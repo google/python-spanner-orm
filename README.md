@@ -1,4 +1,6 @@
-# New Project Template
+# Google Cloud Spanner ORM
+
+Python 3 module for Google Cloud Spanner ORM.
 
 This repository contains a template you can use to seed a repository for a
 new open source project.
