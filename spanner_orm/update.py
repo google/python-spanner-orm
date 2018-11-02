@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Used with DatabaseAdminApi to manage database schema updates"""
+"""Used with DatabaseAdminApi to manage database schema updates."""
 
 from abc import ABC
 from abc import abstractmethod
@@ -24,7 +23,7 @@ from spanner_orm.type import NullableType
 
 
 class SchemaUpdate(ABC):
-  """Base class for specifying database schema update"""
+  """Base class for specifying database schema update."""
 
   @abstractmethod
   def ddl(self):
@@ -40,7 +39,7 @@ class SchemaUpdate(ABC):
 
 
 class ColumnUpdate(SchemaUpdate):
-  """Specifies column updates such as ADD, DROP, and ALTER"""
+  """Specifies column updates such as ADD, DROP, and ALTER."""
 
   def __init__(self, table_name, column_name, db_type):
     self._table = table_name
@@ -61,7 +60,7 @@ class ColumnUpdate(SchemaUpdate):
     return self._table
 
   def _validate_alter_column(self, model):
-    """Validates that the only alteration is to change column nullability"""
+    """Validates that the only alteration is to change column nullability."""
     # Verify type is actually changing
     assert self._column in model.schema()
     old_type = model.schema()[self._column]
@@ -93,7 +92,7 @@ class ColumnUpdate(SchemaUpdate):
 
 
 class IndexUpdate(SchemaUpdate):
-  """Specifies index updates such as ADD and DROP"""
+  """Specifies index updates such as ADD and DROP."""
 
   def __init__(self, table_name, index_name, columns):
     self._table = table_name
@@ -113,7 +112,7 @@ class IndexUpdate(SchemaUpdate):
 
 
 class CreateTableUpdate(SchemaUpdate):
-  """Update that allows creating a new table"""
+  """Update that allows creating a new table."""
 
   def __init__(self, table_name, schema):
     self._table = table_name

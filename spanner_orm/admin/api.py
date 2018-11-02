@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Interacts with the Spanner database to read and manage table schemas"""
+"""Interacts with the Spanner database to read and manage table schemas."""
 
 from spanner_orm.api import TableReadApi
 
@@ -21,14 +20,14 @@ from google.cloud import spanner
 
 
 class DatabaseAdminApi(TableReadApi):
-  """Manages table schema information on Spanner"""
+  """Manages table schema information on Spanner."""
 
   _connection = None
   _connection_info = None
 
   @classmethod
   def connect(cls, project, instance, database, create_ddl=None):
-    """Connects to the specified Spanner database, optionally creating tables"""
+    """Connects to the specified database, optionally creating tables."""
     connection_info = (project, instance, database)
     if cls._connection is not None and connection_info == cls._connection_info:
       return

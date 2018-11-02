@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
 """Class that interacts with spanner database."""
 
 from abc import ABC
@@ -40,15 +39,7 @@ class TableReadApi(ABC):
     """Obtains rows with primary_keys from the given table."""
     stream_results = transaction.read(
         table=table_name, columns=columns, keyset=keyset)
-    results = list(stream_results)
-
-    # If number of primary keys is specified, then number of results
-    # should be less than or equal to number of keys
-    if not keyset.all_ and len(results) > len(keyset.keys):
-      error = 'ERROR: primary_keys "{}" returns extra rows for table "{}"'
-      raise BaseException(error.format(str(keyset), table_name))
-
-    return results
+    return list(stream_results)
 
   @staticmethod
   def sql_query(transaction, query, parameters, parameter_types):
@@ -59,7 +50,7 @@ class TableReadApi(ABC):
 
 
 class TableWriteApi(ABC):
-  """Handles write to table interactions with Spanner"""
+  """Handles write to table interactions with Spanner."""
 
   @classmethod
   @abstractmethod
@@ -90,7 +81,7 @@ class TableWriteApi(ABC):
 
 
 class DatabaseApi(TableReadApi, TableWriteApi):
-  """Class that handles reading from and writing to Spanner tables"""
+  """Class that handles reading from and writing to Spanner tables."""
 
   _connection = None
   _connection_info = None
@@ -103,7 +94,7 @@ class DatabaseApi(TableReadApi, TableWriteApi):
   # Spanner connection methods
   @classmethod
   def connect(cls, project, instance, database):
-    """Connects to the specified Spanner database"""
+    """Connects to the specified Spanner database."""
     connection_info = (project, instance, database)
     if cls._connection is not None:
       if connection_info == cls._connection_info:
