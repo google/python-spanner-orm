@@ -43,7 +43,7 @@ def now():
 
 class SqlBodyTest(unittest.TestCase):
 
-  @patch('spanner_orm.model.DatabaseApi')
+  @patch('spanner_orm.api.SpannerApi')
   def test_where(self, mock_db):
     models.UnittestModel.where_equal(True, int_=3)
     ((_, sql, parameters, types), _) = mock_db.sql_query.call_args
@@ -52,7 +52,7 @@ class SqlBodyTest(unittest.TestCase):
     self.assertEqual({'int_': 3}, parameters)
     self.assertEqual(types, {'int_': Integer.grpc_type()})
 
-  @patch('spanner_orm.model.DatabaseApi')
+  @patch('spanner_orm.api.SpannerApi')
   def test_count(self, mock_db):
     column, value = ('int_', 3)
     models.UnittestModel.count_equal(True, **{column: value})

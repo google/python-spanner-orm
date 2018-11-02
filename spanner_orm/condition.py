@@ -14,21 +14,21 @@
 # limitations under the License.
 """Used with Model#where and Model#count to help create Spanner queries."""
 
-from abc import ABC
-from abc import abstractmethod
-from enum import Enum
+import abc
+import enum
 
 from google.cloud.spanner_v1.proto import type_pb2
 
 
-class ConditionSegment(Enum):
+class Segment(enum.Enum):
+  """The segment of the SQL query that a Condition belongs to."""
   WHERE = 1
   ORDER_BY = 2
   LIMIT = 3
   JOIN = 4
 
 
-class Condition(ABC):
+class Condition(abc.ABC):
   """Base class for specifying conditions in a Spanner query."""
 
   def __init__(self):
@@ -42,12 +42,12 @@ class Condition(ABC):
     assert self.model
     return self._params()
 
-  @abstractmethod
+  @abc.abstractmethod
   def _params(self):
     pass
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def segment():
     raise NotImplementedError
 
@@ -55,7 +55,7 @@ class Condition(ABC):
     assert self.model
     return self._sql()
 
-  @abstractmethod
+  @abc.abstractmethod
   def _sql(self):
     pass
 
@@ -63,11 +63,11 @@ class Condition(ABC):
     assert self.model
     return self._types()
 
-  @abstractmethod
+  @abc.abstractmethod
   def _types(self):
     pass
 
-  @abstractmethod
+  @abc.abstractmethod
   def _validate(self, model):
     pass
 
@@ -85,7 +85,7 @@ class ColumnsEqualCondition(Condition):
     return {}
 
   def segment(self):
-    return ConditionSegment.WHERE
+    return Segment.WHERE
 
   def _sql(self):
     return '{table}.{column} = {other_table}.{other_column}'.format(
@@ -135,7 +135,7 @@ class IncludesCondition(Condition):
 
   @staticmethod
   def segment():
-    return ConditionSegment.JOIN
+    return Segment.JOIN
 
   def _sql(self):
     return ''
@@ -164,7 +164,7 @@ class LimitCondition(Condition):
 
   @staticmethod
   def segment():
-    return ConditionSegment.LIMIT
+    return Segment.LIMIT
 
   def _sql(self):
     return 'LIMIT @{key}'.format(key=self.KEY)
@@ -177,7 +177,7 @@ class LimitCondition(Condition):
     del model
 
 
-class OrderType(Enum):
+class OrderType(enum.Enum):
   ASC = 1
   DESC = 2
 
@@ -205,7 +205,7 @@ class OrderByCondition(Condition):
 
   @staticmethod
   def segment():
-    return ConditionSegment.ORDER_BY
+    return Segment.ORDER_BY
 
   def _types(self):
     return {}
@@ -217,7 +217,7 @@ class OrderByCondition(Condition):
 
 class ComparisonCondition(Condition):
   """Used to specify a comparison between a column and a value in the WHERE"""
-  _segment = ConditionSegment.WHERE
+  _segment = Segment.WHERE
 
   def __init__(self, column, value):
     super().__init__()
@@ -225,7 +225,7 @@ class ComparisonCondition(Condition):
     self.value = value
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def operator():
     raise NotImplementedError
 
@@ -234,7 +234,7 @@ class ComparisonCondition(Condition):
 
   @staticmethod
   def segment():
-    return ConditionSegment.WHERE
+    return Segment.WHERE
 
   def _sql(self):
     return '{alias}.{column} {operator} @{column}'.format(
@@ -321,7 +321,7 @@ class NullableComparisonCondition(ComparisonCondition):
     return self.value is None
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def nullable_operator():
     raise NotImplementedError
 

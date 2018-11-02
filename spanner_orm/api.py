@@ -14,23 +14,22 @@
 # limitations under the License.
 """Class that interacts with spanner database."""
 
-from abc import ABC
-from abc import abstractmethod
+import abc
 from google.cloud import spanner
 
 
-class TableReadApi(ABC):
-  """Handles read from table interactions with Spanner"""
+class SpannerReadApi(abc.ABC):
+  """Handles sending read requests to Spanner"""
 
   @classmethod
-  @abstractmethod
-  def _database_connection(cls):
+  @abc.abstractmethod
+  def _connection(cls):
     raise NotImplementedError
 
   @classmethod
   def run_read_only(cls, method, *args, **kwargs):
-    """Executes the provided callback method for read-only queries."""
-    with cls._database_connection().snapshot() as snapshot:
+    """Wraps read-only queries in a read transaction."""
+    with cls._connection().snapshot() as snapshot:
       return method(snapshot, *args, **kwargs)
 
   # Read methods
@@ -49,18 +48,18 @@ class TableReadApi(ABC):
     return list(stream_results)
 
 
-class TableWriteApi(ABC):
-  """Handles write to table interactions with Spanner."""
+class SpannerWriteApi(abc.ABC):
+  """Handles sending write requests to Spanner."""
 
   @classmethod
-  @abstractmethod
-  def _database_connection(cls):
+  @abc.abstractmethod
+  def _connection(cls):
     raise NotImplementedError
 
   @classmethod
   def run_write(cls, *args, **kwargs):
-    """Executes the provided callback method in a transaction."""
-    return cls._database_connection().run_in_transaction(*args, **kwargs)
+    """Wraps write and read-write queries in a transaction."""
+    return cls._connection().run_in_transaction(*args, **kwargs)
 
   # Write methods
   @staticmethod
@@ -75,25 +74,25 @@ class TableWriteApi(ABC):
 
   @staticmethod
   def upsert(transaction, table_name, columns, values):
-    """Updates row if primary key already exists, otherwise, creates a row."""
+    """Updates existing rows of a table or adds rows if they don't exist."""
     transaction.insert_or_update(
         table=table_name, columns=columns, values=values)
 
 
-class DatabaseApi(TableReadApi, TableWriteApi):
+class SpannerApi(SpannerReadApi, SpannerWriteApi):
   """Class that handles reading from and writing to Spanner tables."""
 
-  _connection = None
+  _spanner_connection = None
   _connection_info = None
 
   @classmethod
-  def _database_connection(cls):
-    assert cls._connection is not None
-    return cls._connection
+  def _connection(cls):
+    assert cls._spanner_connection is not None, 'Not connected to Spanner'
+    return cls._spanner_connection
 
   # Spanner connection methods
   @classmethod
-  def connect(cls, project, instance, database):
+  def connect(cls, *, project, instance, database):
     """Connects to the specified Spanner database."""
     connection_info = (project, instance, database)
     if cls._connection is not None:

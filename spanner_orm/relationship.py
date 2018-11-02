@@ -16,8 +16,8 @@
 
 import importlib
 
-from spanner_orm.condition import columns_equal
-from spanner_orm.model import Model
+from spanner_orm import condition
+from spanner_orm import model
 
 
 class ModelRelationship(object):
@@ -55,7 +55,8 @@ class ModelRelationship(object):
       # This is backward from what you might imagine because the condition will
       # be processed from the context of the destination model
       conditions.append(
-          columns_equal(destination_column, self._origin, origin_column))
+          condition.ColumnsEqualCondition(destination_column, self._origin,
+                                          origin_column))
 
     return conditions
 
@@ -63,6 +64,6 @@ class ModelRelationship(object):
     parts = model_name.split('.')
     path = '.'.join(parts[:-1])
     module = importlib.import_module(path)
-    model = getattr(module, parts[-1])
-    assert issubclass(model, Model)
-    return model
+    klass = getattr(module, parts[-1])
+    assert issubclass(klass, model.Model)
+    return klass
