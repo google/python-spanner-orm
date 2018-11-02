@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Helps define a foreign key relationship between two models"""
+"""Helps define a foreign key relationship between two models."""
 
 import importlib
 
@@ -22,10 +21,10 @@ from spanner_orm.model import Model
 
 
 class ModelRelationship(object):
-  """Helps define a foreign key relationship between two models"""
+  """Helps define a foreign key relationship between two models."""
 
   def __init__(self, origin, destination_name, constraints, is_parent=False):
-    """Creates a ModelRelationship
+    """Creates a ModelRelationship.
 
     Args:
       origin: Model that the relationship originates from
@@ -48,7 +47,7 @@ class ModelRelationship(object):
     return self._origin
 
   def _parse_constraints(self, constraints):
-    """Validates the dictionary of constraints and turns it into Conditions"""
+    """Validates the dictionary of constraints and turns it into Conditions."""
     conditions = []
     for origin_column, destination_column in constraints.items():
       assert origin_column in self._origin.schema()

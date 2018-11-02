@@ -12,19 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base class for a model that also has a corresponding proto message."""
 
-from abc import ABC
-from abc import abstractmethod
+"""spanner_orm setup file."""
+from setuptools import setup
 
-
-class Protoable(ABC):
-
-  @classmethod
-  @abstractmethod
-  def from_proto(cls, proto):
-    raise NotImplementedError
-
-  @abstractmethod
-  def to_proto(self):
-    pass
+setup(
+    name='spanner-orm',
+    version='0.1.0',
+    description='Basic ORM for Spanner',
+    maintainer='Derek Brandao',
+    maintainer_email='dbrandao@google.com',
+    url='https://github.com/google/python-spanner-orm',
+    packages=['spanner_orm', 'spanner_orm.admin', 'spanner_orm.schemas'],
+    install_requires=[
+        'googleapis-common-protos==1.5.3',
+        'google-cloud-spanner'
+    ])

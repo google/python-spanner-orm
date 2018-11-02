@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Helps build SQL for complex Spanner queries"""
+"""Helps build SQL for complex Spanner queries."""
 
 from abc import ABC
 from abc import abstractmethod
@@ -22,7 +21,7 @@ from spanner_orm.condition import ConditionSegment
 
 
 class DatabaseQuery(ABC):
-  """Helps build SQL for complex Spanner queries"""
+  """Helps build SQL for complex Spanner queries."""
 
   def __init__(self, model, conditions):
     self._model = model
@@ -59,7 +58,7 @@ class DatabaseQuery(ABC):
     return segments
 
   def _build(self):
-    """Builds the Spanner query from the given model and conditions"""
+    """Builds the Spanner query from the given model and conditions."""
     segments = [
         self._select(),
         self._from(),
@@ -123,7 +122,7 @@ class DatabaseQuery(ABC):
 
 
 class CountQuery(DatabaseQuery):
-  """Handles COUNT Spanner queries"""
+  """Handles COUNT Spanner queries."""
 
   def _select(self):
     assert not self._segments(ConditionSegment.JOIN)
@@ -134,7 +133,7 @@ class CountQuery(DatabaseQuery):
 
 
 class SelectQuery(DatabaseQuery):
-  """Handles SELECT Spanner queries"""
+  """Handles SELECT Spanner queries."""
 
   def _select_prefix(self):
     return 'SELECT'
@@ -167,7 +166,7 @@ class SelectQuery(DatabaseQuery):
     return models
 
   def _parse_result(self, row, offset, from_model, joins):
-    """Parses a row of results from a Spanner query based on the conditions"""
+    """Parses a row of results from a Spanner query based on the conditions."""
     values = {}
     for column in from_model.columns():
       values[column] = row[offset]

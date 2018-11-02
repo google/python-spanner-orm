@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Model for interacting with Spanner index column schema table"""
+"""Model for interacting with Spanner index column schema table."""
 
 from spanner_orm.schemas.schema import Schema
 from spanner_orm.type import NullableInteger
@@ -22,7 +21,7 @@ from spanner_orm.type import String
 
 
 class IndexColumnSchema(Schema):
-  """Model for interacting with Spanner index column schema table"""
+  """Model for interacting with Spanner index column schema table."""
 
   @staticmethod
   def primary_index_keys():

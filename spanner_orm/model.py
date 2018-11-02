@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Holds table-specific information to make querying spanner eaiser"""
+"""Holds table-specific information to make querying spanner eaiser."""
 
 from abc import ABC
 from abc import abstractmethod
@@ -159,7 +158,7 @@ class Model(ABC):
 
   @classmethod
   def count(cls, transaction, *conditions):
-    """Implementation of the SELECT COUNT query. Requires SqlConditions"""
+    """Implementation of the SELECT COUNT query. Requires SqlConditions."""
     builder = CountQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
     results = cls._execute_read(DatabaseApi.sql_query, transaction, args)
@@ -198,7 +197,7 @@ class Model(ABC):
 
   @classmethod
   def where(cls, transaction, *conditions):
-    """Implementation of the SELECT query. Requires list of SqlConditions"""
+    """Implementation of the SELECT query. Requires list of SqlConditions."""
     builder = SelectQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
     results = cls._execute_read(DatabaseApi.sql_query, transaction, args)
@@ -238,7 +237,7 @@ class Model(ABC):
 
   @classmethod
   def save_batch(cls, transaction, models):
-    """Persist all model changes in list of models to the database"""
+    """Persist all model changes in list of models to the database."""
     to_create, to_update = [], []
     columns = cls.columns()
     for model in models:
@@ -260,7 +259,7 @@ class Model(ABC):
 
   @classmethod
   def _execute_write(cls, db_api, transaction, dictionaries):
-    """Validates all write value types and commits write to Spanner"""
+    """Validates all write value types and commits write to Spanner."""
     columns, values = None, []
     # Assert that we're only setting columns that belong to this table
     for dictionary in dictionaries:

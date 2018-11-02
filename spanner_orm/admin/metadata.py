@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Retrieves database metadata"""
+"""Retrieves database metadata."""
 
 from collections import defaultdict
 from spanner_orm.admin.api import DatabaseAdminApi
@@ -31,7 +30,7 @@ from spanner_orm.update import IndexUpdate
 
 
 class DatabaseMetadata(object):
-  """Retrieve table metadata from Spanner and returns it in a usable format"""
+  """Retrieve table metadata from Spanner and returns it in a usable format."""
 
   @classmethod
   def column_update(cls, schema_change):
@@ -60,7 +59,7 @@ class DatabaseMetadata(object):
 
   @classmethod
   def models(cls, transaction=None):
-    """Constructs model classes from Spanner database schema"""
+    """Constructs model classes from Spanner database schema."""
     tables = cls._tables(transaction)
     indexes = cls._indexes(transaction)
     results = {}
@@ -84,7 +83,7 @@ class DatabaseMetadata(object):
 
   @classmethod
   def _tables(cls, transaction=None):
-    """Compiles table information from column schema"""
+    """Compiles table information from column schema."""
     tables = defaultdict(dict)
     schemas = ColumnSchema.where(transaction,
                                  EqualityCondition('table_catalog', ''),
@@ -95,7 +94,7 @@ class DatabaseMetadata(object):
 
   @classmethod
   def _indexes(cls, transaction=None):
-    """Compiles index information from index and index columns schemas"""
+    """Compiles index information from index and index columns schemas."""
     # ordinal_position is the position of the column in the indicated index.
     # Results are ordered by that so the index columns are added in the correct
     # order. None indicates that the key isn't really a part of the index, so we

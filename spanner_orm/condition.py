@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Used with Model#where and Model#count to help create Spanner queries"""
+"""Used with Model#where and Model#count to help create Spanner queries."""
 
 from abc import ABC
 from abc import abstractmethod
@@ -30,7 +29,7 @@ class ConditionSegment(Enum):
 
 
 class Condition(ABC):
-  """Base class for specifying conditions in a Spanner query"""
+  """Base class for specifying conditions in a Spanner query."""
 
   def __init__(self):
     self.model = None
@@ -74,7 +73,7 @@ class Condition(ABC):
 
 
 class ColumnsEqualCondition(Condition):
-  """Used to join records by matching column values"""
+  """Used to join records by matching column values."""
 
   def __init__(self, origin_column, destination_model, destination_column):
     super().__init__()
@@ -108,7 +107,7 @@ class ColumnsEqualCondition(Condition):
 
 
 class IncludesCondition(Condition):
-  """Used to include related models via a relation in a Spanner query"""
+  """Used to include related models via a relation in a Spanner query."""
 
   def __init__(self, name, conditions=None):
     super().__init__()

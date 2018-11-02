@@ -1,3 +1,4 @@
+# python3
 # Copyright 2018 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# python3
-"""Helper to deal with column types in database interactions"""
+"""Helper to deal with column types in database interactions."""
 
 from abc import ABC
 from abc import abstractmethod
@@ -23,7 +22,7 @@ from google.cloud.spanner_v1.proto import type_pb2
 
 
 class DatabaseType(ABC):
-  """Base class for column types for database interactions"""
+  """Base class for column types for database interactions."""
 
   @classmethod
   def full_ddl(cls):
@@ -70,7 +69,7 @@ class NullableType(ABC):
 
 
 class Boolean(DatabaseType):
-  """Represents an integer type"""
+  """Represents a boolean type."""
 
   @staticmethod
   def db_type():
@@ -94,7 +93,7 @@ class NullableBoolean(NullableType, Boolean):
 
 
 class Integer(DatabaseType):
-  """Represents an integer type"""
+  """Represents an integer type."""
 
   @staticmethod
   def db_type():
@@ -118,7 +117,7 @@ class NullableInteger(NullableType, Integer):
 
 
 class String(DatabaseType):
-  """Represents a string type"""
+  """Represents a string type."""
 
   @staticmethod
   def db_type():
@@ -142,7 +141,7 @@ class NullableString(NullableType, String):
 
 
 class StringArray(DatabaseType):
-  """Represents an array of strings type"""
+  """Represents an array of strings type."""
 
   @staticmethod
   def db_type():
@@ -168,7 +167,7 @@ class NullableStringArray(NullableType, StringArray):
 
 
 class Timestamp(DatabaseType):
-  """Represents a timestamp type"""
+  """Represents a timestamp type."""
 
   @staticmethod
   def db_type():
