@@ -14,37 +14,32 @@
 # limitations under the License.
 """Holds table-specific information to make querying spanner eaiser."""
 
-from abc import ABC
-from abc import abstractmethod
+import abc
 import copy
 
-from spanner_orm.api import DatabaseApi
-from spanner_orm.condition import EqualityCondition
-from spanner_orm.condition import InListCondition
-from spanner_orm.query import CountQuery
-from spanner_orm.query import SelectQuery
+from spanner_orm import api
+from spanner_orm import condition
+from spanner_orm import query
 
 from google.cloud import spanner
 
 
-class Model(ABC):
+class Model(abc.ABC):
   """Maps to a table in spanner and has basic functions for querying tables."""
 
   @classmethod
   def column_prefix(cls):
     return cls.table().split('.')[-1]
 
-  # Database schema class methods
+  # Table schema class methods
   @classmethod
   def columns(cls):
     assert isinstance(cls.schema(), dict)
     return set(cls.schema())
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def primary_index_keys():
-    # TODO(gleeper): we should look into adding indices on columns for possible
-    # speed up
     raise NotImplementedError
 
   @classmethod
@@ -52,12 +47,12 @@ class Model(ABC):
     return {}
 
   @classmethod
-  @abstractmethod
+  @abc.abstractmethod
   def schema(cls):
     raise NotImplementedError
 
   @classmethod
-  @abstractmethod
+  @abc.abstractmethod
   def table(cls):
     raise NotImplementedError
 
@@ -149,19 +144,19 @@ class Model(ABC):
       self._persisted = True
     return self
 
-  # Database read methods
+  # Table read methods
   @classmethod
   def all(cls, transaction=None):
     args = [cls.table(), cls.columns(), spanner.KeySet(all_=True)]
-    results = cls._execute_read(DatabaseApi.find, transaction, args)
+    results = cls._execute_read(api.SpannerApi.find, transaction, args)
     return cls._results_to_models(results)
 
   @classmethod
   def count(cls, transaction, *conditions):
     """Implementation of the SELECT COUNT query. Requires SqlConditions."""
-    builder = CountQuery(cls, conditions)
+    builder = query.CountQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(DatabaseApi.sql_query, transaction, args)
+    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
     return builder.parse_results(results)
 
   @classmethod
@@ -170,9 +165,9 @@ class Model(ABC):
     conditions = []
     for k, v in kwargs.items():
       if isinstance(v, list):
-        conditions.append(InListCondition(k, v))
+        conditions.append(condition.InListCondition(k, v))
       else:
-        conditions.append(EqualityCondition(k, v))
+        conditions.append(condition.EqualityCondition(k, v))
     return cls.count(transaction, *conditions)
 
   @classmethod
@@ -190,7 +185,7 @@ class Model(ABC):
     keyset = spanner.KeySet(keys=[ordered_values])
 
     args = [cls.table(), cls.columns(), keyset]
-    results = cls._execute_read(DatabaseApi.find, transaction, args)
+    results = cls._execute_read(api.SpannerApi.find, transaction, args)
     resources = cls._results_to_models(results)
 
     return resources[0] if resources else None
@@ -198,9 +193,9 @@ class Model(ABC):
   @classmethod
   def where(cls, transaction, *conditions):
     """Implementation of the SELECT query. Requires list of SqlConditions."""
-    builder = SelectQuery(cls, conditions)
+    builder = query.SelectQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(DatabaseApi.sql_query, transaction, args)
+    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
     return builder.parse_results(results)
 
   @classmethod
@@ -209,9 +204,9 @@ class Model(ABC):
     conditions = []
     for k, v in kwargs.items():
       if isinstance(v, list):
-        conditions.append(InListCondition(k, v))
+        conditions.append(condition.InListCondition(k, v))
       else:
-        conditions.append(EqualityCondition(k, v))
+        conditions.append(condition.EqualityCondition(k, v))
     return cls.where(transaction, *conditions)
 
   @classmethod
@@ -224,16 +219,16 @@ class Model(ABC):
     if transaction is not None:
       return db_api(transaction, *args)
     else:
-      return DatabaseApi.run_read_only(db_api, *args)
+      return api.SpannerApi.run_read_only(db_api, *args)
 
-  # Database write methods
+  # Table write methods
   @classmethod
   def create(cls, transaction=None, **kwargs):
-    cls._execute_write(DatabaseApi.insert, transaction, [kwargs])
+    cls._execute_write(api.SpannerApi.insert, transaction, [kwargs])
 
   @classmethod
   def create_or_update(cls, transaction=None, **kwargs):
-    cls._execute_write(DatabaseApi.upsert, transaction, [kwargs])
+    cls._execute_write(api.SpannerApi.upsert, transaction, [kwargs])
 
   @classmethod
   def save_batch(cls, transaction, models):
@@ -249,13 +244,13 @@ class Model(ABC):
         model._persisted = True  # pylint: disable=protected-access
         to_create.append(value)
     if to_create:
-      cls._execute_write(DatabaseApi.insert, transaction, to_create)
+      cls._execute_write(api.SpannerApi.insert, transaction, to_create)
     if to_update:
-      cls._execute_write(DatabaseApi.update, transaction, to_update)
+      cls._execute_write(api.SpannerApi.update, transaction, to_update)
 
   @classmethod
   def update(cls, transaction=None, **kwargs):
-    cls._execute_write(DatabaseApi.update, transaction, [kwargs])
+    cls._execute_write(api.SpannerApi.update, transaction, [kwargs])
 
   @classmethod
   def _execute_write(cls, db_api, transaction, dictionaries):
@@ -276,4 +271,4 @@ class Model(ABC):
     if transaction is not None:
       return db_api(transaction, *args)
     else:
-      return DatabaseApi.run_write(db_api, *args)
+      return api.SpannerApi.run_write(db_api, *args)

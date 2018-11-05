@@ -14,12 +14,12 @@
 # limitations under the License.
 """Interacts with the Spanner database to read and manage table schemas."""
 
-from spanner_orm.api import TableReadApi
+from spanner_orm import api
 
 from google.cloud import spanner
 
 
-class DatabaseAdminApi(TableReadApi):
+class SpannerAdminApi(api.TableReadApi):
   """Manages table schema information on Spanner."""
 
   _connection = None

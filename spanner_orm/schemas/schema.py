@@ -14,11 +14,11 @@
 # limitations under the License.
 """Base model for schemas."""
 
-from spanner_orm.admin.api import DatabaseAdminApi
-from spanner_orm.model import Model
+from spanner_orm import model
+from spanner_orm.admin import api
 
 
-class Schema(Model):
+class Schema(model.Model):
   """Base model for schemas. Disallows writes and uses AdminApi for reads."""
 
   @staticmethod
@@ -26,7 +26,7 @@ class Schema(Model):
     if transaction is not None:
       return db_api(transaction, *args)
     else:
-      return DatabaseAdminApi.run_read_only(db_api, *args)
+      return api.SpannerAdminApi.run_read_only(db_api, *args)
 
   @staticmethod
   def _execute_write():

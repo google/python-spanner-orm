@@ -14,14 +14,13 @@
 # limitations under the License.
 """Helper to deal with column types in database interactions."""
 
-from abc import ABC
-from abc import abstractmethod
-from datetime import datetime
+import abc
+import datetime
 
 from google.cloud.spanner_v1.proto import type_pb2
 
 
-class DatabaseType(ABC):
+class DatabaseType(abc.ABC):
   """Base class for column types for database interactions."""
 
   @classmethod
@@ -32,17 +31,17 @@ class DatabaseType(ABC):
       return '{} NOT NULL'.format(cls.ddl())
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def db_type():
     raise NotImplementedError
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def ddl():
     raise NotImplementedError
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def grpc_type():
     raise NotImplementedError
 
@@ -59,12 +58,12 @@ class DatabaseType(ABC):
       cls.validate_type(value)
 
   @staticmethod
-  @abstractmethod
+  @abc.abstractmethod
   def validate_type(value):
     raise NotImplementedError
 
 
-class NullableType(ABC):
+class NullableType(abc.ABC):
   pass
 
 
@@ -183,7 +182,7 @@ class Timestamp(DatabaseType):
 
   @staticmethod
   def validate_type(value):
-    assert isinstance(value, datetime)
+    assert isinstance(value, datetime.datetime)
 
 
 class NullableTimestamp(NullableType, Timestamp):

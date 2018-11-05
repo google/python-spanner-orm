@@ -12,28 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Used with DatabaseAdminApi to manage database schema updates."""
+"""Used with SpannerAdminApi to manage database schema updates."""
 
-from abc import ABC
-from abc import abstractmethod
+import abc
 
-from spanner_orm.condition import EqualityCondition
-from spanner_orm.schemas.index_column import IndexColumnSchema
+from spanner_orm import condition
+from spanner_orm.schemas import index_column
 from spanner_orm.type import NullableType
 
 
-class SchemaUpdate(ABC):
+class SchemaUpdate(abc.ABC):
   """Base class for specifying database schema update."""
 
-  @abstractmethod
+  @abc.abstractmethod
   def ddl(self):
     pass
 
-  @abstractmethod
+  @abc.abstractmethod
   def table(self):
     pass
 
-  @abstractmethod
+  @abc.abstractmethod
   def validate(self, schema):
     pass
 
@@ -77,9 +76,9 @@ class ColumnUpdate(SchemaUpdate):
   def _validate_drop_column(self, model):
     assert self._column in model.schema()
     # Verify no indices exist on the column we're trying to drop
-    num_index_columns = IndexColumnSchema.count(
-        None, EqualityCondition('column_name', self._column),
-        EqualityCondition('table_name', self._table))
+    num_index_columns = index_column.IndexColumnSchema.count(
+        None, condition.EqualityCondition('column_name', self._column),
+        condition.EqualityCondition('table_name', self._table))
     assert num_index_columns == 0
 
   def validate(self, model):

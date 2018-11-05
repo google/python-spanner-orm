@@ -14,14 +14,14 @@
 # limitations under the License.
 """Model for interacting with Spanner column schema table."""
 
-from spanner_orm.schemas.schema import Schema
+from spanner_orm.schemas import schema
 from spanner_orm.type import ALL_TYPES
 from spanner_orm.type import Integer
 from spanner_orm.type import NullableType
 from spanner_orm.type import String
 
 
-class ColumnSchema(Schema):
+class ColumnSchema(schema.Schema):
   """Model for interacting with Spanner column schema table."""
 
   @staticmethod

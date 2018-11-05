@@ -14,13 +14,12 @@
 # limitations under the License.
 """Helps build SQL for complex Spanner queries."""
 
-from abc import ABC
-from abc import abstractmethod
+import abc
 
-from spanner_orm.condition import ConditionSegment
+from spanner_orm import condition
 
 
-class DatabaseQuery(ABC):
+class SpannerQuery(abc.ABC):
   """Helps build SQL for complex Spanner queries."""
 
   def __init__(self, model, conditions):
@@ -44,7 +43,7 @@ class DatabaseQuery(ABC):
     assert self._sql is not None
     return self._types
 
-  @abstractmethod
+  @abc.abstractmethod
   def parse_results(self, results):
     pass
 
@@ -75,7 +74,7 @@ class DatabaseQuery(ABC):
       self._update_unique(self._parameters, segment_parameters)
       self._update_unique(self._types, segment_types)
 
-  @abstractmethod
+  @abc.abstractmethod
   def _select(self):
     pass
 
@@ -84,7 +83,7 @@ class DatabaseQuery(ABC):
 
   def _where(self):
     sql, sql_parts, parameters, types = '', [], {}, {}
-    wheres = self._segments(ConditionSegment.WHERE)
+    wheres = self._segments(condition.Segment.WHERE)
     for where in wheres:
       sql_parts.append(where.sql())
       self._update_unique(parameters, where.params())
@@ -95,7 +94,7 @@ class DatabaseQuery(ABC):
 
   def _order(self):
     sql, parameters, types = '', {}, {}
-    orders = self._segments(ConditionSegment.ORDER_BY)
+    orders = self._segments(condition.Segment.ORDER_BY)
     if orders:
       assert len(orders) == 1
       order = orders[0]
@@ -106,7 +105,7 @@ class DatabaseQuery(ABC):
 
   def _limit(self):
     sql, parameters, types = '', {}, {}
-    limits = self._segments(ConditionSegment.LIMIT)
+    limits = self._segments(condition.Segment.LIMIT)
     if limits:
       assert len(limits) == 1
       limit = limits[0]
@@ -121,18 +120,18 @@ class DatabaseQuery(ABC):
     to_update.update(new_dict)
 
 
-class CountQuery(DatabaseQuery):
+class CountQuery(SpannerQuery):
   """Handles COUNT Spanner queries."""
 
   def _select(self):
-    assert not self._segments(ConditionSegment.JOIN)
+    assert not self._segments(condition.Segment.JOIN)
     return ('SELECT COUNT(*)', {}, {})
 
   def parse_results(self, results):
     return results[0][0]
 
 
-class SelectQuery(DatabaseQuery):
+class SelectQuery(SpannerQuery):
   """Handles SELECT Spanner queries."""
 
   def _select_prefix(self):
@@ -145,7 +144,7 @@ class SelectQuery(DatabaseQuery):
             alias=self._model.column_prefix(), column=column)
         for column in self._model.columns()
     ]
-    joins = self._segments(ConditionSegment.JOIN)
+    joins = self._segments(condition.Segment.JOIN)
     for join in joins:
       subquery = _SelectSubQuery(join.destination(), join.conditions())
 
@@ -159,7 +158,7 @@ class SelectQuery(DatabaseQuery):
 
   def parse_results(self, results):
     models = []
-    joins = self._segments(ConditionSegment.JOIN)
+    joins = self._segments(condition.Segment.JOIN)
     for result in results:
       model, _ = self._parse_result(result, 0, self._model, joins)
       models.append(model)
@@ -174,7 +173,7 @@ class SelectQuery(DatabaseQuery):
     for join in joins:
       subjoins = [
           condition for condition in join.conditions()
-          if condition.segment() == ConditionSegment.JOIN
+          if condition.segment() == condition.Segment.JOIN
       ]
 
       model, new_offset = self._parse_result(row, offset, join.destination(),
