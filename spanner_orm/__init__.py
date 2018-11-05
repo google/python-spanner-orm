@@ -28,12 +28,8 @@ Model = model.Model
 ModelRelationship = relationship.ModelRelationship
 
 Boolean = field.Boolean
+Field = field.Field
 Integer = field.Integer
-NullableBoolean = field.NullableBoolean
-NullableInteger = field.NullableInteger
-NullableString = field.NullableString
-NullableStringArray = field.NullableStringArray
-NullableTimestamp = field.NullableTimestamp
 String = field.String
 StringArray = field.StringArray
 Timestamp = field.Timestamp

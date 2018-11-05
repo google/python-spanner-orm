@@ -17,6 +17,7 @@ import datetime
 import unittest
 
 from spanner_orm import error
+from spanner_orm import field
 from spanner_orm.tests import models
 
 
@@ -112,6 +113,11 @@ class ModelTest(unittest.TestCase):
                       ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, string)')
     self.assertEqual(models.UnittestModel.create_table_ddl(), test_model_ddl)
 
+  def test_model_class_attribute(self):
+    self.assertIsInstance(models.SmallTestModel.key, field.Field)
+    self.assertEqual(models.SmallTestModel.key.field_type(), field.String)
+    self.assertFalse(models.SmallTestModel.key.nullable())
+    self.assertEqual(models.SmallTestModel.key.name, 'key')
 
 if __name__ == '__main__':
   unittest.main()

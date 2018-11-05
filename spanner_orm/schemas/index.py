@@ -21,24 +21,17 @@ from spanner_orm.schemas import schema
 class IndexSchema(schema.Schema):
   """Model for interacting with Spanner index schema table."""
 
+  __table__ = 'information_schema.indexes'
+  table_catalog = field.Field(field.String)
+  table_schema = field.Field(field.String)
+  table_name = field.Field(field.String)
+  index_name = field.Field(field.String)
+  index_type = field.Field(field.String)
+  parent_table_name = field.Field(field.String, nullable=True)
+  is_unique = field.Field(field.Boolean)
+  is_null_filtered = field.Field(field.Boolean)
+  index_state = field.Field(field.String)
+
   @staticmethod
   def primary_index_keys():
     return ['table_catalog', 'table_schema', 'table_name', 'index_name']
-
-  @classmethod
-  def schema(cls):
-    return {
-        'table_catalog': field.String,
-        'table_schema': field.String,
-        'table_name': field.String,
-        'index_name': field.String,
-        'index_type': field.String,
-        'parent_table_name': field.NullableString,
-        'is_unique': field.Boolean,
-        'is_null_filtered': field.Boolean,
-        'index_state': field.String
-    }
-
-  @classmethod
-  def table(cls):
-    return 'information_schema.indexes'

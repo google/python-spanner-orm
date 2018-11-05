@@ -18,6 +18,7 @@ import collections
 
 from spanner_orm import condition
 from spanner_orm import error
+from spanner_orm import field
 from spanner_orm import model
 from spanner_orm import update
 from spanner_orm.admin import api
@@ -26,7 +27,7 @@ from spanner_orm.schemas import index
 from spanner_orm.schemas import index_column
 
 
-class DatabaseMetadata(object):
+class SpannerMetadata(object):
   """Gathers information about a table from Spanner."""
 
   @classmethod
@@ -97,7 +98,9 @@ class DatabaseMetadata(object):
         transaction, condition.EqualityCondition('table_catalog', ''),
         condition.EqualityCondition('table_schema', ''))
     for schema in schemas:
-      tables[schema.table_name][schema.column_name] = schema.type()
+      new_field = field.Field(schema.field_type(), nullable=schema.nullable())
+      new_field.name = schema.column_name
+      tables[schema.table_name][schema.column_name] = new_field
     return tables
 
   @classmethod

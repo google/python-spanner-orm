@@ -20,20 +20,39 @@ import datetime
 from google.cloud.spanner_v1.proto import type_pb2
 
 
+class Field(object):
+  """Represents a column in a table as a field in a model."""
+
+  def __init__(self, field_type, nullable=False):
+    self._type = field_type
+    self._nullable = nullable
+
+  def ddl(self):
+    if self._nullable:
+      return self._type.ddl()
+    return '{field_type} NOT NULL'.format(field_type=self._type.ddl())
+
+  def field_type(self):
+    return self._type
+
+  def grpc_type(self):
+    return self._type.grpc_type()
+
+  def grpc_list_type(self):
+    return self._type.grpc_list_type()
+
+  def nullable(self):
+    return self._nullable
+
+  def validate(self, value):
+    if value is None:
+      assert self._nullable
+    else:
+      self._type.validate_type(value)
+
+
 class FieldType(abc.ABC):
   """Base class for column types for Spanner interactions."""
-
-  @classmethod
-  def full_ddl(cls):
-    if issubclass(cls, NullableType):
-      return cls.ddl()
-    else:
-      return '{} NOT NULL'.format(cls.ddl())
-
-  @staticmethod
-  @abc.abstractmethod
-  def db_type():
-    raise NotImplementedError
 
   @staticmethod
   @abc.abstractmethod
@@ -50,29 +69,14 @@ class FieldType(abc.ABC):
     return type_pb2.Type(
         code=type_pb2.ARRAY, array_element_type=cls.grpc_type())
 
-  @classmethod
-  def validate(cls, value):
-    if value is None:
-      assert issubclass(cls, NullableType), 'Null value for non-nullable column'
-    else:
-      cls.validate_type(value)
-
   @staticmethod
   @abc.abstractmethod
   def validate_type(value):
     raise NotImplementedError
 
 
-class NullableType(abc.ABC):
-  pass
-
-
 class Boolean(FieldType):
   """Represents a boolean type."""
-
-  @staticmethod
-  def db_type():
-    return Boolean
 
   @staticmethod
   def ddl():
@@ -87,16 +91,8 @@ class Boolean(FieldType):
     assert isinstance(value, bool), '{} is not of type bool'.format(value)
 
 
-class NullableBoolean(NullableType, Boolean):
-  pass
-
-
 class Integer(FieldType):
   """Represents an integer type."""
-
-  @staticmethod
-  def db_type():
-    return Integer
 
   @staticmethod
   def ddl():
@@ -111,16 +107,8 @@ class Integer(FieldType):
     assert isinstance(value, int), '{} is not of type int'.format(value)
 
 
-class NullableInteger(NullableType, Integer):
-  pass
-
-
 class String(FieldType):
   """Represents a string type."""
-
-  @staticmethod
-  def db_type():
-    return String
 
   @staticmethod
   def ddl():
@@ -135,16 +123,8 @@ class String(FieldType):
     assert isinstance(value, str), '{} is not of type str'.format(value)
 
 
-class NullableString(NullableType, String):
-  pass
-
-
 class StringArray(FieldType):
   """Represents an array of strings type."""
-
-  @staticmethod
-  def db_type():
-    return StringArray
 
   @staticmethod
   def ddl():
@@ -161,16 +141,8 @@ class StringArray(FieldType):
       assert isinstance(item, str), '{} is not of type str'.format(item)
 
 
-class NullableStringArray(NullableType, StringArray):
-  pass
-
-
 class Timestamp(FieldType):
   """Represents a timestamp type."""
-
-  @staticmethod
-  def db_type():
-    return Timestamp
 
   @staticmethod
   def ddl():
@@ -185,11 +157,4 @@ class Timestamp(FieldType):
     assert isinstance(value, datetime.datetime)
 
 
-class NullableTimestamp(NullableType, Timestamp):
-  pass
-
-
-ALL_TYPES = [
-    Boolean, NullableBoolean, Integer, NullableInteger, String, NullableString,
-    StringArray, NullableStringArray, Timestamp, NullableTimestamp
-]
+ALL_TYPES = [Boolean, Integer, String, StringArray, Timestamp]
