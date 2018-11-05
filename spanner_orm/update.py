@@ -12,17 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Used with SpannerAdminApi to manage database schema updates."""
+"""Used with SpannerAdminApi to manage Spanner schema updates."""
 
 import abc
 
 from spanner_orm import condition
+from spanner_orm import field
 from spanner_orm.schemas import index_column
-from spanner_orm.type import NullableType
 
 
 class SchemaUpdate(abc.ABC):
-  """Base class for specifying database schema update."""
+  """Base class for specifying schema updates."""
 
   @abc.abstractmethod
   def ddl(self):
@@ -66,12 +66,12 @@ class ColumnUpdate(SchemaUpdate):
     assert self._type != old_type
     assert old_type.db_type() == self._type.db_type()
 
-    if issubclass(old_type, NullableType):
+    if issubclass(old_type, field.NullableType):
       # Type was nullable, so must now be the not nullable type
-      assert not issubclass(self._type, NullableType)
+      assert not issubclass(self._type, field.NullableType)
     else:
       # Type wasn't nullable, so it must now be nullable
-      assert issubclass(self._type, NullableType)
+      assert issubclass(self._type, field.NullableType)
 
   def _validate_drop_column(self, model):
     assert self._column in model.schema()
@@ -87,7 +87,7 @@ class ColumnUpdate(SchemaUpdate):
     elif self._column in model.schema():
       self._validate_alter_column(model)
     else:
-      assert issubclass(self._type, NullableType)
+      assert issubclass(self._type, field.NullableType)
 
 
 class IndexUpdate(SchemaUpdate):

@@ -15,13 +15,13 @@
 """Models used by unit tests."""
 
 from spanner_orm import model
+from spanner_orm.field import Integer
+from spanner_orm.field import NullableInteger
+from spanner_orm.field import NullableString
+from spanner_orm.field import NullableStringArray
+from spanner_orm.field import String
+from spanner_orm.field import Timestamp
 from spanner_orm.relationship import ModelRelationship
-from spanner_orm.type import Integer
-from spanner_orm.type import NullableInteger
-from spanner_orm.type import NullableString
-from spanner_orm.type import NullableStringArray
-from spanner_orm.type import String
-from spanner_orm.type import Timestamp
 
 
 class ChildTestModel(model.Model):

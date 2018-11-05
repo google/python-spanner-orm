@@ -12,16 +12,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Sets up shorcuts for imports from the library."""
 
 from spanner_orm import api
 from spanner_orm import condition
+from spanner_orm import field
 from spanner_orm import model
 from spanner_orm import relationship
 
 # pylint: disable=invalid-name
-Model = model.Model
-ModelRelationship = relationship.ModelRelationship
 SpannerApi = api.SpannerApi
+
+Model = model.Model
+
+ModelRelationship = relationship.ModelRelationship
+
+Boolean = field.Boolean
+Integer = field.Integer
+NullableBoolean = field.NullableBoolean
+NullableInteger = field.NullableInteger
+NullableString = field.NullableString
+NullableStringArray = field.NullableStringArray
+NullableTimestamp = field.NullableTimestamp
+String = field.String
+StringArray = field.StringArray
+Timestamp = field.Timestamp
 
 equal_to = condition.equal_to
 greater_than = condition.greater_than

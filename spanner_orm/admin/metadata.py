@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Retrieves database metadata."""
+"""Retrieves table metadata from Spanner."""
 
 from collections import defaultdict
 
@@ -26,7 +26,7 @@ from spanner_orm.schemas import index_column
 
 
 class DatabaseMetadata(object):
-  """Retrieve table metadata from Spanner and returns it in a usable format."""
+  """Gathers information about a table from Spanner."""
 
   @classmethod
   def column_update(cls, schema_change):
@@ -55,7 +55,7 @@ class DatabaseMetadata(object):
 
   @classmethod
   def models(cls, transaction=None):
-    """Constructs model classes from Spanner database schema."""
+    """Constructs model classes from Spanner table schema."""
     tables = cls._tables(transaction)
     indexes = cls._indexes(transaction)
     results = {}

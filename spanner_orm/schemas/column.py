@@ -14,11 +14,8 @@
 # limitations under the License.
 """Model for interacting with Spanner column schema table."""
 
+from spanner_orm import field
 from spanner_orm.schemas import schema
-from spanner_orm.type import ALL_TYPES
-from spanner_orm.type import Integer
-from spanner_orm.type import NullableType
-from spanner_orm.type import String
 
 
 class ColumnSchema(schema.Schema):
@@ -31,13 +28,13 @@ class ColumnSchema(schema.Schema):
   @classmethod
   def schema(cls):
     return {
-        'table_catalog': String,
-        'table_schema': String,
-        'table_name': String,
-        'column_name': String,
-        'ordinal_position': Integer,
-        'is_nullable': String,
-        'spanner_type': String
+        'table_catalog': field.String,
+        'table_schema': field.String,
+        'table_name': field.String,
+        'column_name': field.String,
+        'ordinal_position': field.Integer,
+        'is_nullable': field.String,
+        'spanner_type': field.String
     }
 
   @classmethod
@@ -48,8 +45,8 @@ class ColumnSchema(schema.Schema):
     return self.is_nullable == 'YES'
 
   def type(self):
-    for db_type in ALL_TYPES:
-      db_nullable = issubclass(db_type, NullableType)
+    for db_type in field.ALL_TYPES:
+      db_nullable = issubclass(db_type, field.NullableType)
       if self.spanner_type == db_type.ddl() and self.nullable() == db_nullable:
         return db_type
 
