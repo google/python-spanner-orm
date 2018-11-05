@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Class that interacts with spanner database."""
+"""Class that handles API calls to Spanner."""
 
 import abc
 from google.cloud import spanner
@@ -92,15 +92,15 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 
   # Spanner connection methods
   @classmethod
-  def connect(cls, *, project, instance, database):
+  def connect(cls, project, instance, database, credentials=None):
     """Connects to the specified Spanner database."""
-    connection_info = (project, instance, database)
+    connection_info = (project, instance, database, credentials)
     if cls._connection is not None:
       if connection_info == cls._connection_info:
         return
       cls.hangup()
 
-    client = spanner.Client(project=project)
+    client = spanner.Client(project=project, credentials=credentials)
     instance = client.instance(instance)
     cls._connection = instance.database(database)
     cls._connection_info = connection_info

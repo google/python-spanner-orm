@@ -30,11 +30,11 @@ from spanner_orm.condition import not_in_list
 from spanner_orm.condition import not_less_than
 from spanner_orm.condition import order_by
 from spanner_orm.condition import OrderType
+from spanner_orm.field import Integer
+from spanner_orm.field import String
+from spanner_orm.field import Timestamp
 from spanner_orm.query import SelectQuery
 from spanner_orm.tests import models
-from spanner_orm.type import Integer
-from spanner_orm.type import String
-from spanner_orm.type import Timestamp
 
 
 def now():

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Helper to deal with column types in database interactions."""
+"""Helper to deal with field types in Spanner interactions."""
 
 import abc
 import datetime
@@ -20,8 +20,8 @@ import datetime
 from google.cloud.spanner_v1.proto import type_pb2
 
 
-class DatabaseType(abc.ABC):
-  """Base class for column types for database interactions."""
+class FieldType(abc.ABC):
+  """Base class for column types for Spanner interactions."""
 
   @classmethod
   def full_ddl(cls):
@@ -67,7 +67,7 @@ class NullableType(abc.ABC):
   pass
 
 
-class Boolean(DatabaseType):
+class Boolean(FieldType):
   """Represents a boolean type."""
 
   @staticmethod
@@ -91,7 +91,7 @@ class NullableBoolean(NullableType, Boolean):
   pass
 
 
-class Integer(DatabaseType):
+class Integer(FieldType):
   """Represents an integer type."""
 
   @staticmethod
@@ -115,7 +115,7 @@ class NullableInteger(NullableType, Integer):
   pass
 
 
-class String(DatabaseType):
+class String(FieldType):
   """Represents a string type."""
 
   @staticmethod
@@ -139,7 +139,7 @@ class NullableString(NullableType, String):
   pass
 
 
-class StringArray(DatabaseType):
+class StringArray(FieldType):
   """Represents an array of strings type."""
 
   @staticmethod
@@ -165,7 +165,7 @@ class NullableStringArray(NullableType, StringArray):
   pass
 
 
-class Timestamp(DatabaseType):
+class Timestamp(FieldType):
   """Represents a timestamp type."""
 
   @staticmethod

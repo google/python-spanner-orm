@@ -232,7 +232,7 @@ class Model(abc.ABC):
 
   @classmethod
   def save_batch(cls, transaction, models):
-    """Persist all model changes in list of models to the database."""
+    """Persist all model changes in list of models to Spanner."""
     to_create, to_update = [], []
     columns = cls.columns()
     for model in models:

@@ -14,10 +14,8 @@
 # limitations under the License.
 """Model for interacting with Spanner index column schema table."""
 
+from spanner_orm import field
 from spanner_orm.schemas import schema
-from spanner_orm.type import NullableInteger
-from spanner_orm.type import NullableString
-from spanner_orm.type import String
 
 
 class IndexColumnSchema(schema.Schema):
@@ -33,15 +31,15 @@ class IndexColumnSchema(schema.Schema):
   @classmethod
   def schema(cls):
     return {
-        'table_catalog': String,
-        'table_schema': String,
-        'table_name': String,
-        'index_name': String,
-        'column_name': String,
-        'ordinal_position': NullableInteger,
-        'column_ordering': NullableString,
-        'is_nullable': String,
-        'spanner_type': String
+        'table_catalog': field.String,
+        'table_schema': field.String,
+        'table_name': field.String,
+        'index_name': field.String,
+        'column_name': field.String,
+        'ordinal_position': field.NullableInteger,
+        'column_ordering': field.NullableString,
+        'is_nullable': field.String,
+        'spanner_type': field.String
     }
 
   @classmethod
