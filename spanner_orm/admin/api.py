@@ -22,8 +22,8 @@ from google.cloud import spanner
 class SpannerAdminApi(api.TableReadApi):
   """Manages table schema information on Spanner."""
 
-  _connection = None
   _connection_info = None
+  _spanner_connection = None
 
   @classmethod
   def connect(cls,
@@ -34,32 +34,35 @@ class SpannerAdminApi(api.TableReadApi):
               create_ddl=None):
     """Connects to the specified database, optionally creating tables."""
     connection_info = (project, instance, database, credentials)
-    if cls._connection is not None and connection_info == cls._connection_info:
-      return
+    if cls._spanner_connection is not None:
+      if connection_info == cls._connection_info:
+        return
+      cls.hangup()
 
     client = spanner.Client(project=project, credentials=credentials)
     instance = client.instance(instance)
 
     if create_ddl is not None:
-      cls._connection = instance.database(database, ddl_statements=create_ddl)
+      cls._spanner_connection = instance.database(
+          database, ddl_statements=create_ddl)
       operation = cls._connection.create()
       operation.result()
     else:
-      cls._connection = instance.database(database)
+      cls._spanner_connection = instance.database(database)
 
     cls._connection_info = connection_info
 
   @classmethod
-  def _database_connection(cls):
-    assert cls._connection is not None
-    return cls._connection
+  def _connection(cls):
+    assert cls._spanner_connection is not None
+    return cls._spanner_connection
 
   @classmethod
   def hangup(cls):
-    cls._connection = None
+    cls._spanner_connection = None
     cls._connection_info = None
 
   @classmethod
   def update_schema(cls, change):
-    operation = cls._database_connection().update_ddl([change])
+    operation = cls._connection().update_ddl([change])
     operation.result()

@@ -82,8 +82,8 @@ class SpannerWriteApi(abc.ABC):
 class SpannerApi(SpannerReadApi, SpannerWriteApi):
   """Class that handles reading from and writing to Spanner tables."""
 
-  _spanner_connection = None
   _connection_info = None
+  _spanner_connection = None
 
   @classmethod
   def _connection(cls):
@@ -95,17 +95,17 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
   def connect(cls, project, instance, database, credentials=None):
     """Connects to the specified Spanner database."""
     connection_info = (project, instance, database, credentials)
-    if cls._connection is not None:
+    if cls._spanner_connection is not None:
       if connection_info == cls._connection_info:
         return
       cls.hangup()
 
     client = spanner.Client(project=project, credentials=credentials)
     instance = client.instance(instance)
-    cls._connection = instance.database(database)
+    cls._spanner_connection = instance.database(database)
     cls._connection_info = connection_info
 
   @classmethod
   def hangup(cls):
-    cls._connection = None
+    cls._spanner_connection = None
     cls._connection_info = None
