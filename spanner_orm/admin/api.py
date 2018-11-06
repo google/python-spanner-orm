@@ -15,11 +15,12 @@
 """Class that handles API calls to Spanner that deal with table metadata."""
 
 from spanner_orm import api
+from spanner_orm import error
 
 from google.cloud import spanner
 
 
-class SpannerAdminApi(api.TableReadApi):
+class SpannerAdminApi(api.SpannerReadApi):
   """Manages table schema information on Spanner."""
 
   _connection_info = None
@@ -54,7 +55,8 @@ class SpannerAdminApi(api.TableReadApi):
 
   @classmethod
   def _connection(cls):
-    assert cls._spanner_connection is not None
+    if not cls._spanner_connection:
+      raise error.SpannerError('Not connected to spanner')
     return cls._spanner_connection
 
   @classmethod

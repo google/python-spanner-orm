@@ -17,6 +17,7 @@
 import abc
 
 from spanner_orm import condition
+from spanner_orm import error
 
 
 class SpannerQuery(abc.ABC):
@@ -25,22 +26,15 @@ class SpannerQuery(abc.ABC):
   def __init__(self, model, conditions):
     self._model = model
     self._conditions = conditions
-    self._parameters = None
-    self._sql = None
-    self._types = None
-
     self._build()
 
   def parameters(self):
-    assert self._sql is not None
     return self._parameters
 
   def sql(self):
-    assert self._sql is not None
     return self._sql
 
   def types(self):
-    assert self._sql is not None
     return self._types
 
   @abc.abstractmethod
@@ -76,12 +70,15 @@ class SpannerQuery(abc.ABC):
 
   @abc.abstractmethod
   def _select(self):
+    """Processes the SELECT segment of the SQL query."""
     pass
 
   def _from(self):
+    """Processes the FROM segment of the SQL query."""
     return (' FROM {}'.format(self._model.table()), {}, {})
 
   def _where(self):
+    """Processes the WHERE segment of the SQL query."""
     sql, sql_parts, parameters, types = '', [], {}, {}
     wheres = self._segments(condition.Segment.WHERE)
     for where in wheres:
@@ -93,10 +90,13 @@ class SpannerQuery(abc.ABC):
     return (sql, parameters, types)
 
   def _order(self):
+    """Processes the ORDER BY segment of the SQL query."""
     sql, parameters, types = '', {}, {}
     orders = self._segments(condition.Segment.ORDER_BY)
     if orders:
-      assert len(orders) == 1
+      if len(orders) != 1:
+        raise error.SpannerError(
+            'Only one order condition may be specified')
       order = orders[0]
       sql = ' ' + order.sql()
       parameters = order.params()
@@ -104,10 +104,13 @@ class SpannerQuery(abc.ABC):
     return (sql, parameters, types)
 
   def _limit(self):
+    """Processes the LIMIT segment of the SQL query."""
     sql, parameters, types = '', {}, {}
     limits = self._segments(condition.Segment.LIMIT)
     if limits:
-      assert len(limits) == 1
+      if len(limits) != 1:
+        raise error.SpannerError(
+            'Only one limit condition may be specified')
       limit = limits[0]
       sql = ' ' + limit.sql()
       parameters = limit.params()
@@ -116,7 +119,10 @@ class SpannerQuery(abc.ABC):
 
   @staticmethod
   def _update_unique(to_update, new_dict):
-    assert to_update.keys().isdisjoint(new_dict)
+    if not to_update.keys().isdisjoint(new_dict):
+      raise error.SpannerError(
+          'Only one condition per field is currently supported')
+
     to_update.update(new_dict)
 
 
@@ -124,7 +130,9 @@ class CountQuery(SpannerQuery):
   """Handles COUNT Spanner queries."""
 
   def _select(self):
-    assert not self._segments(condition.Segment.JOIN)
+    if self._segments(condition.Segment.JOIN):
+      raise error.SpannerError(
+          'Includes conditions are not allowed for count queries')
     return ('SELECT COUNT(*)', {}, {})
 
   def parse_results(self, results):

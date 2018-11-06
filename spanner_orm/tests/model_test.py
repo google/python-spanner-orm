@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
-from datetime import timezone
+import datetime
 import unittest
 
+from spanner_orm import error
 from spanner_orm.tests import models
 
 
 class ModelTest(unittest.TestCase):
 
   def test_set_attr_item(self):
-    timestamp = datetime.now(tz=timezone.utc)
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     string_array = ['foo', 'bar']
 
     test_model = models.UnittestModel({'int_': 0, 'string': ''})
@@ -56,29 +56,29 @@ class ModelTest(unittest.TestCase):
 
   def test_cannot_set_invalid_type(self):
     test_model = models.UnittestModel({'int_': 0, 'string': ''})
-    with self.assertRaises(AssertionError):
+    with self.assertRaises(error.SpannerError):
       test_model.int_2 = 'foo'
 
-    with self.assertRaises(AssertionError):
+    with self.assertRaises(error.SpannerError):
       test_model.string_2 = 5
 
-    with self.assertRaises(AssertionError):
+    with self.assertRaises(error.SpannerError):
       test_model.string_array = 'foo'
 
-    with self.assertRaises(AssertionError):
+    with self.assertRaises(error.SpannerError):
       test_model.timestamp = 5
 
   def test_id(self):
     primary_key = {'string': 'foo', 'int_': 5}
     all_data = primary_key.copy()
     all_data.update({
-        'timestamp': datetime.now(tz=timezone.utc),
+        'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
         'string_array': ['foo', 'bar']
     })
     test_model = models.UnittestModel(all_data)
     self.assertEqual(test_model.id(), primary_key)
 
-    with self.assertRaises(AssertionError):
+    with self.assertRaises(error.SpannerError):
       models.UnittestModel({})
 
   def test_changes(self):

@@ -19,6 +19,7 @@ import copy
 
 from spanner_orm import api
 from spanner_orm import condition
+from spanner_orm import error
 from spanner_orm import query
 
 from google.cloud import spanner
@@ -34,7 +35,6 @@ class Model(abc.ABC):
   # Table schema class methods
   @classmethod
   def columns(cls):
-    assert isinstance(cls.schema(), dict)
     return set(cls.schema())
 
   @staticmethod
@@ -73,7 +73,11 @@ class Model(abc.ABC):
   # Instance methods
   def __init__(self, values, persisted=False):
     # Ensure that we have the primary index keys (unique id) set for all objects
-    assert not set(self.primary_index_keys()) - set(values.keys())
+    missing_keys = set(self.primary_index_keys()) - set(values.keys())
+    if missing_keys:
+      raise error.SpannerError(
+          'All primary keys must be specified. Missing: {keys}'.format(
+              keys=missing_keys))
 
     self.start_values = {
         key: copy.copy(value)
@@ -81,7 +85,10 @@ class Model(abc.ABC):
         if key in self.columns() and value is not None
     }
     for name, value in self.start_values.items():
-      self._validate(name, value)
+      try:
+        self._validate(name, value)
+      except AssertionError as ex:
+        raise error.SpannerError(*ex.args)
     self.values = copy.deepcopy(self.start_values)
     self._persisted = persisted
 
@@ -101,7 +108,10 @@ class Model(abc.ABC):
     if name in self.primary_index_keys():
       raise AttributeError(name)
     elif name in self.schema():
-      self._validate(name, value)
+      try:
+        self._validate(name, value)
+      except AssertionError as ex:
+        raise error.SpannerError(ex.args)
       self.values[name] = copy.copy(value)
     else:
       super().__setattr__(name, value)
@@ -110,7 +120,10 @@ class Model(abc.ABC):
     if name in self.primary_index_keys():
       raise KeyError(name)
     elif name in self.schema():
-      self._validate(name, value)
+      try:
+        self._validate(name, value)
+      except AssertionError as ex:
+        raise error.SpannerError(ex.args)
       self.values[name] = copy.copy(value)
     else:
       raise KeyError(name)
@@ -176,7 +189,9 @@ class Model(abc.ABC):
     # Make sure that all primary keys were included (sometimes multiple
     # primary keys for a table)
     index_keys = list(cls.primary_index_keys())
-    assert set(kwargs.keys()) == set(index_keys)
+    if set(kwargs.keys()) != set(index_keys):
+      raise error.SpannerError(
+          'All primary index keys must be specified')
 
     # Keys need to be in specfic order
     ordered_values = [kwargs[column] for column in index_keys]

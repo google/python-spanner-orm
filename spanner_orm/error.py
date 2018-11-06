@@ -12,23 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base model for schemas."""
-
-from spanner_orm import error
-from spanner_orm import model
-from spanner_orm.admin import api
+"""Generic error to be returned to calling code."""
 
 
-class Schema(model.Model):
-  """Base model for schemas. Disallows writes and uses AdminApi for reads."""
-
-  @staticmethod
-  def _execute_read(db_api, transaction, args):
-    if transaction is not None:
-      return db_api(transaction, *args)
-    else:
-      return api.SpannerAdminApi.run_read_only(db_api, *args)
-
-  @staticmethod
-  def _execute_write():
-    raise error.SpannerError('Writes not allowed for schema tables')
+class SpannerError(Exception):
+  pass

@@ -14,9 +14,10 @@
 # limitations under the License.
 """Retrieves table metadata from Spanner."""
 
-from collections import defaultdict
+import collections
 
 from spanner_orm import condition
+from spanner_orm import error
 from spanner_orm import model
 from spanner_orm import update
 from spanner_orm.admin import api
@@ -30,7 +31,10 @@ class DatabaseMetadata(object):
 
   @classmethod
   def column_update(cls, schema_change):
-    assert isinstance(schema_change, update.ColumnUpdate)
+    """Handles an ALTER TABLE schema update."""
+    if not isinstance(schema_change, update.ColumnUpdate):
+      raise error.SpannerError(
+          'column_update must be provided a ColumnUpdate')
     klass = cls.models()[schema_change.table()]
     schema_change.validate(klass)
 
@@ -38,16 +42,24 @@ class DatabaseMetadata(object):
 
   @classmethod
   def create_table(cls, schema_change):
-    assert isinstance(schema_change, update.CreateTableUpdate)
+    """Handles a CREATE TABLE schema update."""
+    if not isinstance(schema_change, update.CreateTableUpdate):
+      raise error.SpannerError(
+          'create_table must be provided a CreateTableUpdate')
     all_models = cls.models()
-    assert schema_change.table() not in all_models
+    if schema_change.table() in all_models:
+      raise error.SpannerError(
+          'Cannot create a table that already exists')
     schema_change.validate()
 
     api.SpannerAdminApi.update_schema(schema_change.ddl())
 
   @classmethod
   def index_update(cls, schema_change):
-    assert isinstance(schema_change, update.IndexUpdate)
+    """Handles a CREATE INDEX or DROP INDEX schema update."""
+    if not isinstance(schema_change, update.IndexUpdate):
+      raise error.SpannerError(
+          'index_update must be provided a IndexUpdate')
     klass = cls.models()[schema_change.table()]
     schema_change.validate(klass)
 
@@ -80,7 +92,7 @@ class DatabaseMetadata(object):
   @classmethod
   def _tables(cls, transaction=None):
     """Compiles table information from column schema."""
-    tables = defaultdict(dict)
+    tables = collections.defaultdict(dict)
     schemas = column.ColumnSchema.where(
         transaction, condition.EqualityCondition('table_catalog', ''),
         condition.EqualityCondition('table_schema', ''))
@@ -102,7 +114,7 @@ class DatabaseMetadata(object):
         condition.OrderByCondition(('ordinal_position',
                                     condition.OrderType.ASC)))
 
-    index_columns = defaultdict(list)
+    index_columns = collections.defaultdict(list)
     for schema in index_column_schemas:
       key = (schema.table_name, schema.index_name)
       index_columns[key].append(schema.column_name)
@@ -110,7 +122,7 @@ class DatabaseMetadata(object):
     index_schemas = index.IndexSchema.where(
         transaction, condition.EqualityCondition('table_catalog', ''),
         condition.EqualityCondition('table_schema', ''))
-    indexes = defaultdict(dict)
+    indexes = collections.defaultdict(dict)
     for schema in index_schemas:
       indexes[schema.table_name][schema.index_name] = {
           'columns': index_columns[(schema.table_name, schema.index_name)],
