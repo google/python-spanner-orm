@@ -51,13 +51,27 @@ class SqlBodyTest(unittest.TestCase):
     self.assertEqual(types, {column: field.Integer.grpc_type()})
 
   def test_query_limit(self):
-    key, value = (condition.LimitCondition.KEY, 2)
+    key, value = ('limit', 2)
     query_ = query.SelectQuery(models.UnittestModel, [condition.limit(value)])
 
     sql, params, types = query_._limit()
     self.assertEqual(sql, ' LIMIT @limit')
     self.assertEqual(params, {key: value})
     self.assertEqual(types, {key: field.Integer.grpc_type()})
+
+    query_ = query.SelectQuery(models.UnittestModel, [])
+    self.assertEqual(query_._limit(), ('', {}, {}))
+
+  def test_query_limit_offset(self):
+    limit_key, limit = 'limit', 2
+    offset_key, offset = 'offset', 5
+    query_ = query.SelectQuery(models.UnittestModel,
+                               [condition.limit(limit, offset=offset)])
+
+    sql, params, types = query_._limit()
+    self.assertEqual(sql, ' LIMIT @limit OFFSET @offset')
+    self.assertEqual(params, {limit_key: limit, offset_key: offset})
+    self.assertEqual(types, {limit_key: field.Integer.grpc_type(), offset_key: field.Integer.grpc_type()})
 
     query_ = query.SelectQuery(models.UnittestModel, [])
     self.assertEqual(query_._limit(), ('', {}, {}))
