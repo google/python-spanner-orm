@@ -32,7 +32,7 @@ class SpannerReadApi(abc.ABC):
   @classmethod
   def run_read_only(cls, method, *args, **kwargs):
     """Wraps read-only queries in a read transaction."""
-    with cls._connection().snapshot() as snapshot:
+    with cls._connection().snapshot(multi_use=True) as snapshot:
       return method(snapshot, *args, **kwargs)
 
   # Read methods
