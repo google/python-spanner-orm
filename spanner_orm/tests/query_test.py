@@ -50,7 +50,7 @@ class SqlBodyTest(unittest.TestCase):
     self.assertEqual({column: value}, parameters)
     self.assertEqual(types, {column: field.Integer.grpc_type()})
 
-  def test_query__limit(self):
+  def test_query_limit(self):
     key, value = (condition.LimitCondition.KEY, 2)
     query_ = query.SelectQuery(models.UnittestModel, [condition.limit(value)])
 

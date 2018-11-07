@@ -52,11 +52,7 @@ class ApiTest(unittest.TestCase):
 
   def mock_connection(self, client):
     connection = mock.Mock()
-    instance = mock.Mock()
-    instance.database.return_value = connection
-    spanner_client = mock.Mock()
-    spanner_client.instance.return_value = instance
-    client.return_value = spanner_client
+    client().instance().database.return_value = connection
     return connection
 
 
