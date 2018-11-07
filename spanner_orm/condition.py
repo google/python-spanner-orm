@@ -57,8 +57,7 @@ class Condition(abc.ABC):
 
   def sql(self):
     if not self.model:
-      raise error.SpannerError(
-          'Condition must be bound before sql is called')
+      raise error.SpannerError('Condition must be bound before sql is called')
     return self._sql()
 
   @abc.abstractmethod
@@ -67,8 +66,7 @@ class Condition(abc.ABC):
 
   def types(self):
     if not self.model:
-      raise error.SpannerError(
-          'Condition must be bound before types is called')
+      raise error.SpannerError('Condition must be bound before types is called')
     return self._types()
 
   @abc.abstractmethod
@@ -164,27 +162,40 @@ class IncludesCondition(Condition):
 
 class LimitCondition(Condition):
   """Used to specify a LIMIT condition in a Spanner query"""
-  KEY = 'limit'
+  LIMIT_KEY = 'limit'
+  OFFSET_KEY = 'offset'
 
-  def __init__(self, value):
+  def __init__(self, limit, offset=0):
     super().__init__()
-    if not isinstance(value, int):
-      raise error.SpannerError(
-          '{value} is not of type int'.format(value=value))
-    self.value = value
+    for value in [limit, offset]:
+      if not isinstance(value, int):
+        raise error.SpannerError(
+            '{value} is not of type int'.format(value=value))
+
+    self.limit = limit
+    self.offset = offset
 
   def _params(self):
-    return {self.KEY: self.value}
+    params = {self.LIMIT_KEY: self.limit}
+    if self.offset:
+      params[self.OFFSET_KEY] = self.offset
+    return params
 
   @staticmethod
   def segment():
     return Segment.LIMIT
 
   def _sql(self):
-    return 'LIMIT @{key}'.format(key=self.KEY)
+    if self.offset:
+      return 'LIMIT @{limit} OFFSET @{offset}'.format(
+          limit=self.LIMIT_KEY, offset=self.OFFSET_KEY)
+    return 'LIMIT @{limit}'.format(limit=self.LIMIT_KEY)
 
   def _types(self):
-    return {self.KEY: type_pb2.Type(code=type_pb2.INT64)}
+    types = {self.LIMIT_KEY: type_pb2.Type(code=type_pb2.INT64)}
+    if self.offset:
+      types[self.OFFSET_KEY] = type_pb2.Type(code=type_pb2.INT64)
+    return types
 
   def _validate(self, model):
     # Validation is independent of model for LIMIT
@@ -422,8 +433,8 @@ def less_than_or_equal_to(column, value):
   return LessThanOrEqualCondition(column, value)
 
 
-def limit(value):
-  return LimitCondition(value)
+def limit(value, offset=0):
+  return LimitCondition(value, offset=offset)
 
 
 def not_equal_to(column, value):
