@@ -23,17 +23,13 @@ class ColumnSchema(schema.Schema):
   """Model for interacting with Spanner column schema table."""
 
   __table__ = 'information_schema.columns'
-  table_catalog = field.Field(field.String)
-  table_schema = field.Field(field.String)
-  table_name = field.Field(field.String)
-  column_name = field.Field(field.String)
+  table_catalog = field.Field(field.String, primary_key=True)
+  table_schema = field.Field(field.String, primary_key=True)
+  table_name = field.Field(field.String, primary_key=True)
+  column_name = field.Field(field.String, primary_key=True)
   ordinal_position = field.Field(field.Integer)
   is_nullable = field.Field(field.String)
   spanner_type = field.Field(field.String)
-
-  @staticmethod
-  def primary_index_keys():
-    return ['table_catalog', 'table_schema', 'table_name', 'column_name']
 
   def nullable(self):
     return self.is_nullable == 'YES'

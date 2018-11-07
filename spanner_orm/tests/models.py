@@ -22,13 +22,9 @@ from spanner_orm import relationship
 class ChildTestModel(model.Model):
   """Model class for testing relationships"""
 
-  @staticmethod
-  def primary_index_keys():
-    return ['parent_key', 'child_key']
-
   __table__ = 'ChildTestModel'
-  parent_key = field.Field(field.String)
-  child_key = field.Field(field.String)
+  parent_key = field.Field(field.String, primary_key=True)
+  child_key = field.Field(field.String, primary_key=True)
   parent = relationship.Relationship(
       'spanner_orm.tests.models.SmallTestModel', {'parent_key': 'key'},
       single=True)
@@ -39,12 +35,8 @@ class ChildTestModel(model.Model):
 class SmallTestModel(model.Model):
   """Model class used for testing"""
 
-  @staticmethod
-  def primary_index_keys():
-    return ['key']
-
   __table__ = 'SmallTestModel'
-  key = field.Field(field.String)
+  key = field.Field(field.String, primary_key=True)
   value_1 = field.Field(field.String)
   value_2 = field.Field(field.String, nullable=True)
 
@@ -52,14 +44,10 @@ class SmallTestModel(model.Model):
 class UnittestModel(model.Model):
   """Model class used for model testing"""
 
-  @staticmethod
-  def primary_index_keys():
-    return ['int_', 'string']
-
   __table__ = 'table'
-  int_ = field.Field(field.Integer)
+  int_ = field.Field(field.Integer, primary_key=True)
   int_2 = field.Field(field.Integer, nullable=True)
-  string = field.Field(field.String)
+  string = field.Field(field.String, primary_key=True)
   string_2 = field.Field(field.String, nullable=True)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)

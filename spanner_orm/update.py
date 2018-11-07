@@ -18,7 +18,7 @@ import abc
 
 from spanner_orm import condition
 from spanner_orm import field
-from spanner_orm.schemas import index_column
+from spanner_orm import schemas
 
 
 class SchemaUpdate(abc.ABC):
@@ -76,7 +76,7 @@ class ColumnUpdate(SchemaUpdate):
   def _validate_drop_column(self, model):
     assert self._column in model.schema()
     # Verify no indices exist on the column we're trying to drop
-    num_index_columns = index_column.IndexColumnSchema.count(
+    num_index_columns = schemas.IndexColumnSchema.count(
         None, condition.EqualityCondition('column_name', self._column),
         condition.EqualityCondition('table_name', self._table))
     assert num_index_columns == 0

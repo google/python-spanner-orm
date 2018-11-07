@@ -23,9 +23,10 @@ from google.cloud.spanner_v1.proto import type_pb2
 class Field(object):
   """Represents a column in a table as a field in a model."""
 
-  def __init__(self, field_type, nullable=False):
+  def __init__(self, field_type, nullable=False, primary_key=False):
     self._type = field_type
     self._nullable = nullable
+    self._primary_key = primary_key
 
   def ddl(self):
     if self._nullable:
@@ -38,11 +39,11 @@ class Field(object):
   def grpc_type(self):
     return self._type.grpc_type()
 
-  def grpc_list_type(self):
-    return self._type.grpc_list_type()
-
   def nullable(self):
     return self._nullable
+
+  def primary_key(self):
+    return self._primary_key
 
   def validate(self, value):
     if value is None:
@@ -63,11 +64,6 @@ class FieldType(abc.ABC):
   @abc.abstractmethod
   def grpc_type():
     raise NotImplementedError
-
-  @classmethod
-  def grpc_list_type(cls):
-    return type_pb2.Type(
-        code=type_pb2.ARRAY, array_element_type=cls.grpc_type())
 
   @staticmethod
   @abc.abstractmethod

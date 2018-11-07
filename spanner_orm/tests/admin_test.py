@@ -16,10 +16,8 @@
 import unittest
 from unittest import mock
 
+from spanner_orm import schemas
 from spanner_orm.admin import metadata
-from spanner_orm.schemas import column
-from spanner_orm.schemas import index
-from spanner_orm.schemas import index_column
 from spanner_orm.tests import models
 
 
@@ -27,7 +25,7 @@ class AdminTest(unittest.TestCase):
 
   def smalltestmodel_columns(self):
     columns, iteration = [], 1
-    for row in models.SmallTestModel.meta.schema.values():
+    for row in models.SmallTestModel.schema().values():
       columns.append({
           'table_catalog': '',
           'table_schema': '',
@@ -38,11 +36,11 @@ class AdminTest(unittest.TestCase):
           'spanner_type': row.field_type().ddl()
       })
       iteration += 1
-    return [column.ColumnSchema(row) for row in columns]
+    return [schemas.ColumnSchema(row) for row in columns]
 
   def smalltestmodel_index_columns(self):
     columns = []
-    for row in models.SmallTestModel.primary_index_keys():
+    for row in models.SmallTestModel.primary_keys():
       columns.append({
           'table_catalog': '',
           'table_schema': '',
@@ -50,11 +48,11 @@ class AdminTest(unittest.TestCase):
           'index_name': 'PRIMARY_KEY',
           'column_name': row
       })
-    return [index_column.IndexColumnSchema(row) for row in columns]
+    return [schemas.IndexColumnSchema(row) for row in columns]
 
   def smalltestmodel_indexes(self):
     return [
-        index.IndexSchema({
+        schemas.IndexSchema({
             'table_catalog': '',
             'table_schema': '',
             'table_name': models.SmallTestModel.table(),
@@ -83,8 +81,8 @@ class AdminTest(unittest.TestCase):
                        model.schema()[row].field_type())
       self.assertEqual(meta.schema()[row].nullable(),
                        model.schema()[row].nullable())
-    self.assertEqual(meta.primary_index_keys(),
-                     models.SmallTestModel.primary_index_keys())
+    self.assertEqual(meta.primary_keys(),
+                     models.SmallTestModel.primary_keys())
 
 
 if __name__ == '__main__':
