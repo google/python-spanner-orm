@@ -17,6 +17,8 @@
 import abc
 import enum
 
+from spanner_orm import error
+
 from google.cloud.spanner_v1.proto import type_pb2
 
 
@@ -39,7 +41,9 @@ class Condition(abc.ABC):
     self.model = model
 
   def params(self):
-    assert self.model
+    if not self.model:
+      raise error.SpannerError(
+          'Condition must be bound before params is called')
     return self._params()
 
   @abc.abstractmethod
@@ -52,7 +56,9 @@ class Condition(abc.ABC):
     raise NotImplementedError
 
   def sql(self):
-    assert self.model
+    if not self.model:
+      raise error.SpannerError(
+          'Condition must be bound before sql is called')
     return self._sql()
 
   @abc.abstractmethod
@@ -60,7 +66,9 @@ class Condition(abc.ABC):
     pass
 
   def types(self):
-    assert self.model
+    if not self.model:
+      raise error.SpannerError(
+          'Condition must be bound before types is called')
     return self._types()
 
   @abc.abstractmethod
@@ -120,11 +128,15 @@ class IncludesCondition(Condition):
     self.relation = self.model.relations()[self.name]
 
   def conditions(self):
-    assert self.relation
+    if not self.relation:
+      raise error.SpannerError(
+          'Condition must be bound before conditions is called')
     return self.relation.conditions() + self._conditions
 
   def destination(self):
-    assert self.relation
+    if not self.relation:
+      raise error.SpannerError(
+          'Condition must be bound before destination is called')
     return self.relation.destination()
 
   def relation_name(self):
@@ -156,7 +168,9 @@ class LimitCondition(Condition):
 
   def __init__(self, value):
     super().__init__()
-    assert isinstance(value, int)
+    if not isinstance(value, int):
+      raise error.SpannerError(
+          '{value} is not of type int'.format(value=value))
     self.value = value
 
   def _params(self):
@@ -188,7 +202,9 @@ class OrderByCondition(Condition):
   def __init__(self, *orderings):
     super().__init__()
     for (_, order_type) in orderings:
-      assert isinstance(order_type, OrderType)
+      if not isinstance(order_type, OrderType):
+        raise error.SpannerError(
+            '{order} is not of type OrderType'.format(order=order_type))
     self.orderings = orderings
 
   def _params(self):

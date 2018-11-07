@@ -15,6 +15,9 @@
 """Class that handles API calls to Spanner."""
 
 import abc
+
+from spanner_orm import error
+
 from google.cloud import spanner
 
 
@@ -87,7 +90,8 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 
   @classmethod
   def _connection(cls):
-    assert cls._spanner_connection is not None, 'Not connected to Spanner'
+    if not cls._spanner_connection:
+      raise error.SpannerError('Not connected to spanner')
     return cls._spanner_connection
 
   # Spanner connection methods

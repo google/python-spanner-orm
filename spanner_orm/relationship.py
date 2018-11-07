@@ -17,6 +17,7 @@
 import importlib
 
 from spanner_orm import condition
+from spanner_orm import error
 from spanner_orm import model
 
 
@@ -50,8 +51,13 @@ class ModelRelationship(object):
     """Validates the dictionary of constraints and turns it into Conditions."""
     conditions = []
     for origin_column, destination_column in constraints.items():
-      assert origin_column in self._origin.schema()
-      assert destination_column in self._destination.schema()
+      if origin_column not in self._origin.schema():
+        raise error.SpannerError(
+            'Origin column must be present in origin model')
+
+      if destination_column not in self._destination.schema():
+        raise error.SpannerError(
+            'Destination column must be present in destination model')
       # This is backward from what you might imagine because the condition will
       # be processed from the context of the destination model
       conditions.append(
@@ -65,5 +71,7 @@ class ModelRelationship(object):
     path = '.'.join(parts[:-1])
     module = importlib.import_module(path)
     klass = getattr(module, parts[-1])
-    assert issubclass(klass, model.Model)
+    if not issubclass(klass, model.Model):
+      raise error.SpannerError(
+          '{model} is not a Model'.format(model=model_name))
     return klass

@@ -14,6 +14,7 @@
 # limitations under the License.
 """Model for interacting with Spanner column schema table."""
 
+from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.schemas import schema
 
@@ -50,5 +51,5 @@ class ColumnSchema(schema.Schema):
       if self.spanner_type == db_type.ddl() and self.nullable() == db_nullable:
         return db_type
 
-    raise AssertionError('No corresponding Type for {}'.format(
+    raise error.SpannerError('No corresponding Type for {}'.format(
         self.spanner_type))
