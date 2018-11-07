@@ -38,7 +38,7 @@ class SpannerQuery(abc.ABC):
     return self._types
 
   @abc.abstractmethod
-  def parse_results(self, results):
+  def process_results(self, results):
     pass
 
   def _segments(self, segment_type):
@@ -95,8 +95,7 @@ class SpannerQuery(abc.ABC):
     orders = self._segments(condition.Segment.ORDER_BY)
     if orders:
       if len(orders) != 1:
-        raise error.SpannerError(
-            'Only one order condition may be specified')
+        raise error.SpannerError('Only one order condition may be specified')
       order = orders[0]
       sql = ' ' + order.sql()
       parameters = order.params()
@@ -109,8 +108,7 @@ class SpannerQuery(abc.ABC):
     limits = self._segments(condition.Segment.LIMIT)
     if limits:
       if len(limits) != 1:
-        raise error.SpannerError(
-            'Only one limit condition may be specified')
+        raise error.SpannerError('Only one limit condition may be specified')
       limit = limits[0]
       sql = ' ' + limit.sql()
       parameters = limit.params()
@@ -135,7 +133,7 @@ class CountQuery(SpannerQuery):
           'Includes conditions are not allowed for count queries')
     return ('SELECT COUNT(*)', {}, {})
 
-  def parse_results(self, results):
+  def process_results(self, results):
     return results[0][0]
 
 
@@ -154,7 +152,7 @@ class SelectQuery(SpannerQuery):
     ]
     joins = self._segments(condition.Segment.JOIN)
     for join in joins:
-      subquery = _SelectSubQuery(join.destination(), join.conditions())
+      subquery = _SelectSubQuery(join.destination, join.conditions)
 
       self._update_unique(parameters, subquery.parameters())
       self._update_unique(types, subquery.types())
@@ -164,31 +162,25 @@ class SelectQuery(SpannerQuery):
         prefix=self._select_prefix(), columns=', '.join(columns)), parameters,
             types)
 
-  def parse_results(self, results):
-    models = []
-    joins = self._segments(condition.Segment.JOIN)
-    for result in results:
-      model, _ = self._parse_result(result, 0, self._model, joins)
-      models.append(model)
-    return models
+  def process_results(self, results):
+    return [self._process_row(result) for result in results]
 
-  def _parse_result(self, row, offset, from_model, joins):
+  def _process_row(self, row):
     """Parses a row of results from a Spanner query based on the conditions."""
-    values = {}
-    for column in from_model.columns():
-      values[column] = row[offset]
-      offset += 1
-    for join in joins:
-      subjoins = [
-          condition for condition in join.conditions()
-          if condition.segment() == condition.Segment.JOIN
-      ]
-
-      model, new_offset = self._parse_result(row, offset, join.destination(),
-                                             subjoins)
-      values[join.relation_name()] = model
-      offset = new_offset
-    return (from_model(values, persisted=True), offset)
+    values = dict(zip(self._model.columns(), row))
+    joins = self._segments(condition.Segment.JOIN)
+    join_values = row[len(self._model.columns()):]
+    for join, join_value in zip(joins, join_values):
+      subquery = _SelectSubQuery(join.destination, join.conditions)
+      models = subquery.process_results(join_value)
+      if join.single:
+        if len(models) > 1:
+          raise error.SpannerError(
+              'Multiple objects returned for relationship marked as single')
+        values[join.relation_name] = models[0] if models else None
+      else:
+        values[join.relation_name] = models
+    return self._model(values, persisted=True)
 
 
 class _SelectSubQuery(SelectQuery):

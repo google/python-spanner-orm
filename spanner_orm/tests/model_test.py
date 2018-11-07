@@ -29,7 +29,7 @@ class ModelTest(unittest.TestCase):
 
     test_model = models.UnittestModel({'int_': 0, 'string': ''})
     test_model.timestamp = timestamp
-    test_model['string_array'] = string_array
+    test_model.string_array = string_array
     self.assertEqual(
         test_model.values, {
             'int_': 0,
@@ -43,30 +43,24 @@ class ModelTest(unittest.TestCase):
     with self.assertRaises(AttributeError):
       test_model.int_ = 2
 
-    with self.assertRaises(KeyError):
-      test_model['string'] = 'foo'
-
-  def test_get_attr_item(self):
+  def test_get_attr(self):
     test_model = models.UnittestModel({'int_': 5, 'string': 'foo'})
     self.assertEqual(test_model.int_, 5)
-    self.assertEqual(test_model['int_'], 5)
     self.assertEqual(test_model.string, 'foo')
-    self.assertEqual(test_model['string'], 'foo')
     self.assertEqual(test_model.timestamp, None)
-    self.assertEqual(test_model['timestamp'], None)
 
   def test_cannot_set_invalid_type(self):
     test_model = models.UnittestModel({'int_': 0, 'string': ''})
-    with self.assertRaises(error.SpannerError):
+    with self.assertRaises(AttributeError):
       test_model.int_2 = 'foo'
 
-    with self.assertRaises(error.SpannerError):
+    with self.assertRaises(AttributeError):
       test_model.string_2 = 5
 
-    with self.assertRaises(error.SpannerError):
+    with self.assertRaises(AttributeError):
       test_model.string_array = 'foo'
 
-    with self.assertRaises(error.SpannerError):
+    with self.assertRaises(AttributeError):
       test_model.timestamp = 5
 
   def test_id(self):
@@ -118,6 +112,23 @@ class ModelTest(unittest.TestCase):
     self.assertEqual(models.SmallTestModel.key.field_type(), field.String)
     self.assertFalse(models.SmallTestModel.key.nullable())
     self.assertEqual(models.SmallTestModel.key.name, 'key')
+
+  def test_relation_get(self):
+    test_model = models.ChildTestModel({
+        'parent_key': 'parent',
+        'child_key': 'child',
+        'parent': []
+    })
+    self.assertEqual(test_model.parent, [])
+
+  def test_error_on_unretrieved_relation_get(self):
+    test_model = models.ChildTestModel({
+        'parent_key': 'parent',
+        'child_key': 'child'
+    })
+    with self.assertRaises(AttributeError):
+      _ = test_model.parent
+
 
 if __name__ == '__main__':
   unittest.main()

@@ -22,15 +22,6 @@ from spanner_orm import relationship
 class ChildTestModel(model.Model):
   """Model class for testing relationships"""
 
-  @classmethod
-  def relations(cls):
-    return {
-        'parent':
-            relationship.ModelRelationship(
-                cls, 'spanner_orm.tests.models.SmallTestModel',
-                {'parent_key': 'key'})
-    }
-
   @staticmethod
   def primary_index_keys():
     return ['parent_key', 'child_key']
@@ -38,6 +29,11 @@ class ChildTestModel(model.Model):
   __table__ = 'ChildTestModel'
   parent_key = field.Field(field.String)
   child_key = field.Field(field.String)
+  parent = relationship.Relationship(
+      'spanner_orm.tests.models.SmallTestModel', {'parent_key': 'key'},
+      single=True)
+  parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
+                                      {'parent_key': 'key'})
 
 
 class SmallTestModel(model.Model):

@@ -21,47 +21,63 @@ from spanner_orm import error
 from spanner_orm import model
 
 
-class ModelRelationship(object):
+class Relationship(object):
   """Helps define a foreign key relationship between two models."""
 
-  def __init__(self, origin, destination_name, constraints, is_parent=False):
+  def __init__(self,
+               destination_name,
+               constraints,
+               is_parent=False,
+               single=False):
     """Creates a ModelRelationship.
 
     Args:
-      origin: Model that the relationship originates from
       destination_name: Fully qualified class name of the destination model
-      constraints: Maps origin columns to destination columns
+      constraints: Dictionary where the keys are names of columns from the
+        origin model and the value for a key is the name of the column in the
+        destination model that the key should be equal to in order for there to
+        be a relationship from an origin model to the destination
       is_parent: True if the destination is a parent table of the origin
+      single: True if the destination should be treated as a single object
+        instead of a list of objects
     """
-    self._origin = origin
-    self._destination = self._load_model(destination_name)
-    self._conditions = self._parse_constraints(constraints)
+    self._destination_name = destination_name
+    self._destination = None
+    self._constraints = constraints
     self._is_parent = is_parent
+    self._single = single
+    self.origin = None
 
+  @property
   def conditions(self):
-    return self._conditions
+    assert self.origin, 'Origin must be set before conditions is called'
+    return self._parse_constraints()
 
+  @property
   def destination(self):
+    if not self._destination:
+      self._destination = self._load_model(self._destination_name)
     return self._destination
 
-  def origin(self):
-    return self._origin
+  @property
+  def single(self):
+    return self._single
 
-  def _parse_constraints(self, constraints):
+  def _parse_constraints(self):
     """Validates the dictionary of constraints and turns it into Conditions."""
     conditions = []
-    for origin_column, destination_column in constraints.items():
-      if origin_column not in self._origin.schema():
+    for origin_column, destination_column in self._constraints.items():
+      if origin_column not in self.origin.schema():
         raise error.SpannerError(
             'Origin column must be present in origin model')
 
-      if destination_column not in self._destination.schema():
+      if destination_column not in self.destination.schema():
         raise error.SpannerError(
             'Destination column must be present in destination model')
       # This is backward from what you might imagine because the condition will
       # be processed from the context of the destination model
       conditions.append(
-          condition.ColumnsEqualCondition(destination_column, self._origin,
+          condition.ColumnsEqualCondition(destination_column, self.origin,
                                           origin_column))
 
     return conditions
