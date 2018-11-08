@@ -18,6 +18,7 @@ import logging
 import unittest
 from unittest import mock
 
+from absl.testing import parameterized
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
@@ -31,22 +32,23 @@ def now():
   return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
-class SqlBodyTest(unittest.TestCase):
+class QueryTest(parameterized.TestCase):
 
   @mock.patch('spanner_orm.api.SpannerApi')
-  def test_where(self, mock_db):
+  def test_where(self, spanner_api):
     models.UnittestModel.where_equal(True, int_=3)
-    ((_, sql, parameters, types), _) = mock_db.sql_query.call_args
+    (_, sql, parameters, types), _ = spanner_api.sql_query.call_args
+
     expected_sql = 'SELECT .* FROM table WHERE table.int_ = @int_0'
     self.assertRegex(sql, expected_sql)
-    self.assertEqual({'int_0': 3}, parameters)
+    self.assertEqual(parameters, {'int_0': 3})
     self.assertEqual(types, {'int_0': field.Integer.grpc_type()})
 
   @mock.patch('spanner_orm.api.SpannerApi')
-  def test_count(self, mock_db):
-    column, value = ('int_', 3)
-    models.UnittestModel.count_equal(True, **{column: value})
-    ((_, sql, parameters, types), _) = mock_db.sql_query.call_args
+  def test_count(self, spanner_api):
+    column, value = 'int_', 3
+    models.UnittestModel.count_equal(True, int_=3)
+    (_, sql, parameters, types), _ = spanner_api.sql_query.call_args
 
     column_key = '{}0'.format(column)
     expected_sql = r'SELECT COUNT\(\*\) FROM table WHERE table.{} = @{}'.format(
@@ -55,124 +57,120 @@ class SqlBodyTest(unittest.TestCase):
     self.assertEqual({column_key: value}, parameters)
     self.assertEqual(types, {column_key: field.Integer.grpc_type()})
 
+  def select(self, *conditions):
+    return query.SelectQuery(models.UnittestModel, list(conditions))
+
   def test_query_limit(self):
-    key, value = ('limit0', 2)
-    query_ = query.SelectQuery(models.UnittestModel, [condition.limit(value)])
+    key, value = 'limit0', 2
+    select_query = self.select(condition.limit(value))
 
-    self.assertTrue(query_.sql().endswith(' LIMIT @{}'.format(key)))
-    self.assertEqual(query_.parameters(), {key: value})
-    self.assertEqual(query_.types(), {key: field.Integer.grpc_type()})
+    self.assertTrue(select_query.sql().endswith(' LIMIT @{}'.format(key)))
+    self.assertEqual(select_query.parameters(), {key: value})
+    self.assertEqual(select_query.types(), {key: field.Integer.grpc_type()})
 
-    query_ = query.SelectQuery(models.UnittestModel, [])
-    self.assertEqual(query_._limit(), ('', {}, {}))
+    select_query = self.select()
+    self.assertNotRegex(select_query.sql(), 'LIMIT')
 
   def test_query_limit_offset(self):
     limit_key, limit = 'limit0', 2
     offset_key, offset = 'offset0', 5
-    query_ = query.SelectQuery(models.UnittestModel,
-                               [condition.limit(limit, offset=offset)])
+    select_query = self.select(condition.limit(limit, offset=offset))
 
-    self.assertTrue(query_.sql().endswith(' LIMIT @{} OFFSET @{}'.format(
+    self.assertTrue(select_query.sql().endswith(' LIMIT @{} OFFSET @{}'.format(
         limit_key, offset_key)))
-    self.assertEqual(query_.parameters(), {
+    self.assertEqual(select_query.parameters(), {
         limit_key: limit,
         offset_key: offset
     })
-    self.assertEqual(query_.types(), {
+    self.assertEqual(select_query.types(), {
         limit_key: field.Integer.grpc_type(),
         offset_key: field.Integer.grpc_type()
     })
 
-    query_ = query.SelectQuery(models.UnittestModel, [])
-    self.assertEqual(query_._limit(), ('', {}, {}))
-
-  def test_query__order_by(self):
+  def test_query_order_by(self):
     order = ('int_', condition.OrderType.DESC)
-    query_ = query.SelectQuery(models.UnittestModel,
-                               [condition.order_by(order)])
+    select_query = self.select(condition.order_by(order))
 
-    self.assertTrue(query_.sql().endswith(' ORDER BY table.int_ DESC'))
-    self.assertEqual(query_.parameters(), {})
-    self.assertEqual(query_.types(), {})
+    self.assertTrue(select_query.sql().endswith(' ORDER BY table.int_ DESC'))
+    self.assertEqual(select_query.parameters(), {})
+    self.assertEqual(select_query.types(), {})
 
-    query_ = query.SelectQuery(models.UnittestModel, [])
-    self.assertEqual(query_._order(), ('', {}, {}))
+    select_query = self.select()
+    self.assertNotRegex(select_query.sql(), 'ORDER BY')
 
-  def test_query__where_comparison(self):
-    tuples = [('int_', 5, field.Integer.grpc_type()),
-              ('string', 'foo', field.String.grpc_type()),
-              ('timestamp', now(), field.Timestamp.grpc_type())]
-    conditions = [
+  @parameterized.parameters(('int_', 5, field.Integer.grpc_type()),
+                            ('string', 'foo', field.String.grpc_type()),
+                            ('timestamp', now(), field.Timestamp.grpc_type()))
+  def test_query_where_comparison(self, column, value, grpc_type):
+    condition_generators = [
         condition.greater_than, condition.not_less_than, condition.less_than,
         condition.not_greater_than, condition.equal_to, condition.not_equal_to
     ]
-    for column, value, type_ in tuples:
-      for condition_generator in conditions:
-        current_condition = condition_generator(column, value)
-        query_ = query.SelectQuery(models.UnittestModel, [current_condition])
+    for condition_generator in condition_generators:
+      current_condition = condition_generator(column, value)
+      select_query = self.select(current_condition)
 
-        column_key = '{}0'.format(column)
-        expected_where = ' WHERE table.{} {} @{}'.format(
-            column, current_condition.operator(), column_key)
-        self.assertTrue(query_.sql().endswith(expected_where))
-        self.assertEqual(query_.parameters(), {column_key: value})
-        self.assertEqual(query_.types(), {column_key: type_})
+      column_key = '{}0'.format(column)
+      expected_where = ' WHERE table.{} {} @{}'.format(
+          column, current_condition.operator(), column_key)
+      self.assertTrue(select_query.sql().endswith(expected_where))
+      self.assertEqual(select_query.parameters(), {column_key: value})
+      self.assertEqual(select_query.types(), {column_key: grpc_type})
 
-  def test_query__where_list_comparison(self):
-    tuples = [('int_', [1, 2, 3], field.Integer.grpc_type()),
-              ('string', ['a', 'b', 'c'], field.String.grpc_type()),
-              ('timestamp', [now()], field.Timestamp.grpc_type())]
+  @parameterized.parameters(
+      ('int_', [1, 2, 3], field.Integer.grpc_type()),
+      ('string', ['a', 'b', 'c'], field.String.grpc_type()),
+      ('timestamp', [now()], field.Timestamp.grpc_type()))
+  def test_query_where_list_comparison(self, column, values, grpc_type):
+    condition_generators = [condition.in_list, condition.not_in_list]
+    for condition_generator in condition_generators:
+      current_condition = condition_generator(column, values)
+      select_query = self.select(current_condition)
 
-    conditions = [condition.in_list, condition.not_in_list]
-    for column, values, type_ in tuples:
-      for condition_generator in conditions:
-        current_condition = condition_generator(column, values)
-        query_ = query.SelectQuery(models.UnittestModel, [current_condition])
+      column_key = '{}0'.format(column)
+      expected_sql = ' WHERE table.{} {} UNNEST(@{})'.format(
+          column, current_condition.operator(), column_key)
+      list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
+      self.assertTrue(select_query.sql().endswith(expected_sql))
+      self.assertEqual(select_query.parameters(), {column_key: values})
+      self.assertEqual(select_query.types(), {column_key: list_type})
 
-        column_key = '{}0'.format(column)
-        expected_sql = ' WHERE table.{} {} UNNEST(@{})'.format(
-            column, current_condition.operator(), column_key)
-        list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=type_)
-        self.assertTrue(query_.sql().endswith(expected_sql))
-        self.assertEqual(query_.parameters(), {column_key: values})
-        self.assertEqual(query_.types(), {column_key: list_type})
-
-  def test_query__combines_properly(self):
-    query_ = query.SelectQuery(models.UnittestModel, [
+  def test_query_combines_properly(self):
+    select_query = self.select(
         condition.equal_to('int_', 5),
         condition.not_equal_to('string_array', ['foo', 'bar']),
         condition.limit(2),
-        condition.order_by(('string', condition.OrderType.DESC))
-    ])
+        condition.order_by(('string', condition.OrderType.DESC)))
     expected_sql = ('WHERE table.int_ = @int_0 AND table.string_array != '
                     '@string_array1 ORDER BY table.string DESC LIMIT @limit2')
-    self.assertTrue(query_.sql().endswith(expected_sql))
+    self.assertTrue(select_query.sql().endswith(expected_sql))
 
   def test_only_one_limit_allowed(self):
     with self.assertRaises(error.SpannerError):
-      query.SelectQuery(
-          models.UnittestModel,
-          [condition.limit(2), condition.limit(2)])
+      self.select(condition.limit(2), condition.limit(2))
+
+  def includes(self, relation, *conditions):
+    include_condition = condition.includes(relation, list(conditions))
+    return query.SelectQuery(models.ChildTestModel, [include_condition])
 
   def test_includes(self):
-    query_ = query.SelectQuery(models.ChildTestModel,
-                               [condition.includes('parent')])
+    select_query = self.includes('parent')
+
     # The column order varies between test runs
     expected_sql = (
         r'SELECT ChildTestModel\S* ChildTestModel\S* ARRAY\(SELECT AS '
         r'STRUCT SmallTestModel\S* SmallTestModel\S* SmallTestModel\S* FROM '
         r'SmallTestModel WHERE SmallTestModel.key = '
         r'ChildTestModel.parent_key\)')
-    (sql, _, _) = query_._select()
-    self.assertRegex(sql, expected_sql)
+    self.assertRegex(select_query.sql(), expected_sql)
+    self.assertEqual(select_query.parameters(), {})
+    self.assertEqual(select_query.types(), {})
 
   def test_includes_subconditions_query(self):
-    query_ = query.SelectQuery(
-        models.ChildTestModel,
-        [condition.includes('parents', [condition.equal_to('key', 'value')])])
+    select_query = self.includes('parents', condition.equal_to('key', 'value'))
     expected_sql = ('WHERE SmallTestModel.key = ChildTestModel.parent_key '
                     'AND SmallTestModel.key = @key0')
-    self.assertRegex(query_.sql(), expected_sql)
+    self.assertRegex(select_query.sql(), expected_sql)
 
   def includes_result(self, related=1):
     child = {'parent_key': 'parent_key', 'child_key': 'child'}
@@ -185,10 +183,9 @@ class SqlBodyTest(unittest.TestCase):
     return child, parent, [result]
 
   def test_includes_single_related_object_result(self):
-    query_ = query.SelectQuery(models.ChildTestModel,
-                               [condition.includes('parent')])
+    select_query = self.includes('parent')
     child_values, parent_values, rows = self.includes_result(related=1)
-    result = query_.process_results(rows)[0]
+    result = select_query.process_results(rows)[0]
 
     self.assertIsInstance(result.parent, models.SmallTestModel)
     for name, value in child_values.items():
@@ -198,22 +195,19 @@ class SqlBodyTest(unittest.TestCase):
       self.assertEqual(getattr(result.parent, name), value)
 
   def test_includes_single_no_related_object_result(self):
-    query_ = query.SelectQuery(models.ChildTestModel,
-                               [condition.includes('parent')])
+    select_query = self.includes('parent')
     child_values, _, rows = self.includes_result(related=0)
-    result = query_.process_results(rows)[0]
+    result = select_query.process_results(rows)[0]
 
     self.assertIsNone(result.parent)
     for name, value in child_values.items():
       self.assertEqual(getattr(result, name), value)
 
   def test_includes_subcondition_result(self):
-    query_ = query.SelectQuery(
-        models.ChildTestModel,
-        [condition.includes('parents', [condition.equal_to('key', 'value')])])
+    select_query = self.includes('parents', condition.equal_to('key', 'value'))
 
     child_values, parent_values, rows = self.includes_result(related=2)
-    result = query_.process_results(rows)[0]
+    result = select_query.process_results(rows)[0]
 
     self.assertEqual(len(result.parents), 2)
     for name, value in child_values.items():
@@ -223,32 +217,24 @@ class SqlBodyTest(unittest.TestCase):
       self.assertEqual(getattr(result.parents[0], name), value)
 
   def test_includes_error_on_multiple_results_for_single(self):
-    query_ = query.SelectQuery(models.ChildTestModel,
-                               [condition.includes('parent')])
+    select_query = self.includes('parent')
     _, _, rows = self.includes_result(related=2)
     with self.assertRaises(error.SpannerError):
-      _ = query_.process_results(rows)
+      _ = select_query.process_results(rows)
 
   def test_includes_error_on_invalid_relation(self):
     with self.assertRaises(AssertionError):
-      query.SelectQuery(models.ChildTestModel,
-                        [condition.includes('bad_relation')])
+      self.includes('bad_relation')
 
   def test_includes_error_on_invalid_subconditions(self):
     with self.assertRaises(AssertionError):
-      query.SelectQuery(
-          models.ChildTestModel,
-          [condition.includes('parent', [condition.equal_to('bad_column', 0)])])
+      self.includes('parent', condition.equal_to('bad_column', 0))
 
     with self.assertRaises(AssertionError):
-      query.SelectQuery(
-          models.ChildTestModel,
-          [condition.includes('parent', [condition.equal_to('child_key', 0)])])
+      self.includes('parent', condition.equal_to('child_key', 0))
 
     with self.assertRaises(AssertionError):
-      query.SelectQuery(
-          models.ChildTestModel,
-          [condition.includes('parent', [condition.equal_to('key', 0)])])
+      self.includes('parent', condition.equal_to('key', 0))
 
 
 if __name__ == '__main__':
