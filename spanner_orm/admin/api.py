@@ -46,7 +46,7 @@ class SpannerAdminApi(api.SpannerReadApi):
     if create_ddl is not None:
       cls._spanner_connection = instance.database(
           database, ddl_statements=create_ddl)
-      operation = cls._connection.create()
+      operation = cls._spanner_connection.create()
       operation.result()
     else:
       cls._spanner_connection = instance.database(database)
