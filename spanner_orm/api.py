@@ -51,7 +51,8 @@ class SpannerReadApi(abc.ABC):
   @staticmethod
   def sql_query(transaction, query, parameters, parameter_types):
     """Runs a read only SQL query."""
-    _logger.debug('%s\n%s\n%s', query, parameters, parameter_types)
+    _logger.debug('Executing SQL:\n%s\n%s\n%s',
+                  query, parameters, parameter_types)
     stream_results = transaction.execute_sql(
         query, params=parameters, param_types=parameter_types)
     return list(stream_results)
