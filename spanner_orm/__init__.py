@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Sets up shorcuts for imports from the library."""
+import logging
 
 from spanner_orm import api
 from spanner_orm import condition
 from spanner_orm import field
 from spanner_orm import model
 from spanner_orm import relationship
+
+# add NullHandler to root-module logger so that individual modules
+# won't have to.
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 # pylint: disable=invalid-name
 SpannerApi = api.SpannerApi

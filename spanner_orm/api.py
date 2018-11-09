@@ -15,10 +15,13 @@
 """Class that handles API calls to Spanner."""
 
 import abc
+import logging
 
 from spanner_orm import error
 
 from google.cloud import spanner
+
+_logger = logging.getLogger(__name__)
 
 
 class SpannerReadApi(abc.ABC):
@@ -39,6 +42,8 @@ class SpannerReadApi(abc.ABC):
   @staticmethod
   def find(transaction, table_name, columns, keyset):
     """Obtains rows with primary_keys from the given table."""
+    _logger.debug('Find table=%s columns=%s keys=%s',
+                  table_name, columns, keyset.keys)
     stream_results = transaction.read(
         table=table_name, columns=columns, keyset=keyset)
     return list(stream_results)
@@ -46,6 +51,7 @@ class SpannerReadApi(abc.ABC):
   @staticmethod
   def sql_query(transaction, query, parameters, parameter_types):
     """Runs a read only SQL query."""
+    _logger.debug('%s\n%s\n%s', query, parameters, parameter_types)
     stream_results = transaction.execute_sql(
         query, params=parameters, param_types=parameter_types)
     return list(stream_results)
@@ -68,16 +74,22 @@ class SpannerWriteApi(abc.ABC):
   @staticmethod
   def insert(transaction, table_name, columns, values):
     """Add rows to a table."""
+    _logger.debug('Insert table=%s columns=%s values=%s',
+                  table_name, columns, values)
     transaction.insert(table=table_name, columns=columns, values=values)
 
   @staticmethod
   def update(transaction, table_name, columns, values):
     """Updates rows of a table."""
+    _logger.debug('Update table=%s columns=%s values=%s',
+                  table_name, columns, values)
     transaction.update(table=table_name, columns=columns, values=values)
 
   @staticmethod
   def upsert(transaction, table_name, columns, values):
     """Updates existing rows of a table or adds rows if they don't exist."""
+    _logger.debug('Upsert table=%s columns=%s values=%s',
+                  table_name, columns, values)
     transaction.insert_or_update(
         table=table_name, columns=columns, values=values)
 
