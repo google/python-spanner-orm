@@ -14,38 +14,30 @@
 # limitations under the License.
 """Models used by unit tests."""
 
+from spanner_orm import field
 from spanner_orm import model
-from spanner_orm.field import Integer
-from spanner_orm.field import NullableInteger
-from spanner_orm.field import NullableString
-from spanner_orm.field import NullableStringArray
-from spanner_orm.field import String
-from spanner_orm.field import Timestamp
-from spanner_orm.relationship import ModelRelationship
+from spanner_orm import relationship
 
 
 class ChildTestModel(model.Model):
   """Model class for testing relationships"""
 
-  @staticmethod
-  def primary_index_keys():
-    return ['parent_key', 'child_key']
-
   @classmethod
   def relations(cls):
     return {
         'parent':
-            ModelRelationship(cls, 'spanner_orm.tests.models.SmallTestModel',
-                              {'parent_key': 'key'})
+            relationship.ModelRelationship(
+                cls, 'spanner_orm.tests.models.SmallTestModel',
+                {'parent_key': 'key'})
     }
 
-  @classmethod
-  def schema(cls):
-    return {'parent_key': String, 'child_key': String}
+  @staticmethod
+  def primary_index_keys():
+    return ['parent_key', 'child_key']
 
-  @classmethod
-  def table(cls):
-    return 'ChildTestModel'
+  __table__ = 'ChildTestModel'
+  parent_key = field.Field(field.String)
+  child_key = field.Field(field.String)
 
 
 class SmallTestModel(model.Model):
@@ -55,13 +47,10 @@ class SmallTestModel(model.Model):
   def primary_index_keys():
     return ['key']
 
-  @classmethod
-  def schema(cls):
-    return {'key': String, 'value_1': String, 'value_2': NullableString}
-
-  @classmethod
-  def table(cls):
-    return 'SmallTestModel'
+  __table__ = 'SmallTestModel'
+  key = field.Field(field.String)
+  value_1 = field.Field(field.String)
+  value_2 = field.Field(field.String, nullable=True)
 
 
 class UnittestModel(model.Model):
@@ -71,17 +60,10 @@ class UnittestModel(model.Model):
   def primary_index_keys():
     return ['int_', 'string']
 
-  @staticmethod
-  def schema():
-    return {
-        'int_': Integer,
-        'int_2': NullableInteger,
-        'string': String,
-        'string_2': NullableString,
-        'timestamp': Timestamp,
-        'string_array': NullableStringArray
-    }
-
-  @classmethod
-  def table(cls):
-    return 'table'
+  __table__ = 'table'
+  int_ = field.Field(field.Integer)
+  int_2 = field.Field(field.Integer, nullable=True)
+  string = field.Field(field.String)
+  string_2 = field.Field(field.String, nullable=True)
+  timestamp = field.Field(field.Timestamp)
+  string_array = field.Field(field.StringArray, nullable=True)

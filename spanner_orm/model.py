@@ -14,18 +14,53 @@
 # limitations under the License.
 """Holds table-specific information to make querying spanner eaiser."""
 
-import abc
 import copy
 
 from spanner_orm import api
 from spanner_orm import condition
 from spanner_orm import error
+from spanner_orm import field
 from spanner_orm import query
 
 from google.cloud import spanner
 
 
-class Model(abc.ABC):
+class Meta(object):
+
+  def __init__(self, schema=None, table=None):
+    self.schema = schema
+    self.table = table
+
+
+class ModelBase(type):
+  """Populates Model metadata based on class attributes."""
+
+  def __new__(mcs, name, bases, attrs, **kwargs):
+    parents = [base for base in bases if isinstance(base, ModelBase)]
+    if not parents:
+      return super().__new__(mcs, name, bases, attrs, **kwargs)
+
+    table = None
+    schema = {}
+    old_attrs = attrs.copy()
+    for key, value in old_attrs.items():
+      if isinstance(value, field.Field):
+        value.name = key
+        schema[key] = attrs.pop(key)
+      elif key == '__table__':
+        table = attrs.pop(key)
+
+    cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+    cls.meta = Meta(schema=schema, table=table)
+    return cls
+
+  def __getattr__(cls, name):
+    if name in cls.meta.schema:
+      return cls.meta.schema[name]
+    raise AttributeError(name)
+
+
+class Model(metaclass=ModelBase):
   """Maps to a table in spanner and has basic functions for querying tables."""
 
   @classmethod
@@ -38,7 +73,6 @@ class Model(abc.ABC):
     return set(cls.schema())
 
   @staticmethod
-  @abc.abstractmethod
   def primary_index_keys():
     raise NotImplementedError
 
@@ -47,19 +81,17 @@ class Model(abc.ABC):
     return {}
 
   @classmethod
-  @abc.abstractmethod
   def schema(cls):
-    raise NotImplementedError
+    return cls.meta.schema
 
   @classmethod
-  @abc.abstractmethod
   def table(cls):
-    raise NotImplementedError
+    return cls.meta.table
 
   @classmethod
   def create_table_ddl(cls):
     fields = [
-        '{} {}'.format(name, field.full_ddl())
+        '{} {}'.format(name, field.ddl())
         for name, field in cls.schema().items()
     ]
     field_ddl = '({})'.format(', '.join(fields))

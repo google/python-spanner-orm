@@ -22,34 +22,26 @@ from spanner_orm.schemas import schema
 class ColumnSchema(schema.Schema):
   """Model for interacting with Spanner column schema table."""
 
+  __table__ = 'information_schema.columns'
+  table_catalog = field.Field(field.String)
+  table_schema = field.Field(field.String)
+  table_name = field.Field(field.String)
+  column_name = field.Field(field.String)
+  ordinal_position = field.Field(field.Integer)
+  is_nullable = field.Field(field.String)
+  spanner_type = field.Field(field.String)
+
   @staticmethod
   def primary_index_keys():
     return ['table_catalog', 'table_schema', 'table_name', 'column_name']
 
-  @classmethod
-  def schema(cls):
-    return {
-        'table_catalog': field.String,
-        'table_schema': field.String,
-        'table_name': field.String,
-        'column_name': field.String,
-        'ordinal_position': field.Integer,
-        'is_nullable': field.String,
-        'spanner_type': field.String
-    }
-
-  @classmethod
-  def table(cls):
-    return 'information_schema.columns'
-
   def nullable(self):
     return self.is_nullable == 'YES'
 
-  def type(self):
-    for db_type in field.ALL_TYPES:
-      db_nullable = issubclass(db_type, field.NullableType)
-      if self.spanner_type == db_type.ddl() and self.nullable() == db_nullable:
-        return db_type
+  def field_type(self):
+    for field_type in field.ALL_TYPES:
+      if self.spanner_type == field_type.ddl():
+        return field_type
 
     raise error.SpannerError('No corresponding Type for {}'.format(
         self.spanner_type))

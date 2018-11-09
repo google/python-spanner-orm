@@ -105,11 +105,12 @@ class ColumnsEqualCondition(Condition):
 
   def _validate(self, model):
     assert self.column in model.schema()
-    origin_type = model.schema()[self.column]
+    origin = model.schema()[self.column]
     assert self.destination_column in self.destination_model.schema()
-    destination_type = self.destination_model.schema()[self.destination_column]
+    dest = self.destination_model.schema()[self.destination_column]
 
-    assert origin_type.db_type() == destination_type.db_type()
+    assert (origin.field_type() == dest.field_type() and
+            origin.nullable() == dest.nullable())
 
 
 class IncludesCondition(Condition):
