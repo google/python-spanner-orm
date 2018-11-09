@@ -20,6 +20,7 @@ from spanner_orm import condition
 from spanner_orm import field
 from spanner_orm import model
 from spanner_orm import relationship
+from spanner_orm.admin import api as admin_api
 
 # add NullHandler to root-module logger so that individual modules
 # won't have to.
@@ -27,6 +28,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 # pylint: disable=invalid-name
 SpannerApi = api.SpannerApi
+SpannerAdminApi = admin_api.SpannerAdminApi
 
 Model = model.Model
 

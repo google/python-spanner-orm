@@ -51,6 +51,12 @@ class ApiTest(unittest.TestCase):
     with self.assertRaises(error.SpannerError):
       api.SpannerApi._connection()
 
+  @mock.patch('google.cloud.spanner.Client')
+  def test_admin_api_create_ddl_connection(self, client):
+    connection = self.mock_connection(client)
+    admin_api.SpannerAdminApi.connect('', '', '', create_ddl=['create ddl'])
+    self.assertEqual(admin_api.SpannerAdminApi._connection(), connection)
+
   def mock_connection(self, client):
     connection = mock.Mock()
     client().instance().database.return_value = connection
