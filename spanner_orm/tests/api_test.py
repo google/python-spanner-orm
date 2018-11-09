@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import unittest
 from unittest import mock
 
@@ -57,4 +58,5 @@ class ApiTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+  logging.basicConfig()
   unittest.main()

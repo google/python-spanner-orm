@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import datetime
+import logging
 import unittest
 from unittest import mock
 
@@ -255,4 +256,5 @@ class SqlBodyTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+  logging.basicConfig()
   unittest.main()

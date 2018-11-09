@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import datetime
+import logging
 import unittest
 
 from spanner_orm import error
@@ -131,4 +132,5 @@ class ModelTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+  logging.basicConfig()
   unittest.main()
