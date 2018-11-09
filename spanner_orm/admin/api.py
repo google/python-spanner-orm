@@ -56,8 +56,13 @@ class SpannerAdminApi(api.SpannerReadApi):
   @classmethod
   def _connection(cls):
     if not cls._spanner_connection:
-      raise error.SpannerError('Not connected to spanner')
+      raise error.SpannerError('Not connected to Spanner')
     return cls._spanner_connection
+
+  @classmethod
+  def drop_database(cls):
+    cls._connection.drop()
+    cls.hangup()
 
   @classmethod
   def hangup(cls):
