@@ -23,6 +23,8 @@ from spanner_orm import field
 from spanner_orm import query
 from spanner_orm.tests import models
 
+from google.cloud.spanner_v1.proto import type_pb2
+
 
 def now():
   return datetime.datetime.now(tz=datetime.timezone.utc)
@@ -112,9 +114,9 @@ class SqlBodyTest(unittest.TestCase):
         self.assertEqual(types, {column: type_})
 
   def test_query__where_list_comparison(self):
-    tuples = [('int_', [1, 2, 3], field.Integer.grpc_list_type()),
-              ('string', ['a', 'b', 'c'], field.String.grpc_list_type()),
-              ('timestamp', [now()], field.Timestamp.grpc_list_type())]
+    tuples = [('int_', [1, 2, 3], field.Integer.grpc_type()),
+              ('string', ['a', 'b', 'c'], field.String.grpc_type()),
+              ('timestamp', [now()], field.Timestamp.grpc_type())]
 
     conditions = [condition.in_list, condition.not_in_list]
     for column, values, type_ in tuples:
@@ -126,7 +128,8 @@ class SqlBodyTest(unittest.TestCase):
         sql, params, types = query_._where()
         self.assertEqual(sql, expected_sql)
         self.assertEqual(params, {column: values})
-        self.assertEqual(types, {column: type_})
+        list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=type_)
+        self.assertEqual(types, {column: list_type})
 
   def test_query__combines_properly(self):
     query_ = query.SelectQuery(models.UnittestModel, [

@@ -328,7 +328,9 @@ class ListComparisonCondition(ComparisonCondition):
         operator=self.operator())
 
   def _types(self):
-    return {self.column: self.model.schema()[self.column].grpc_list_type()}
+    grpc_type = self.model.schema()[self.column].grpc_type()
+    list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
+    return {self.column: list_type}
 
   def _validate(self, model):
     schema = model.schema()

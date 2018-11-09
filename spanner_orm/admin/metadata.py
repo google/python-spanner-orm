@@ -20,11 +20,9 @@ from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import model
+from spanner_orm import schemas
 from spanner_orm import update
 from spanner_orm.admin import api
-from spanner_orm.schemas import column
-from spanner_orm.schemas import index
-from spanner_orm.schemas import index_column
 
 
 class SpannerMetadata(object):
@@ -83,7 +81,7 @@ class SpannerMetadata(object):
       primary_index = indexes[table_name]['PRIMARY_KEY']['columns']
       klass = type(
           'Model_{}'.format(table_name), (model.Model,), {
-              'primary_index_keys': make_method(primary_index),
+              'primary_keys': make_method(primary_index),
               'schema': make_classmethod(schema),
               'table': make_classmethod(table_name)
           })
@@ -94,13 +92,13 @@ class SpannerMetadata(object):
   def _tables(cls, transaction=None):
     """Compiles table information from column schema."""
     tables = collections.defaultdict(dict)
-    schemas = column.ColumnSchema.where(
+    columns = schemas.ColumnSchema.where(
         transaction, condition.EqualityCondition('table_catalog', ''),
         condition.EqualityCondition('table_schema', ''))
-    for schema in schemas:
-      new_field = field.Field(schema.field_type(), nullable=schema.nullable())
-      new_field.name = schema.column_name
-      tables[schema.table_name][schema.column_name] = new_field
+    for column in columns:
+      new_field = field.Field(column.field_type(), nullable=column.nullable())
+      new_field.name = column.column_name
+      tables[column.table_name][column.column_name] = new_field
     return tables
 
   @classmethod
@@ -110,7 +108,7 @@ class SpannerMetadata(object):
     # Results are ordered by that so the index columns are added in the correct
     # order. None indicates that the key isn't really a part of the index, so we
     # skip those
-    index_column_schemas = index_column.IndexColumnSchema.where(
+    index_column_schemas = schemas.IndexColumnSchema.where(
         transaction, condition.EqualityCondition('table_catalog', ''),
         condition.EqualityCondition('table_schema', ''),
         condition.InequalityCondition('ordinal_position', None),
@@ -122,7 +120,7 @@ class SpannerMetadata(object):
       key = (schema.table_name, schema.index_name)
       index_columns[key].append(schema.column_name)
 
-    index_schemas = index.IndexSchema.where(
+    index_schemas = schemas.IndexSchema.where(
         transaction, condition.EqualityCondition('table_catalog', ''),
         condition.EqualityCondition('table_schema', ''))
     indexes = collections.defaultdict(dict)

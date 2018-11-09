@@ -28,10 +28,12 @@ from google.cloud import spanner
 
 class Meta(object):
 
-  def __init__(self, schema=None, table=None, relations=None):
-    self.table = table
-    self.schema = schema
-    self.relations = relations
+  def __init__(self, table=None, schema=None, primary_keys=None,
+               relations=None):
+    self.table = table or ''
+    self.schema = schema or {}
+    self.primary_keys = primary_keys or []
+    self.relations = relations or []
 
 
 class ModelBase(type):
@@ -45,6 +47,7 @@ class ModelBase(type):
     table = None
     schema = {}
     relations = {}
+    primary_keys = []
     old_attrs = attrs.copy()
     for key, value in old_attrs.items():
       if key == '__table__':
@@ -52,12 +55,18 @@ class ModelBase(type):
       if isinstance(value, field.Field):
         value.name = key
         schema[key] = attrs.pop(key)
+        if value.primary_key():
+          primary_keys.append(key)
       elif isinstance(value, relationship.Relationship):
         value.name = key
         relations[key] = attrs.pop(key)
 
     cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-    cls.meta = Meta(schema=schema, table=table, relations=relations)
+    cls.meta = Meta(
+        table=table,
+        schema=schema,
+        primary_keys=primary_keys,
+        relations=relations)
     for _, relation in relations.items():
       relation.origin = cls
     return cls
@@ -80,9 +89,9 @@ class Model(metaclass=ModelBase):
   def columns(cls):
     return set(cls.schema())
 
-  @staticmethod
-  def primary_index_keys():
-    raise NotImplementedError
+  @classmethod
+  def primary_keys(cls):
+    return cls.meta.primary_keys
 
   @classmethod
   def relations(cls):
@@ -103,7 +112,7 @@ class Model(metaclass=ModelBase):
         for name, field in cls.schema().items()
     ]
     field_ddl = '({})'.format(', '.join(fields))
-    index_ddl = 'PRIMARY KEY ({})'.format(', '.join(cls.primary_index_keys()))
+    index_ddl = 'PRIMARY KEY ({})'.format(', '.join(cls.primary_keys()))
     return 'CREATE TABLE {} {} {}'.format(cls.table(), field_ddl, index_ddl)
 
   @classmethod
@@ -116,7 +125,7 @@ class Model(metaclass=ModelBase):
   # Instance methods
   def __init__(self, values, persisted=False):
     # Ensure that we have the primary index keys (unique id) set for all objects
-    missing_keys = set(self.primary_index_keys()) - set(values.keys())
+    missing_keys = set(self.primary_keys()) - set(values.keys())
     if missing_keys:
       raise error.SpannerError(
           'All primary keys must be specified. Missing: {keys}'.format(
@@ -147,7 +156,7 @@ class Model(metaclass=ModelBase):
     raise AttributeError(name)
 
   def __setattr__(self, name, value):
-    if name in self.primary_index_keys():
+    if name in self.primary_keys():
       raise AttributeError(name)
     elif name in self.schema():
       self._validate(name, value, AttributeError)
@@ -165,7 +174,7 @@ class Model(metaclass=ModelBase):
     }
 
   def id(self):
-    return {key: self.values[key] for key in self.primary_index_keys()}
+    return {key: self.values[key] for key in self.primary_keys()}
 
   def reload(self, transaction=None):
     updated_object = self.find(transaction, **self.id())
@@ -217,7 +226,7 @@ class Model(metaclass=ModelBase):
     """Grabs the row with the given primary_key."""
     # Make sure that all primary keys were included (sometimes multiple
     # primary keys for a table)
-    index_keys = list(cls.primary_index_keys())
+    index_keys = list(cls.primary_keys())
     if set(kwargs.keys()) != set(index_keys):
       raise error.SpannerError('All primary index keys must be specified')
 

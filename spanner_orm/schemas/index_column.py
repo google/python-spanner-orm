@@ -22,19 +22,12 @@ class IndexColumnSchema(schema.Schema):
   """Model for interacting with Spanner index column schema table."""
 
   __table__ = 'information_schema.index_columns'
-  table_catalog = field.Field(field.String)
-  table_schema = field.Field(field.String)
-  table_name = field.Field(field.String)
-  index_name = field.Field(field.String)
-  column_name = field.Field(field.String)
+  table_catalog = field.Field(field.String, primary_key=True)
+  table_schema = field.Field(field.String, primary_key=True)
+  table_name = field.Field(field.String, primary_key=True)
+  index_name = field.Field(field.String, primary_key=True)
+  column_name = field.Field(field.String, primary_key=True)
   ordinal_position = field.Field(field.Integer, nullable=True)
   column_ordering = field.Field(field.String, nullable=True)
   is_nullable = field.Field(field.String)
   spanner_type = field.Field(field.String)
-
-  @staticmethod
-  def primary_index_keys():
-    return [
-        'table_catalog', 'table_schema', 'table_name', 'index_name',
-        'column_name'
-    ]
