@@ -21,15 +21,17 @@ from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import query
+from spanner_orm import relationship
 
 from google.cloud import spanner
 
 
 class Meta(object):
 
-  def __init__(self, schema=None, table=None):
-    self.schema = schema
+  def __init__(self, schema=None, table=None, relations=None):
     self.table = table
+    self.schema = schema
+    self.relations = relations
 
 
 class ModelBase(type):
@@ -42,16 +44,22 @@ class ModelBase(type):
 
     table = None
     schema = {}
+    relations = {}
     old_attrs = attrs.copy()
     for key, value in old_attrs.items():
+      if key == '__table__':
+        table = attrs.pop(key)
       if isinstance(value, field.Field):
         value.name = key
         schema[key] = attrs.pop(key)
-      elif key == '__table__':
-        table = attrs.pop(key)
+      elif isinstance(value, relationship.Relationship):
+        value.name = key
+        relations[key] = attrs.pop(key)
 
     cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-    cls.meta = Meta(schema=schema, table=table)
+    cls.meta = Meta(schema=schema, table=table, relations=relations)
+    for _, relation in relations.items():
+      relation.origin = cls
     return cls
 
   def __getattr__(cls, name):
@@ -78,7 +86,7 @@ class Model(metaclass=ModelBase):
 
   @classmethod
   def relations(cls):
-    return {}
+    return cls.meta.relations
 
   @classmethod
   def schema(cls):
@@ -99,8 +107,11 @@ class Model(metaclass=ModelBase):
     return 'CREATE TABLE {} {} {}'.format(cls.table(), field_ddl, index_ddl)
 
   @classmethod
-  def _validate(cls, name, value):
-    cls.schema()[name].validate(value)
+  def _validate(cls, name, value, error_type):
+    try:
+      cls.schema()[name].validate(value)
+    except AssertionError as ex:
+      raise error_type(*ex.args)
 
   # Instance methods
   def __init__(self, values, persisted=False):
@@ -111,54 +122,40 @@ class Model(metaclass=ModelBase):
           'All primary keys must be specified. Missing: {keys}'.format(
               keys=missing_keys))
 
-    self.start_values = {
-        key: copy.copy(value)
-        for key, value in values.items()
-        if key in self.columns() and value is not None
-    }
-    for name, value in self.start_values.items():
-      try:
-        self._validate(name, value)
-      except AssertionError as ex:
-        raise error.SpannerError(*ex.args)
+    self.start_values, self.related = {}, {}
+    for key, value in values.items():
+      if key in self.relations():
+        self.related[key] = value
+      elif key in self.columns():
+        if value is not None:
+          self._validate(key, value, ValueError)
+          self.start_values[key] = copy.copy(value)
+      else:
+        raise ValueError('{name} is not part of {klass}'.format(
+            name=key, klass=type(self).__name__))
+
     self.values = copy.deepcopy(self.start_values)
     self._persisted = persisted
 
   def __getattr__(self, name):
     if name in self.schema():
       return self.values.get(name)
-    else:
-      raise AttributeError(name)
-
-  def __getitem__(self, name):
-    if name in self.schema():
-      return self.values.get(name)
-    else:
-      raise KeyError(name)
+    elif name in self.related:
+      return self.related[name]
+    elif name in self.relations():
+      raise AttributeError('{name} was not included in query'.format(name=name))
+    raise AttributeError(name)
 
   def __setattr__(self, name, value):
     if name in self.primary_index_keys():
       raise AttributeError(name)
     elif name in self.schema():
-      try:
-        self._validate(name, value)
-      except AssertionError as ex:
-        raise error.SpannerError(ex.args)
+      self._validate(name, value, AttributeError)
       self.values[name] = copy.copy(value)
+    elif name in self.relations():
+      raise AttributeError('{name} is not settable'.format(name=name))
     else:
       super().__setattr__(name, value)
-
-  def __setitem__(self, name, value):
-    if name in self.primary_index_keys():
-      raise KeyError(name)
-    elif name in self.schema():
-      try:
-        self._validate(name, value)
-      except AssertionError as ex:
-        raise error.SpannerError(ex.args)
-      self.values[name] = copy.copy(value)
-    else:
-      raise KeyError(name)
 
   def changes(self):
     return {
@@ -202,7 +199,7 @@ class Model(metaclass=ModelBase):
     builder = query.CountQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
     results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
-    return builder.parse_results(results)
+    return builder.process_results(results)
 
   @classmethod
   def count_equal(cls, transaction=None, **kwargs):
@@ -222,8 +219,7 @@ class Model(metaclass=ModelBase):
     # primary keys for a table)
     index_keys = list(cls.primary_index_keys())
     if set(kwargs.keys()) != set(index_keys):
-      raise error.SpannerError(
-          'All primary index keys must be specified')
+      raise error.SpannerError('All primary index keys must be specified')
 
     # Keys need to be in specfic order
     ordered_values = [kwargs[column] for column in index_keys]
@@ -243,7 +239,7 @@ class Model(metaclass=ModelBase):
     builder = query.SelectQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
     results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
-    return builder.parse_results(results)
+    return builder.process_results(results)
 
   @classmethod
   def where_equal(cls, transaction=None, **kwargs):
@@ -311,7 +307,7 @@ class Model(metaclass=ModelBase):
       # All dictionaries should have the same set of fields specified
       assert columns == dictionary.keys()
       for key, value in dictionary.items():
-        cls._validate(key, value)
+        cls._validate(key, value, error.SpannerError)
       values.append([dictionary[column] for column in columns])
 
     args = [cls.table(), columns, values]

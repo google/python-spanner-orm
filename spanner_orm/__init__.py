@@ -25,11 +25,10 @@ SpannerApi = api.SpannerApi
 
 Model = model.Model
 
-ModelRelationship = relationship.ModelRelationship
-
 Boolean = field.Boolean
 Field = field.Field
 Integer = field.Integer
+Relationship = relationship.Relationship
 String = field.String
 StringArray = field.StringArray
 Timestamp = field.Timestamp

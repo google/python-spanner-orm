@@ -126,20 +126,30 @@ class IncludesCondition(Condition):
     super().bind(model)
     self.relation = self.model.relations()[self.name]
 
+  @property
   def conditions(self):
     if not self.relation:
       raise error.SpannerError(
           'Condition must be bound before conditions is called')
-    return self.relation.conditions() + self._conditions
+    return self.relation.conditions + self._conditions
 
+  @property
   def destination(self):
     if not self.relation:
       raise error.SpannerError(
           'Condition must be bound before destination is called')
-    return self.relation.destination()
+    return self.relation.destination
 
+  @property
   def relation_name(self):
     return self.name
+
+  @property
+  def single(self):
+    if not self.relation:
+      raise error.SpannerError(
+          'Condition must be bound before single is called')
+    return self.relation.single
 
   def _params(self):
     return {}
@@ -156,7 +166,7 @@ class IncludesCondition(Condition):
 
   def _validate(self, model):
     assert self.name in model.relations()
-    other_model = model.relations()[self.name].destination()
+    other_model = model.relations()[self.name].destination
     for condition in self._conditions:
       condition._validate(other_model)  # pylint: disable=protected-access
 
@@ -166,14 +176,14 @@ class LimitCondition(Condition):
   LIMIT_KEY = 'limit'
   OFFSET_KEY = 'offset'
 
-  def __init__(self, limit, offset=0):
+  def __init__(self, value, offset=0):
     super().__init__()
-    for value in [limit, offset]:
-      if not isinstance(value, int):
+    for param in [value, offset]:
+      if not isinstance(param, int):
         raise error.SpannerError(
-            '{value} is not of type int'.format(value=value))
+            '{param} is not of type int'.format(param=param))
 
-    self.limit = limit
+    self.limit = value
     self.offset = offset
 
   def _params(self):

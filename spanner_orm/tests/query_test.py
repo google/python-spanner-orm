@@ -71,7 +71,10 @@ class SqlBodyTest(unittest.TestCase):
     sql, params, types = query_._limit()
     self.assertEqual(sql, ' LIMIT @limit OFFSET @offset')
     self.assertEqual(params, {limit_key: limit, offset_key: offset})
-    self.assertEqual(types, {limit_key: field.Integer.grpc_type(), offset_key: field.Integer.grpc_type()})
+    self.assertEqual(types, {
+        limit_key: field.Integer.grpc_type(),
+        offset_key: field.Integer.grpc_type()
+    })
 
     query_ = query.SelectQuery(models.UnittestModel, [])
     self.assertEqual(query_._limit(), ('', {}, {}))
@@ -161,15 +164,70 @@ class SqlBodyTest(unittest.TestCase):
     (sql, _, _) = query_._select()
     self.assertRegex(sql, expected_sql)
 
-  def test_includes_subconditions(self):
+  def test_includes_subconditions_query(self):
     query_ = query.SelectQuery(
         models.ChildTestModel,
-        [condition.includes('parent', [condition.equal_to('key', 'value')])])
+        [condition.includes('parents', [condition.equal_to('key', 'value')])])
     # The column order varies between test runs
     expected_sql = ('WHERE SmallTestModel.key = ChildTestModel.parent_key '
                     'AND SmallTestModel.key = @key')
     (sql, _, _) = query_._select()
     self.assertRegex(sql, expected_sql)
+
+  def includes_result(self, related=1):
+    child = {'parent_key': 'parent_key', 'child_key': 'child'}
+    result = [child[name] for name in models.ChildTestModel.columns()]
+    parent = {'key': 'key', 'value_1': 'value_1', 'value_2': None}
+    parents = []
+    for _ in range(related):
+      parents.append([parent[name] for name in models.SmallTestModel.columns()])
+    result.append(parents)
+    return child, parent, [result]
+
+  def test_includes_single_related_object_result(self):
+    query_ = query.SelectQuery(models.ChildTestModel,
+                               [condition.includes('parent')])
+    child_values, parent_values, rows = self.includes_result(related=1)
+    result = query_.process_results(rows)[0]
+
+    self.assertIsInstance(result.parent, models.SmallTestModel)
+    for name, value in child_values.items():
+      self.assertEqual(getattr(result, name), value)
+
+    for name, value in parent_values.items():
+      self.assertEqual(getattr(result.parent, name), value)
+
+  def test_includes_single_no_related_object_result(self):
+    query_ = query.SelectQuery(models.ChildTestModel,
+                               [condition.includes('parent')])
+    child_values, _, rows = self.includes_result(related=0)
+    result = query_.process_results(rows)[0]
+
+    self.assertIsNone(result.parent)
+    for name, value in child_values.items():
+      self.assertEqual(getattr(result, name), value)
+
+  def test_includes_subcondition_result(self):
+    query_ = query.SelectQuery(
+        models.ChildTestModel,
+        [condition.includes('parents', [condition.equal_to('key', 'value')])])
+
+    child_values, parent_values, rows = self.includes_result(related=2)
+    result = query_.process_results(rows)[0]
+
+    self.assertEqual(len(result.parents), 2)
+    for name, value in child_values.items():
+      self.assertEqual(getattr(result, name), value)
+
+    for name, value in parent_values.items():
+      self.assertEqual(getattr(result.parents[0], name), value)
+
+  def test_includes_error_on_multiple_results_for_single(self):
+    query_ = query.SelectQuery(models.ChildTestModel,
+                               [condition.includes('parent')])
+    _, _, rows = self.includes_result(related=2)
+    with self.assertRaises(error.SpannerError):
+      _ = query_.process_results(rows)
 
   def test_includes_error_on_invalid_relation(self):
     with self.assertRaises(AssertionError):
