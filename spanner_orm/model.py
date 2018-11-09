@@ -26,14 +26,21 @@ from spanner_orm import relationship
 from google.cloud import spanner
 
 
-class Meta(object):
+class Metadata(object):
+  """Holds Spanner table metadata corresponding to a Model."""
 
   def __init__(self, table=None, schema=None, primary_keys=None,
                relations=None):
     self.table = table or ''
     self.schema = schema or {}
     self.primary_keys = primary_keys or []
-    self.relations = relations or []
+    self.relations = relations or {}
+
+  def add_metadata(self, metadata):
+    self.table = metadata.table or self.table
+    self.schema.update(metadata.schema)
+    self.primary_keys.extend(metadata.primary_keys)
+    self.relations.update(metadata.relations)
 
 
 class ModelBase(type):
@@ -44,31 +51,30 @@ class ModelBase(type):
     if not parents:
       return super().__new__(mcs, name, bases, attrs, **kwargs)
 
-    table = None
-    schema = {}
-    relations = {}
-    primary_keys = []
-    old_attrs = attrs.copy()
-    for key, value in old_attrs.items():
+    metadata = Metadata()
+    for parent in parents:
+      if 'meta' in vars(parent):
+        metadata.add_metadata(parent.meta)
+
+    non_model_attrs = {}
+    for key, value in attrs.items():
       if key == '__table__':
-        table = attrs.pop(key)
+        metadata.table = value
       if isinstance(value, field.Field):
         value.name = key
-        schema[key] = attrs.pop(key)
+        metadata.schema[key] = value
         if value.primary_key():
-          primary_keys.append(key)
+          metadata.primary_keys.append(key)
       elif isinstance(value, relationship.Relationship):
         value.name = key
-        relations[key] = attrs.pop(key)
+        metadata.relations[key] = value
+      else:
+        non_model_attrs[key] = value
 
-    cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-    cls.meta = Meta(
-        table=table,
-        schema=schema,
-        primary_keys=primary_keys,
-        relations=relations)
-    for _, relation in relations.items():
+    cls = super().__new__(mcs, name, bases, non_model_attrs, **kwargs)
+    for _, relation in metadata.relations.items():
       relation.origin = cls
+    cls.meta = metadata
     return cls
 
   def __getattr__(cls, name):

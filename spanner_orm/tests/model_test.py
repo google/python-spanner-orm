@@ -130,6 +130,13 @@ class ModelTest(unittest.TestCase):
     with self.assertRaises(AttributeError):
       _ = test_model.parent
 
+  def test_inherited_fields(self):
+    self.assertEqual(models.InheritanceTestModel.key, models.SmallTestModel.key)
+
+    values = {'key': 'key', 'value_3': 'value_3'}
+    test_model = models.InheritanceTestModel(values)
+    for name, value in values.items():
+      self.assertEqual(getattr(test_model, name), value)
 
 if __name__ == '__main__':
   logging.basicConfig()

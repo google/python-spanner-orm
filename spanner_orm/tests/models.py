@@ -41,6 +41,11 @@ class SmallTestModel(model.Model):
   value_2 = field.Field(field.String, nullable=True)
 
 
+class InheritanceTestModel(SmallTestModel):
+  """Model class used for testing model inheritance"""
+  value_3 = field.Field(field.String, nullable=True)
+
+
 class UnittestModel(model.Model):
   """Model class used for model testing"""
 
