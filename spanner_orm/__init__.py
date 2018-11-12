@@ -17,6 +17,7 @@ import logging
 
 from spanner_orm import api
 from spanner_orm import condition
+from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import model
 from spanner_orm import relationship
@@ -29,6 +30,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 # pylint: disable=invalid-name
 SpannerApi = api.SpannerApi
 SpannerAdminApi = admin_api.SpannerAdminApi
+SpannerError = error.SpannerError
 
 Model = model.Model
 
@@ -53,3 +55,5 @@ not_greater_than = condition.not_greater_than
 not_in_list = condition.not_in_list
 not_less_than = condition.not_less_than
 order_by = condition.order_by
+ORDER_ASC = condition.OrderType.ASC
+ORDER_DESC = condition.OrderType.DESC

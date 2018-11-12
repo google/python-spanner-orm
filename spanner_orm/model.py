@@ -288,7 +288,7 @@ class Model(metaclass=ModelBase):
     to_create, to_update = [], []
     columns = cls.columns()
     for model in models:
-      value = {column: model[column] for column in columns}
+      value = {column: getattr(model, column) for column in columns}
       if model._persisted:  # pylint: disable=protected-access
         if model.changes():
           to_update.append(value)
@@ -308,13 +308,18 @@ class Model(metaclass=ModelBase):
   def _execute_write(cls, db_api, transaction, dictionaries):
     """Validates all write value types and commits write to Spanner."""
     columns, values = None, []
-    # Assert that we're only setting columns that belong to this table
     for dictionary in dictionaries:
-      assert not set(dictionary.keys()) - cls.columns()
+      invalid_keys = set(dictionary.keys()) - cls.columns()
+      if invalid_keys:
+        raise error.SpannerError('Invalid keys set on {model}: {keys}'.format(
+            model=cls.__name__, keys=invalid_keys))
+
       if columns is None:
         columns = dictionary.keys()
-      # All dictionaries should have the same set of fields specified
-      assert columns == dictionary.keys()
+      if columns != dictionary.keys():
+        raise error.SpannerError(
+            'Attempted to update rows with different sets of keys')
+
       for key, value in dictionary.items():
         cls._validate(key, value, error.SpannerError)
       values.append([dictionary[column] for column in columns])

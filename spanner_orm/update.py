@@ -17,7 +17,6 @@
 import abc
 
 from spanner_orm import condition
-from spanner_orm import field
 from spanner_orm import schemas
 
 
@@ -40,38 +39,30 @@ class SchemaUpdate(abc.ABC):
 class ColumnUpdate(SchemaUpdate):
   """Specifies column updates such as ADD, DROP, and ALTER."""
 
-  def __init__(self, table_name, column_name, db_type):
+  def __init__(self, table_name, column_name, field):
     self._table = table_name
     self._column = column_name
-    self._type = db_type
+    self._field = field
 
   def ddl(self, model):
-    if self._type is None:
+    if self._field is None:
       return 'ALTER TABLE {} DROP COLUMN {}'.format(self._table, self._column)
     elif self._column in model.schema():
       operation = 'ALTER COLUMN'
     else:
       operation = 'ADD COLUMN'
     return 'ALTER TABLE {} {} {} {}'.format(self._table, operation,
-                                            self._column, self._type.full_ddl())
+                                            self._column, self._field.ddl())
 
   def table(self):
     return self._table
 
   def _validate_alter_column(self, model):
-    """Validates that the only alteration is to change column nullability."""
-    # Verify type is actually changing
     assert self._column in model.schema()
-    old_type = model.schema()[self._column]
-    assert self._type != old_type
-    assert old_type.db_type() == self._type.db_type()
-
-    if issubclass(old_type, field.NullableType):
-      # Type was nullable, so must now be the not nullable type
-      assert not issubclass(self._type, field.NullableType)
-    else:
-      # Type wasn't nullable, so it must now be nullable
-      assert issubclass(self._type, field.NullableType)
+    old_field = model.schema()[self._column]
+    # Validate that the only alteration is to change column nullability
+    assert self._field.field_type() == old_field.field_type()
+    assert self._field.nullable() != old_field.nullable()
 
   def _validate_drop_column(self, model):
     assert self._column in model.schema()
@@ -82,12 +73,12 @@ class ColumnUpdate(SchemaUpdate):
     assert num_index_columns == 0
 
   def validate(self, model):
-    if self._type is None:
+    if self._field is None:
       self._validate_drop_column(model)
     elif self._column in model.schema():
       self._validate_alter_column(model)
     else:
-      assert issubclass(self._type, field.NullableType)
+      assert self._field.nullable()
 
 
 class IndexUpdate(SchemaUpdate):
