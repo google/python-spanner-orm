@@ -37,44 +37,48 @@ class SqlBodyTest(unittest.TestCase):
   def test_where(self, mock_db):
     models.UnittestModel.where_equal(True, int_=3)
     ((_, sql, parameters, types), _) = mock_db.sql_query.call_args
-    expected_sql = 'SELECT .* FROM table WHERE table.int_ = @int_'
+    expected_sql = 'SELECT .* FROM table WHERE table.int_ = @int_0'
     self.assertRegex(sql, expected_sql)
-    self.assertEqual({'int_': 3}, parameters)
-    self.assertEqual(types, {'int_': field.Integer.grpc_type()})
+    self.assertEqual({'int_0': 3}, parameters)
+    self.assertEqual(types, {'int_0': field.Integer.grpc_type()})
 
   @mock.patch('spanner_orm.api.SpannerApi')
   def test_count(self, mock_db):
     column, value = ('int_', 3)
     models.UnittestModel.count_equal(True, **{column: value})
     ((_, sql, parameters, types), _) = mock_db.sql_query.call_args
+
+    column_key = '{}0'.format(column)
     expected_sql = r'SELECT COUNT\(\*\) FROM table WHERE table.{} = @{}'.format(
-        column, column)
+        column, column_key)
     self.assertRegex(sql, expected_sql)
-    self.assertEqual({column: value}, parameters)
-    self.assertEqual(types, {column: field.Integer.grpc_type()})
+    self.assertEqual({column_key: value}, parameters)
+    self.assertEqual(types, {column_key: field.Integer.grpc_type()})
 
   def test_query_limit(self):
-    key, value = ('limit', 2)
+    key, value = ('limit0', 2)
     query_ = query.SelectQuery(models.UnittestModel, [condition.limit(value)])
 
-    sql, params, types = query_._limit()
-    self.assertEqual(sql, ' LIMIT @limit')
-    self.assertEqual(params, {key: value})
-    self.assertEqual(types, {key: field.Integer.grpc_type()})
+    self.assertTrue(query_.sql().endswith(' LIMIT @{}'.format(key)))
+    self.assertEqual(query_.parameters(), {key: value})
+    self.assertEqual(query_.types(), {key: field.Integer.grpc_type()})
 
     query_ = query.SelectQuery(models.UnittestModel, [])
     self.assertEqual(query_._limit(), ('', {}, {}))
 
   def test_query_limit_offset(self):
-    limit_key, limit = 'limit', 2
-    offset_key, offset = 'offset', 5
+    limit_key, limit = 'limit0', 2
+    offset_key, offset = 'offset0', 5
     query_ = query.SelectQuery(models.UnittestModel,
                                [condition.limit(limit, offset=offset)])
 
-    sql, params, types = query_._limit()
-    self.assertEqual(sql, ' LIMIT @limit OFFSET @offset')
-    self.assertEqual(params, {limit_key: limit, offset_key: offset})
-    self.assertEqual(types, {
+    self.assertTrue(query_.sql().endswith(' LIMIT @{} OFFSET @{}'.format(
+        limit_key, offset_key)))
+    self.assertEqual(query_.parameters(), {
+        limit_key: limit,
+        offset_key: offset
+    })
+    self.assertEqual(query_.types(), {
         limit_key: field.Integer.grpc_type(),
         offset_key: field.Integer.grpc_type()
     })
@@ -87,10 +91,9 @@ class SqlBodyTest(unittest.TestCase):
     query_ = query.SelectQuery(models.UnittestModel,
                                [condition.order_by(order)])
 
-    sql, params, types = query_._order()
-    self.assertEqual(sql, ' ORDER BY table.int_ DESC')
-    self.assertEqual(params, {})
-    self.assertEqual(types, {})
+    self.assertTrue(query_.sql().endswith(' ORDER BY table.int_ DESC'))
+    self.assertEqual(query_.parameters(), {})
+    self.assertEqual(query_.types(), {})
 
     query_ = query.SelectQuery(models.UnittestModel, [])
     self.assertEqual(query_._order(), ('', {}, {}))
@@ -107,12 +110,13 @@ class SqlBodyTest(unittest.TestCase):
       for condition_generator in conditions:
         current_condition = condition_generator(column, value)
         query_ = query.SelectQuery(models.UnittestModel, [current_condition])
+
+        column_key = '{}0'.format(column)
         expected_where = ' WHERE table.{} {} @{}'.format(
-            column, current_condition.operator(), column)
-        sql, params, types = query_._where()
-        self.assertEqual(sql, expected_where)
-        self.assertEqual(params, {column: value})
-        self.assertEqual(types, {column: type_})
+            column, current_condition.operator(), column_key)
+        self.assertTrue(query_.sql().endswith(expected_where))
+        self.assertEqual(query_.parameters(), {column_key: value})
+        self.assertEqual(query_.types(), {column_key: type_})
 
   def test_query__where_list_comparison(self):
     tuples = [('int_', [1, 2, 3], field.Integer.grpc_type()),
@@ -124,13 +128,14 @@ class SqlBodyTest(unittest.TestCase):
       for condition_generator in conditions:
         current_condition = condition_generator(column, values)
         query_ = query.SelectQuery(models.UnittestModel, [current_condition])
+
+        column_key = '{}0'.format(column)
         expected_sql = ' WHERE table.{} {} UNNEST(@{})'.format(
-            column, current_condition.operator(), column)
-        sql, params, types = query_._where()
-        self.assertEqual(sql, expected_sql)
-        self.assertEqual(params, {column: values})
+            column, current_condition.operator(), column_key)
         list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=type_)
-        self.assertEqual(types, {column: list_type})
+        self.assertTrue(query_.sql().endswith(expected_sql))
+        self.assertEqual(query_.parameters(), {column_key: values})
+        self.assertEqual(query_.types(), {column_key: list_type})
 
   def test_query__combines_properly(self):
     query_ = query.SelectQuery(models.UnittestModel, [
@@ -139,8 +144,8 @@ class SqlBodyTest(unittest.TestCase):
         condition.limit(2),
         condition.order_by(('string', condition.OrderType.DESC))
     ])
-    expected_sql = ('WHERE table.int_ = @int_ AND table.string_array != '
-                    '@string_array ORDER BY table.string DESC LIMIT @limit')
+    expected_sql = ('WHERE table.int_ = @int_0 AND table.string_array != '
+                    '@string_array1 ORDER BY table.string DESC LIMIT @limit2')
     self.assertTrue(query_.sql().endswith(expected_sql))
 
   def test_only_one_limit_allowed(self):
@@ -148,13 +153,6 @@ class SqlBodyTest(unittest.TestCase):
       query.SelectQuery(
           models.UnittestModel,
           [condition.limit(2), condition.limit(2)])
-
-  def test_only_one_condition_per_column_allowed(self):
-    with self.assertRaises(error.SpannerError):
-      query.SelectQuery(
-          models.UnittestModel,
-          [condition.equal_to('int_', 5),
-           condition.equal_to('int_', 2)])
 
   def test_includes(self):
     query_ = query.SelectQuery(models.ChildTestModel,
@@ -172,11 +170,9 @@ class SqlBodyTest(unittest.TestCase):
     query_ = query.SelectQuery(
         models.ChildTestModel,
         [condition.includes('parents', [condition.equal_to('key', 'value')])])
-    # The column order varies between test runs
     expected_sql = ('WHERE SmallTestModel.key = ChildTestModel.parent_key '
-                    'AND SmallTestModel.key = @key')
-    (sql, _, _) = query_._select()
-    self.assertRegex(sql, expected_sql)
+                    'AND SmallTestModel.key = @key0')
+    self.assertRegex(query_.sql(), expected_sql)
 
   def includes_result(self, related=1):
     child = {'parent_key': 'parent_key', 'child_key': 'child'}
