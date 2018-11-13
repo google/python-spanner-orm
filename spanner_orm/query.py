@@ -32,7 +32,7 @@ class SpannerQuery(abc.ABC):
     self._types = {}
     self._build()
 
-  def _param_index(self):
+  def _next_param_index(self):
     return self._param_offset + len(self._parameters)
 
   def parameters(self):
@@ -88,7 +88,7 @@ class SpannerQuery(abc.ABC):
     sql, sql_parts, parameters, types = '', [], {}, {}
     wheres = self._segments(condition.Segment.WHERE)
     for where in wheres:
-      where.suffix = str(self._param_index() + len(parameters))
+      where.suffix = str(self._next_param_index() + len(parameters))
       sql_parts.append(where.sql())
       parameters.update(where.params())
       types.update(where.types())
@@ -104,7 +104,7 @@ class SpannerQuery(abc.ABC):
       if len(orders) != 1:
         raise error.SpannerError('Only one order condition may be specified')
       order = orders[0]
-      order.suffix = str(self._param_index())
+      order.suffix = str(self._next_param_index())
       sql = ' ' + order.sql()
       parameters = order.params()
       types = order.types()
@@ -118,7 +118,7 @@ class SpannerQuery(abc.ABC):
       if len(limits) != 1:
         raise error.SpannerError('Only one limit condition may be specified')
       limit = limits[0]
-      limit.suffix = str(self._param_index())
+      limit.suffix = str(self._next_param_index())
       sql = ' ' + limit.sql()
       parameters = limit.params()
       types = limit.types()
@@ -158,7 +158,7 @@ class SelectQuery(SpannerQuery):
     joins = self._segments(condition.Segment.JOIN)
     for join in joins:
       subquery = _SelectSubQuery(join.destination, join.conditions,
-                                 param_offset=self._param_index())
+                                 param_offset=self._next_param_index())
 
       columns.append('ARRAY({subquery})'.format(subquery=subquery.sql()))
       parameters.update(subquery.parameters())
