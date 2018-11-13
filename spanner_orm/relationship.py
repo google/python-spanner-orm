@@ -67,11 +67,11 @@ class Relationship(object):
     """Validates the dictionary of constraints and turns it into Conditions."""
     conditions = []
     for origin_column, destination_column in self._constraints.items():
-      if origin_column not in self.origin.schema():
+      if origin_column not in self.origin.schema:
         raise error.SpannerError(
             'Origin column must be present in origin model')
 
-      if destination_column not in self.destination.schema():
+      if destination_column not in self.destination.schema:
         raise error.SpannerError(
             'Destination column must be present in destination model')
       # This is backward from what you might imagine because the condition will

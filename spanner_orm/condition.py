@@ -95,19 +95,19 @@ class ColumnsEqualCondition(Condition):
 
   def _sql(self):
     return '{table}.{column} = {other_table}.{other_column}'.format(
-        table=self.model.table(),
+        table=self.model.table,
         column=self.column,
-        other_table=self.destination_model.table(),
+        other_table=self.destination_model.table,
         other_column=self.destination_column)
 
   def _types(self):
     return {}
 
   def _validate(self, model):
-    assert self.column in model.schema()
-    origin = model.schema()[self.column]
-    assert self.destination_column in self.destination_model.schema()
-    dest = self.destination_model.schema()[self.destination_column]
+    assert self.column in model.schema
+    origin = model.schema[self.column]
+    assert self.destination_column in self.destination_model.schema
+    dest = self.destination_model.schema[self.destination_column]
 
     assert (origin.field_type() == dest.field_type() and
             origin.nullable() == dest.nullable())
@@ -124,7 +124,7 @@ class IncludesCondition(Condition):
 
   def bind(self, model):
     super().bind(model)
-    self.relation = self.model.relations()[self.name]
+    self.relation = self.model.relations[self.name]
 
   @property
   def conditions(self):
@@ -165,8 +165,8 @@ class IncludesCondition(Condition):
     return {}
 
   def _validate(self, model):
-    assert self.name in model.relations()
-    other_model = model.relations()[self.name].destination
+    assert self.name in model.relations
+    other_model = model.relations[self.name].destination
     for condition in self._conditions:
       condition._validate(other_model)  # pylint: disable=protected-access
 
@@ -236,7 +236,7 @@ class OrderByCondition(Condition):
     orders = []
     for (column, order_type) in self.orderings:
       orders.append('{alias}.{column} {order_type}'.format(
-          alias=self.model.column_prefix(),
+          alias=self.model.column_prefix,
           column=column,
           order_type=order_type.name))
     return 'ORDER BY {orders}'.format(orders=', '.join(orders))
@@ -250,7 +250,7 @@ class OrderByCondition(Condition):
 
   def _validate(self, model):
     for (column, _) in self.orderings:
-      assert column in model.schema()
+      assert column in model.schema
 
 
 class ComparisonCondition(Condition):
@@ -276,15 +276,15 @@ class ComparisonCondition(Condition):
 
   def _sql(self):
     return '{alias}.{column} {operator} @{column}'.format(
-        alias=self.model.column_prefix(),
+        alias=self.model.column_prefix,
         column=self.column,
         operator=self.operator())
 
   def _types(self):
-    return {self.column: self.model.schema()[self.column].grpc_type()}
+    return {self.column: self.model.schema[self.column].grpc_type()}
 
   def _validate(self, model):
-    schema = model.schema()
+    schema = model.schema
     assert self.column in schema
     assert self.value is not None
     schema[self.column].validate(self.value)
@@ -323,17 +323,17 @@ class ListComparisonCondition(ComparisonCondition):
 
   def _sql(self):
     return '{alias}.{column} {operator} UNNEST(@{column})'.format(
-        alias=self.model.column_prefix(),
+        alias=self.model.column_prefix,
         column=self.column,
         operator=self.operator())
 
   def _types(self):
-    grpc_type = self.model.schema()[self.column].grpc_type()
+    grpc_type = self.model.schema[self.column].grpc_type()
     list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
     return {self.column: list_type}
 
   def _validate(self, model):
-    schema = model.schema()
+    schema = model.schema
     assert isinstance(self.value, list)
     assert self.column in schema
     for value in self.value:
@@ -373,7 +373,7 @@ class NullableComparisonCondition(ComparisonCondition):
   def _sql(self):
     if self.is_null():
       return '{alias}.{column} {operator} NULL'.format(
-          alias=self.model.column_prefix(),
+          alias=self.model.column_prefix,
           column=self.column,
           operator=self.nullable_operator())
     return super()._sql()
@@ -384,7 +384,7 @@ class NullableComparisonCondition(ComparisonCondition):
     return super()._types()
 
   def _validate(self, model):
-    schema = model.schema()
+    schema = model.schema
     assert self.column in schema
     schema[self.column].validate(self.value)
 

@@ -29,18 +29,24 @@ from google.cloud import spanner
 class Metadata(object):
   """Holds Spanner table metadata corresponding to a Model."""
 
-  def __init__(self, table=None, schema=None, primary_keys=None,
-               relations=None):
+  def __init__(self, table=None, fields=None, relations=None):
     self.table = table or ''
-    self.schema = schema or {}
-    self.primary_keys = primary_keys or []
+    self.fields = fields or {}
     self.relations = relations or {}
+    self.process_fields()
 
   def add_metadata(self, metadata):
     self.table = metadata.table or self.table
-    self.schema.update(metadata.schema)
-    self.primary_keys.extend(metadata.primary_keys)
+    self.fields.update(metadata.fields)
     self.relations.update(metadata.relations)
+    self.process_fields()
+
+  def process_fields(self):
+    sorted_fields = list(sorted(self.fields.values(), key=lambda f: f.index))
+    self.columns = [f.name for f in sorted_fields]
+    self.primary_keys = [
+        f.name for f in sorted_fields if f.primary_key()
+    ]
 
 
 class ModelBase(type):
@@ -62,14 +68,14 @@ class ModelBase(type):
         metadata.table = value
       if isinstance(value, field.Field):
         value.name = key
-        metadata.schema[key] = value
-        if value.primary_key():
-          metadata.primary_keys.append(key)
+        value.index = len(metadata.fields)
+        metadata.fields[key] = value
       elif isinstance(value, relationship.Relationship):
         value.name = key
         metadata.relations[key] = value
       else:
         non_model_attrs[key] = value
+    metadata.process_fields()
 
     cls = super().__new__(mcs, name, bases, non_model_attrs, **kwargs)
     for _, relation in metadata.relations.items():
@@ -78,109 +84,235 @@ class ModelBase(type):
     return cls
 
   def __getattr__(cls, name):
-    if name in cls.meta.schema:
-      return cls.meta.schema[name]
+    if name in cls.schema:
+      return cls.schema[name]
+    elif name in cls.relations:
+      return cls.relations[name]
     raise AttributeError(name)
 
+  @property
+  def creation_ddl(cls):
+    fields = [
+        '{} {}'.format(name, field.ddl()) for name, field in cls.schema.items()
+    ]
+    field_ddl = '({})'.format(', '.join(fields))
+    index_ddl = 'PRIMARY KEY ({})'.format(', '.join(cls.primary_keys))
+    return 'CREATE TABLE {} {} {}'.format(cls.table, field_ddl, index_ddl)
 
-class Model(metaclass=ModelBase):
-  """Maps to a table in spanner and has basic functions for querying tables."""
-
-  @classmethod
+  @property
   def column_prefix(cls):
-    return cls.table().split('.')[-1]
+    return cls.table.split('.')[-1]
 
   # Table schema class methods
-  @classmethod
+  @property
   def columns(cls):
-    return set(cls.schema())
+    return cls.meta.columns
 
-  @classmethod
+  @property
   def primary_keys(cls):
     return cls.meta.primary_keys
 
-  @classmethod
+  @property
   def relations(cls):
     return cls.meta.relations
 
-  @classmethod
+  @property
   def schema(cls):
-    return cls.meta.schema
+    return cls.meta.fields
 
-  @classmethod
+  @property
   def table(cls):
     return cls.meta.table
 
-  @classmethod
-  def create_table_ddl(cls):
-    fields = [
-        '{} {}'.format(name, field.ddl())
-        for name, field in cls.schema().items()
-    ]
-    field_ddl = '({})'.format(', '.join(fields))
-    index_ddl = 'PRIMARY KEY ({})'.format(', '.join(cls.primary_keys()))
-    return 'CREATE TABLE {} {} {}'.format(cls.table(), field_ddl, index_ddl)
-
-  @classmethod
-  def _validate(cls, name, value, error_type):
+  def validate_value(cls, field_name, value, error_type=error.SpannerError):
     try:
-      cls.schema()[name].validate(value)
+      cls.schema[field_name].validate(value)
     except AssertionError as ex:
       raise error_type(*ex.args)
 
+
+class ModelMeta(ModelBase):
+  """Implements Spanner queries on top of ModelBase."""
+
+  # Table read methods
+  def all(cls, transaction=None):
+    args = [cls.table, cls.columns, spanner.KeySet(all_=True)]
+    results = cls._execute_read(api.SpannerApi.find, transaction, args)
+    return cls._results_to_models(results)
+
+  def count(cls, transaction, *conditions):
+    """Implementation of the SELECT COUNT query."""
+    builder = query.CountQuery(cls, conditions)
+    args = [builder.sql(), builder.parameters(), builder.types()]
+    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
+    return builder.process_results(results)
+
+  def count_equal(cls, transaction=None, **constraints):
+    """Creates and executes a SELECT COUNT query from constraints."""
+    conditions = []
+    for column, value in constraints.items():
+      if isinstance(value, list):
+        conditions.append(condition.in_list(column, value))
+      else:
+        conditions.append(condition.equal_to(column, value))
+    return cls.count(transaction, *conditions)
+
+  def find(cls, transaction=None, **keys):
+    """Grabs the row with the given primary key."""
+    if set(kwargs.keys()) != set(cls.primary_keys):
+      raise error.SpannerError('All primary index keys must be specified')
+
+    key_values = [keys[column] for column in cls.primary_keys]
+    keyset = spanner.KeySet(keys=[ordered_values])
+
+    args = [cls.table, cls.columns, keyset]
+    results = cls._execute_read(api.SpannerApi.find, transaction, args)
+    resources = cls._results_to_models(results)
+
+    return resources[0] if resources else None
+
+  def where(cls, transaction, *conditions):
+    """Implementation of the SELECT query."""
+    builder = query.SelectQuery(cls, conditions)
+    args = [builder.sql(), builder.parameters(), builder.types()]
+    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
+    return builder.process_results(results)
+
+  def where_equal(cls, transaction=None, **constraints):
+    """Creates and executes a SELECT query from constraints."""
+    conditions = []
+    for column, value in constraints.items():
+      if isinstance(value, list):
+        conditions.append(condition.in_list(column, value))
+      else:
+        conditions.append(condition.equal_to(column, value))
+    return cls.where(transaction, *conditions)
+
+  def _results_to_models(cls, results):
+    items = [dict(zip(cls.columns, result)) for result in results]
+    return [cls(item, persisted=True) for item in items]
+
+  def _execute_read(cls, db_api, transaction, args):
+    if transaction is not None:
+      return db_api(transaction, *args)
+    else:
+      return api.SpannerApi.run_read_only(db_api, *args)
+
+  # Table write methods
+  def create(cls, transaction=None, **kwargs):
+    cls._execute_write(api.SpannerApi.insert, transaction, [kwargs])
+
+  def create_or_update(cls, transaction=None, **kwargs):
+    cls._execute_write(api.SpannerApi.upsert, transaction, [kwargs])
+
+  def save_batch(cls, transaction, models):
+    """Persist all model changes in list of models to Spanner."""
+    to_create, to_update = [], []
+    columns = cls.columns
+    for model in models:
+      value = {column: getattr(model, column) for column in columns}
+      if model._persisted:  # pylint: disable=protected-access
+        if model.changes():
+          to_update.append(value)
+      else:
+        model._persisted = True  # pylint: disable=protected-access
+        to_create.append(value)
+    if to_create:
+      cls._execute_write(api.SpannerApi.insert, transaction, to_create)
+    if to_update:
+      cls._execute_write(api.SpannerApi.update, transaction, to_update)
+
+  def update(cls, transaction=None, **kwargs):
+    cls._execute_write(api.SpannerApi.update, transaction, [kwargs])
+
+  def _execute_write(cls, db_api, transaction, dictionaries):
+    """Validates all write value types and commits write to Spanner."""
+    columns, values = None, []
+    for dictionary in dictionaries:
+      invalid_keys = set(dictionary.keys()) - cls.columns
+      if invalid_keys:
+        raise error.SpannerError('Invalid keys set on {model}: {keys}'.format(
+            model=cls.__name__, keys=invalid_keys))
+
+      if columns is None:
+        columns = dictionary.keys()
+      if columns != dictionary.keys():
+        raise error.SpannerError(
+            'Attempted to update rows with different sets of keys')
+
+      for key, value in dictionary.items():
+        cls.validate_value(key, value, error.SpannerError)
+      values.append([dictionary[column] for column in columns])
+
+    args = [cls.table, columns, values]
+    if transaction is not None:
+      return db_api(transaction, *args)
+    else:
+      return api.SpannerApi.run_write(db_api, *args)
+
+
+class Model(object, metaclass=ModelMeta):
+  """Maps to a table in spanner and has basic functions for querying tables."""
+
   # Instance methods
   def __init__(self, values, persisted=False):
+    metaclass = type(self)
+    self.related = {}
+    self.start_values = {}
     # Ensure that we have the primary index keys (unique id) set for all objects
-    missing_keys = set(self.primary_keys()) - set(values.keys())
+    missing_keys = set(metaclass.primary_keys) - set(values.keys())
     if missing_keys:
       raise error.SpannerError(
           'All primary keys must be specified. Missing: {keys}'.format(
               keys=missing_keys))
 
-    self.start_values, self.related = {}, {}
     for key, value in values.items():
-      if key in self.relations():
+      if key in metaclass.relations:
         self.related[key] = value
-      elif key in self.columns():
+      elif key in metaclass.columns:
         if value is not None:
-          self._validate(key, value, ValueError)
+          metaclass.validate_value(key, value, ValueError)
           self.start_values[key] = copy.copy(value)
       else:
         raise ValueError('{name} is not part of {klass}'.format(
-            name=key, klass=type(self).__name__))
+            name=key, klass=metaclass.__name__))
 
     self.values = copy.deepcopy(self.start_values)
     self._persisted = persisted
 
   def __getattr__(self, name):
-    if name in self.schema():
+    metaclass = type(self)
+    if name in metaclass.schema:
       return self.values.get(name)
-    elif name in self.related:
-      return self.related[name]
-    elif name in self.relations():
+    elif name in metaclass.relations:
+      if name in self.related:
+        return self.related[name]
       raise AttributeError('{name} was not included in query'.format(name=name))
     raise AttributeError(name)
 
   def __setattr__(self, name, value):
-    if name in self.primary_keys():
+    metaclass = type(self)
+    if name in metaclass.primary_keys:
       raise AttributeError(name)
-    elif name in self.schema():
-      self._validate(name, value, AttributeError)
+    elif name in metaclass.schema:
+      metaclass.validate_value(name, value, AttributeError)
       self.values[name] = copy.copy(value)
-    elif name in self.relations():
+    elif name in metaclass.relations:
       raise AttributeError('{name} is not settable'.format(name=name))
     else:
       super().__setattr__(name, value)
 
   def changes(self):
+    metaclass = type(self)
     return {
         key: self.values[key]
-        for key in self.columns()
+        for key in metaclass.columns
         if self.values.get(key) != self.start_values.get(key)
     }
 
   def id(self):
-    return {key: self.values[key] for key in self.primary_keys()}
+    metaclass = type(self)
+    return {key: self.values[key] for key in metaclass.primary_keys}
 
   def reload(self, transaction=None):
     updated_object = self.find(transaction, **self.id())
@@ -200,138 +332,3 @@ class Model(metaclass=ModelBase):
       self.create(transaction, **self.values)
       self._persisted = True
     return self
-
-  # Table read methods
-  @classmethod
-  def all(cls, transaction=None):
-    args = [cls.table(), cls.columns(), spanner.KeySet(all_=True)]
-    results = cls._execute_read(api.SpannerApi.find, transaction, args)
-    return cls._results_to_models(results)
-
-  @classmethod
-  def count(cls, transaction, *conditions):
-    """Implementation of the SELECT COUNT query. Requires SqlConditions."""
-    builder = query.CountQuery(cls, conditions)
-    args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
-    return builder.process_results(results)
-
-  @classmethod
-  def count_equal(cls, transaction=None, **kwargs):
-    """Creates and executes a SELECT COUNT query from kwargs."""
-    conditions = []
-    for k, v in kwargs.items():
-      if isinstance(v, list):
-        conditions.append(condition.InListCondition(k, v))
-      else:
-        conditions.append(condition.EqualityCondition(k, v))
-    return cls.count(transaction, *conditions)
-
-  @classmethod
-  def find(cls, transaction=None, **kwargs):
-    """Grabs the row with the given primary_key."""
-    # Make sure that all primary keys were included (sometimes multiple
-    # primary keys for a table)
-    index_keys = list(cls.primary_keys())
-    if set(kwargs.keys()) != set(index_keys):
-      raise error.SpannerError('All primary index keys must be specified')
-
-    # Keys need to be in specfic order
-    ordered_values = [kwargs[column] for column in index_keys]
-
-    # Get all columns for row
-    keyset = spanner.KeySet(keys=[ordered_values])
-
-    args = [cls.table(), cls.columns(), keyset]
-    results = cls._execute_read(api.SpannerApi.find, transaction, args)
-    resources = cls._results_to_models(results)
-
-    return resources[0] if resources else None
-
-  @classmethod
-  def where(cls, transaction, *conditions):
-    """Implementation of the SELECT query. Requires list of SqlConditions."""
-    builder = query.SelectQuery(cls, conditions)
-    args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
-    return builder.process_results(results)
-
-  @classmethod
-  def where_equal(cls, transaction=None, **kwargs):
-    """Creates and executes a SELECT query from kwargs."""
-    conditions = []
-    for k, v in kwargs.items():
-      if isinstance(v, list):
-        conditions.append(condition.InListCondition(k, v))
-      else:
-        conditions.append(condition.EqualityCondition(k, v))
-    return cls.where(transaction, *conditions)
-
-  @classmethod
-  def _results_to_models(cls, results):
-    items = [dict(zip(cls.columns(), result)) for result in results]
-    return [cls(item, persisted=True) for item in items]
-
-  @staticmethod
-  def _execute_read(db_api, transaction, args):
-    if transaction is not None:
-      return db_api(transaction, *args)
-    else:
-      return api.SpannerApi.run_read_only(db_api, *args)
-
-  # Table write methods
-  @classmethod
-  def create(cls, transaction=None, **kwargs):
-    cls._execute_write(api.SpannerApi.insert, transaction, [kwargs])
-
-  @classmethod
-  def create_or_update(cls, transaction=None, **kwargs):
-    cls._execute_write(api.SpannerApi.upsert, transaction, [kwargs])
-
-  @classmethod
-  def save_batch(cls, transaction, models):
-    """Persist all model changes in list of models to Spanner."""
-    to_create, to_update = [], []
-    columns = cls.columns()
-    for model in models:
-      value = {column: getattr(model, column) for column in columns}
-      if model._persisted:  # pylint: disable=protected-access
-        if model.changes():
-          to_update.append(value)
-      else:
-        model._persisted = True  # pylint: disable=protected-access
-        to_create.append(value)
-    if to_create:
-      cls._execute_write(api.SpannerApi.insert, transaction, to_create)
-    if to_update:
-      cls._execute_write(api.SpannerApi.update, transaction, to_update)
-
-  @classmethod
-  def update(cls, transaction=None, **kwargs):
-    cls._execute_write(api.SpannerApi.update, transaction, [kwargs])
-
-  @classmethod
-  def _execute_write(cls, db_api, transaction, dictionaries):
-    """Validates all write value types and commits write to Spanner."""
-    columns, values = None, []
-    for dictionary in dictionaries:
-      invalid_keys = set(dictionary.keys()) - cls.columns()
-      if invalid_keys:
-        raise error.SpannerError('Invalid keys set on {model}: {keys}'.format(
-            model=cls.__name__, keys=invalid_keys))
-
-      if columns is None:
-        columns = dictionary.keys()
-      if columns != dictionary.keys():
-        raise error.SpannerError(
-            'Attempted to update rows with different sets of keys')
-
-      for key, value in dictionary.items():
-        cls._validate(key, value, error.SpannerError)
-      values.append([dictionary[column] for column in columns])
-
-    args = [cls.table(), columns, values]
-    if transaction is not None:
-      return db_api(transaction, *args)
-    else:
-      return api.SpannerApi.run_write(db_api, *args)

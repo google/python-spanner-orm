@@ -25,11 +25,11 @@ class AdminTest(unittest.TestCase):
 
   def smalltestmodel_columns(self):
     columns, iteration = [], 1
-    for row in models.SmallTestModel.schema().values():
+    for row in models.SmallTestModel.schema.values():
       columns.append({
           'table_catalog': '',
           'table_schema': '',
-          'table_name': models.SmallTestModel.table(),
+          'table_name': models.SmallTestModel.table,
           'column_name': row.name,
           'ordinal_position': iteration,
           'is_nullable': 'YES' if row.nullable() else 'NO',
@@ -40,11 +40,11 @@ class AdminTest(unittest.TestCase):
 
   def smalltestmodel_index_columns(self):
     columns = []
-    for row in models.SmallTestModel.primary_keys():
+    for row in models.SmallTestModel.primary_keys:
       columns.append({
           'table_catalog': '',
           'table_schema': '',
-          'table_name': models.SmallTestModel.table(),
+          'table_name': models.SmallTestModel.table,
           'index_name': 'PRIMARY_KEY',
           'column_name': row
       })
@@ -55,7 +55,7 @@ class AdminTest(unittest.TestCase):
         schemas.IndexSchema({
             'table_catalog': '',
             'table_schema': '',
-            'table_name': models.SmallTestModel.table(),
+            'table_name': models.SmallTestModel.table,
             'index_name': 'PRIMARY_KEY',
             'index_type': 'PRIMARY_KEY',
             'is_unique': True,
@@ -74,15 +74,15 @@ class AdminTest(unittest.TestCase):
 
     meta = metadata.SpannerMetadata.models()['SmallTestModel']
 
-    self.assertEqual(meta.table(), models.SmallTestModel.table())
-    self.assertEqual(meta.schema().keys(), model.columns())
-    for row in model.columns():
-      self.assertEqual(meta.schema()[row].field_type(),
-                       model.schema()[row].field_type())
-      self.assertEqual(meta.schema()[row].nullable(),
-                       model.schema()[row].nullable())
-    self.assertEqual(meta.primary_keys(),
-                     models.SmallTestModel.primary_keys())
+    self.assertEqual(meta.table, models.SmallTestModel.table)
+    self.assertEqual(meta.columns, model.columns)
+    for row in model.columns:
+      self.assertEqual(meta.schema[row].field_type(),
+                       model.schema[row].field_type())
+      self.assertEqual(meta.schema[row].nullable(),
+                       model.schema[row].nullable())
+    self.assertEqual(meta.primary_keys,
+                     models.SmallTestModel.primary_keys)
 
 
 if __name__ == '__main__':

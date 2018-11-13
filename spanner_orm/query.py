@@ -75,7 +75,7 @@ class SpannerQuery(abc.ABC):
 
   def _from(self):
     """Processes the FROM segment of the SQL query."""
-    return (' FROM {}'.format(self._model.table()), {}, {})
+    return (' FROM {}'.format(self._model.table), {}, {})
 
   def _where(self):
     """Processes the WHERE segment of the SQL query."""
@@ -147,8 +147,8 @@ class SelectQuery(SpannerQuery):
     parameters, types = {}, {}
     columns = [
         '{alias}.{column}'.format(
-            alias=self._model.column_prefix(), column=column)
-        for column in self._model.columns()
+            alias=self._model.column_prefix, column=column)
+        for column in self._model.columns
     ]
     joins = self._segments(condition.Segment.JOIN)
     for join in joins:
@@ -167,9 +167,9 @@ class SelectQuery(SpannerQuery):
 
   def _process_row(self, row):
     """Parses a row of results from a Spanner query based on the conditions."""
-    values = dict(zip(self._model.columns(), row))
+    values = dict(zip(self._model.columns, row))
     joins = self._segments(condition.Segment.JOIN)
-    join_values = row[len(self._model.columns()):]
+    join_values = row[len(self._model.columns):]
     for join, join_value in zip(joins, join_values):
       subquery = _SelectSubQuery(join.destination, join.conditions)
       models = subquery.process_results(join_value)
