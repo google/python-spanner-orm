@@ -15,7 +15,6 @@
 
 """spanner_orm setup file."""
 from setuptools import setup
-
 setup(
     name='spanner-orm',
     version='0.1.1',
@@ -27,4 +26,5 @@ setup(
     install_requires=[
         'googleapis-common-protos==1.5.3',
         'google-cloud-spanner'
-    ])
+    ],
+    tests_require=['absl-py'])
