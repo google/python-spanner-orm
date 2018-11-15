@@ -35,10 +35,16 @@ class Condition(abc.ABC):
 
   def __init__(self):
     self.model = None
+    self.suffix = None
 
   def bind(self, model):
     self._validate(model)
     self.model = model
+
+  def key(self, name):
+    if self.suffix:
+      return '{name}{suffix}'.format(name=name, suffix=self.suffix)
+    return name
 
   def params(self):
     if not self.model:
@@ -173,8 +179,6 @@ class IncludesCondition(Condition):
 
 class LimitCondition(Condition):
   """Used to specify a LIMIT condition in a Spanner query"""
-  LIMIT_KEY = 'limit'
-  OFFSET_KEY = 'offset'
 
   def __init__(self, value, offset=0):
     super().__init__()
@@ -186,10 +190,18 @@ class LimitCondition(Condition):
     self.limit = value
     self.offset = offset
 
+  @property
+  def _limit_key(self):
+    return self.key('limit')
+
+  @property
+  def _offset_key(self):
+    return self.key('offset')
+
   def _params(self):
-    params = {self.LIMIT_KEY: self.limit}
+    params = {self._limit_key: self.limit}
     if self.offset:
-      params[self.OFFSET_KEY] = self.offset
+      params[self._offset_key] = self.offset
     return params
 
   @staticmethod
@@ -198,14 +210,14 @@ class LimitCondition(Condition):
 
   def _sql(self):
     if self.offset:
-      return 'LIMIT @{limit} OFFSET @{offset}'.format(
-          limit=self.LIMIT_KEY, offset=self.OFFSET_KEY)
-    return 'LIMIT @{limit}'.format(limit=self.LIMIT_KEY)
+      return 'LIMIT @{limit_key} OFFSET @{offset_key}'.format(
+          limit_key=self._limit_key, offset_key=self._offset_key)
+    return 'LIMIT @{limit_key}'.format(limit_key=self._limit_key)
 
   def _types(self):
-    types = {self.LIMIT_KEY: type_pb2.Type(code=type_pb2.INT64)}
+    types = {self._limit_key: type_pb2.Type(code=type_pb2.INT64)}
     if self.offset:
-      types[self.OFFSET_KEY] = type_pb2.Type(code=type_pb2.INT64)
+      types[self._offset_key] = type_pb2.Type(code=type_pb2.INT64)
     return types
 
   def _validate(self, model):
@@ -262,26 +274,31 @@ class ComparisonCondition(Condition):
     self.column = column
     self.value = value
 
+  @property
+  def _column_key(self):
+    return self.key(self.column)
+
   @staticmethod
   @abc.abstractmethod
   def operator():
     raise NotImplementedError
 
   def _params(self):
-    return {self.column: self.value}
+    return {self._column_key: self.value}
 
   @staticmethod
   def segment():
     return Segment.WHERE
 
   def _sql(self):
-    return '{alias}.{column} {operator} @{column}'.format(
+    return '{alias}.{column} {operator} @{column_key}'.format(
         alias=self.model.column_prefix,
         column=self.column,
-        operator=self.operator())
+        operator=self.operator(),
+        column_key=self._column_key)
 
   def _types(self):
-    return {self.column: self.model.schema[self.column].grpc_type()}
+    return {self._column_key: self.model.schema[self.column].grpc_type()}
 
   def _validate(self, model):
     schema = model.schema
@@ -322,15 +339,16 @@ class ListComparisonCondition(ComparisonCondition):
   """Used to compare between a column and a list of values"""
 
   def _sql(self):
-    return '{alias}.{column} {operator} UNNEST(@{column})'.format(
+    return '{alias}.{column} {operator} UNNEST(@{column_key})'.format(
         alias=self.model.column_prefix,
         column=self.column,
-        operator=self.operator())
+        operator=self.operator(),
+        column_key=self._column_key)
 
   def _types(self):
     grpc_type = self.model.schema[self.column].grpc_type()
     list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
-    return {self.column: list_type}
+    return {self._column_key: list_type}
 
   def _validate(self, model):
     schema = model.schema

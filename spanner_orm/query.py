@@ -26,7 +26,14 @@ class SpannerQuery(abc.ABC):
   def __init__(self, model, conditions):
     self._model = model
     self._conditions = conditions
+    self._param_offset = 0
+    self._sql = ''
+    self._parameters = {}
+    self._types = {}
     self._build()
+
+  def _next_param_index(self):
+    return self._param_offset + len(self._parameters)
 
   def parameters(self):
     return self._parameters
@@ -52,21 +59,20 @@ class SpannerQuery(abc.ABC):
 
   def _build(self):
     """Builds the Spanner query from the given model and conditions."""
-    segments = [
-        self._select(),
-        self._from(),
-        self._where(),
-        self._order(),
-        self._limit()
+    segment_builders = [
+        self._select,
+        self._from,
+        self._where,
+        self._order,
+        self._limit
     ]
 
     self._sql, self._parameters, self._types = '', {}, {}
-    for segment in segments:
-      segment_sql, segment_parameters, segment_types = segment
+    for segment_builder in segment_builders:
+      segment_sql, segment_parameters, segment_types = segment_builder()
       self._sql += segment_sql
-
-      self._update_unique(self._parameters, segment_parameters)
-      self._update_unique(self._types, segment_types)
+      self._parameters.update(segment_parameters)
+      self._types.update(segment_types)
 
   @abc.abstractmethod
   def _select(self):
@@ -82,9 +88,10 @@ class SpannerQuery(abc.ABC):
     sql, sql_parts, parameters, types = '', [], {}, {}
     wheres = self._segments(condition.Segment.WHERE)
     for where in wheres:
+      where.suffix = str(self._next_param_index() + len(parameters))
       sql_parts.append(where.sql())
-      self._update_unique(parameters, where.params())
-      self._update_unique(types, where.types())
+      parameters.update(where.params())
+      types.update(where.types())
     if sql_parts:
       sql = ' WHERE {}'.format(' AND '.join(sql_parts))
     return (sql, parameters, types)
@@ -97,6 +104,7 @@ class SpannerQuery(abc.ABC):
       if len(orders) != 1:
         raise error.SpannerError('Only one order condition may be specified')
       order = orders[0]
+      order.suffix = str(self._next_param_index())
       sql = ' ' + order.sql()
       parameters = order.params()
       types = order.types()
@@ -110,27 +118,24 @@ class SpannerQuery(abc.ABC):
       if len(limits) != 1:
         raise error.SpannerError('Only one limit condition may be specified')
       limit = limits[0]
+      limit.suffix = str(self._next_param_index())
       sql = ' ' + limit.sql()
       parameters = limit.params()
       types = limit.types()
     return (sql, parameters, types)
 
-  @staticmethod
-  def _update_unique(to_update, new_dict):
-    if not to_update.keys().isdisjoint(new_dict):
-      raise error.SpannerError(
-          'Only one condition per field is currently supported')
-
-    to_update.update(new_dict)
-
 
 class CountQuery(SpannerQuery):
   """Handles COUNT Spanner queries."""
 
+  def __init__(self, model, conditions):
+    super().__init__(model, conditions)
+    for c in conditions:
+      if c.segment() != condition.Segment.WHERE:
+        raise error.SpannerError('Only conditions that affect the WHERE clause '
+                                 'are allowed for count queries')
+
   def _select(self):
-    if self._segments(condition.Segment.JOIN):
-      raise error.SpannerError(
-          'Includes conditions are not allowed for count queries')
     return ('SELECT COUNT(*)', {}, {})
 
   def process_results(self, results):
@@ -152,12 +157,12 @@ class SelectQuery(SpannerQuery):
     ]
     joins = self._segments(condition.Segment.JOIN)
     for join in joins:
-      subquery = _SelectSubQuery(join.destination, join.conditions)
-
-      self._update_unique(parameters, subquery.parameters())
-      self._update_unique(types, subquery.types())
+      subquery = _SelectSubQuery(join.destination, join.conditions,
+                                 param_offset=self._next_param_index())
 
       columns.append('ARRAY({subquery})'.format(subquery=subquery.sql()))
+      parameters.update(subquery.parameters())
+      types.update(subquery.types())
     return ('{prefix} {columns}'.format(
         prefix=self._select_prefix(), columns=', '.join(columns)), parameters,
             types)
@@ -184,6 +189,10 @@ class SelectQuery(SpannerQuery):
 
 
 class _SelectSubQuery(SelectQuery):
+
+  def __init__(self, model, conditions, param_offset=0):
+    super().__init__(model, conditions)
+    self._param_offset = param_offset
 
   def _select_prefix(self):
     return 'SELECT AS STRUCT'
