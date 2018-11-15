@@ -159,11 +159,11 @@ class ModelMeta(ModelBase):
 
   def find(cls, transaction=None, **keys):
     """Grabs the row with the given primary key."""
-    if set(kwargs.keys()) != set(cls.primary_keys):
+    if set(keys.keys()) != set(cls.primary_keys):
       raise error.SpannerError('All primary index keys must be specified')
 
     key_values = [keys[column] for column in cls.primary_keys]
-    keyset = spanner.KeySet(keys=[ordered_values])
+    keyset = spanner.KeySet(keys=[key_values])
 
     args = [cls.table, cls.columns, keyset]
     results = cls._execute_read(api.SpannerApi.find, transaction, args)
