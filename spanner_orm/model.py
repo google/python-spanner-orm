@@ -256,63 +256,78 @@ class Model(object, metaclass=ModelMeta):
 
   # Instance methods
   def __init__(self, values, persisted=False):
-    metaclass = type(self)
     self.related = {}
     self.start_values = {}
     # Ensure that we have the primary index keys (unique id) set for all objects
-    missing_keys = set(metaclass.primary_keys) - set(values.keys())
+    missing_keys = set(self._primary_keys) - set(values.keys())
     if missing_keys:
       raise error.SpannerError(
           'All primary keys must be specified. Missing: {keys}'.format(
               keys=missing_keys))
 
     for key, value in values.items():
-      if key in metaclass.relations:
+      if key in self._relations:
         self.related[key] = value
-      elif key in metaclass.columns:
+      elif key in self._columns:
         if value is not None:
-          metaclass.validate_value(key, value, ValueError)
+          self._metaclass.validate_value(key, value, ValueError)
           self.start_values[key] = copy.copy(value)
       else:
         raise ValueError('{name} is not part of {klass}'.format(
-            name=key, klass=metaclass.__name__))
+            name=key, klass=type(self).__name__))
 
     self.values = copy.deepcopy(self.start_values)
     self._persisted = persisted
 
+  @property
+  def _metaclass(self):
+    return type(self)
+
+  @property
+  def _columns(self):
+    return self._metaclass.columns
+
+  @property
+  def _fields(self):
+    return self._metaclass.schema
+
+  @property
+  def _primary_keys(self):
+    return self._metaclass.primary_keys
+
+  @property
+  def _relations(self):
+    return self._metaclass.relations
+
   def __getattr__(self, name):
-    metaclass = type(self)
-    if name in metaclass.schema:
+    if name in self._fields:
       return self.values.get(name)
-    elif name in metaclass.relations:
+    elif name in self._relations:
       if name in self.related:
         return self.related[name]
       raise AttributeError('{name} was not included in query'.format(name=name))
     raise AttributeError(name)
 
   def __setattr__(self, name, value):
-    metaclass = type(self)
-    if name in metaclass.primary_keys:
+    if name in self._primary_keys:
       raise AttributeError(name)
-    elif name in metaclass.schema:
-      metaclass.validate_value(name, value, AttributeError)
+    elif name in self._fields:
+      self._metaclass.validate_value(name, value, AttributeError)
       self.values[name] = copy.copy(value)
-    elif name in metaclass.relations:
+    elif name in self._relations:
       raise AttributeError('{name} is not settable'.format(name=name))
     else:
       super().__setattr__(name, value)
 
   def changes(self):
-    metaclass = type(self)
     return {
         key: self.values[key]
-        for key in metaclass.columns
+        for key in self._columns
         if self.values.get(key) != self.start_values.get(key)
     }
 
   def id(self):
-    metaclass = type(self)
-    return {key: self.values[key] for key in metaclass.primary_keys}
+    return {key: self.values[key] for key in self._primary_keys}
 
   def reload(self, transaction=None):
     updated_object = self.find(transaction, **self.id())
