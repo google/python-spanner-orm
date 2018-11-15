@@ -64,7 +64,7 @@ class QueryTest(parameterized.TestCase):
     key, value = 'limit0', 2
     select_query = self.select(condition.limit(value))
 
-    self.assertTrue(select_query.sql().endswith(' LIMIT @{}'.format(key)))
+    self.assertEndsWith(select_query.sql(), ' LIMIT @{}'.format(key))
     self.assertEqual(select_query.parameters(), {key: value})
     self.assertEqual(select_query.types(), {key: field.Integer.grpc_type()})
 
@@ -76,8 +76,8 @@ class QueryTest(parameterized.TestCase):
     offset_key, offset = 'offset0', 5
     select_query = self.select(condition.limit(limit, offset=offset))
 
-    self.assertTrue(select_query.sql().endswith(' LIMIT @{} OFFSET @{}'.format(
-        limit_key, offset_key)))
+    self.assertEndsWith(select_query.sql(), ' LIMIT @{} OFFSET @{}'.format(
+        limit_key, offset_key))
     self.assertEqual(select_query.parameters(), {
         limit_key: limit,
         offset_key: offset
@@ -91,9 +91,9 @@ class QueryTest(parameterized.TestCase):
     order = ('int_', condition.OrderType.DESC)
     select_query = self.select(condition.order_by(order))
 
-    self.assertTrue(select_query.sql().endswith(' ORDER BY table.int_ DESC'))
-    self.assertEqual(select_query.parameters(), {})
-    self.assertEqual(select_query.types(), {})
+    self.assertEndsWith(select_query.sql(), ' ORDER BY table.int_ DESC')
+    self.assertEmpty(select_query.parameters())
+    self.assertEmpty(select_query.types())
 
     select_query = self.select()
     self.assertNotRegex(select_query.sql(), 'ORDER BY')
@@ -113,7 +113,7 @@ class QueryTest(parameterized.TestCase):
       column_key = '{}0'.format(column)
       expected_where = ' WHERE table.{} {} @{}'.format(
           column, current_condition.operator(), column_key)
-      self.assertTrue(select_query.sql().endswith(expected_where))
+      self.assertEndsWith(select_query.sql(), expected_where)
       self.assertEqual(select_query.parameters(), {column_key: value})
       self.assertEqual(select_query.types(), {column_key: grpc_type})
 
@@ -130,8 +130,9 @@ class QueryTest(parameterized.TestCase):
       column_key = '{}0'.format(column)
       expected_sql = ' WHERE table.{} {} UNNEST(@{})'.format(
           column, current_condition.operator(), column_key)
-      list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
-      self.assertTrue(select_query.sql().endswith(expected_sql))
+      list_type = type_pb2.Type(
+          code=type_pb2.ARRAY, array_element_type=grpc_type)
+      self.assertEndsWith(select_query.sql(), expected_sql)
       self.assertEqual(select_query.parameters(), {column_key: values})
       self.assertEqual(select_query.types(), {column_key: list_type})
 
@@ -143,7 +144,7 @@ class QueryTest(parameterized.TestCase):
         condition.order_by(('string', condition.OrderType.DESC)))
     expected_sql = ('WHERE table.int_ = @int_0 AND table.string_array != '
                     '@string_array1 ORDER BY table.string DESC LIMIT @limit2')
-    self.assertTrue(select_query.sql().endswith(expected_sql))
+    self.assertEndsWith(select_query.sql(), expected_sql)
 
   def test_only_one_limit_allowed(self):
     with self.assertRaises(error.SpannerError):
@@ -163,8 +164,8 @@ class QueryTest(parameterized.TestCase):
         r'SmallTestModel WHERE SmallTestModel.key = '
         r'ChildTestModel.parent_key\)')
     self.assertRegex(select_query.sql(), expected_sql)
-    self.assertEqual(select_query.parameters(), {})
-    self.assertEqual(select_query.types(), {})
+    self.assertEmpty(select_query.parameters())
+    self.assertEmpty(select_query.types())
 
   def test_includes_subconditions_query(self):
     select_query = self.includes('parents', condition.equal_to('key', 'value'))
@@ -226,15 +227,11 @@ class QueryTest(parameterized.TestCase):
     with self.assertRaises(AssertionError):
       self.includes('bad_relation')
 
-  def test_includes_error_on_invalid_subconditions(self):
+  @parameterized.parameters(('bad_column', 0), ('child_key', 'good value'),
+                            ('key', ['bad value']))
+  def test_includes_error_on_invalid_subconditions(self, column, value):
     with self.assertRaises(AssertionError):
-      self.includes('parent', condition.equal_to('bad_column', 0))
-
-    with self.assertRaises(AssertionError):
-      self.includes('parent', condition.equal_to('child_key', 0))
-
-    with self.assertRaises(AssertionError):
-      self.includes('parent', condition.equal_to('key', 0))
+      self.includes('parent', condition.equal_to(column, value))
 
 
 if __name__ == '__main__':
