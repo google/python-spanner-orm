@@ -61,7 +61,7 @@ class SpannerAdminApi(api.SpannerReadApi):
 
   @classmethod
   def drop_database(cls):
-    cls._connection.drop()
+    cls._connection().drop()
     cls.hangup()
 
   @classmethod

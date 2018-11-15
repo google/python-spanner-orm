@@ -176,11 +176,11 @@ class SqlBodyTest(unittest.TestCase):
 
   def includes_result(self, related=1):
     child = {'parent_key': 'parent_key', 'child_key': 'child'}
-    result = [child[name] for name in models.ChildTestModel.columns()]
+    result = [child[name] for name in models.ChildTestModel.columns]
     parent = {'key': 'key', 'value_1': 'value_1', 'value_2': None}
     parents = []
     for _ in range(related):
-      parents.append([parent[name] for name in models.SmallTestModel.columns()])
+      parents.append([parent[name] for name in models.SmallTestModel.columns])
     result.append(parents)
     return child, parent, [result]
 

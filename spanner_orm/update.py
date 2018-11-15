@@ -47,7 +47,7 @@ class ColumnUpdate(SchemaUpdate):
   def ddl(self, model):
     if self._field is None:
       return 'ALTER TABLE {} DROP COLUMN {}'.format(self._table, self._column)
-    elif self._column in model.schema():
+    elif self._column in model.schema:
       operation = 'ALTER COLUMN'
     else:
       operation = 'ADD COLUMN'
@@ -58,14 +58,14 @@ class ColumnUpdate(SchemaUpdate):
     return self._table
 
   def _validate_alter_column(self, model):
-    assert self._column in model.schema()
-    old_field = model.schema()[self._column]
+    assert self._column in model.schema
+    old_field = model.schema[self._column]
     # Validate that the only alteration is to change column nullability
     assert self._field.field_type() == old_field.field_type()
     assert self._field.nullable() != old_field.nullable()
 
   def _validate_drop_column(self, model):
-    assert self._column in model.schema()
+    assert self._column in model.schema
     # Verify no indices exist on the column we're trying to drop
     num_index_columns = schemas.IndexColumnSchema.count(
         None, condition.EqualityCondition('column_name', self._column),
@@ -75,7 +75,7 @@ class ColumnUpdate(SchemaUpdate):
   def validate(self, model):
     if self._field is None:
       self._validate_drop_column(model)
-    elif self._column in model.schema():
+    elif self._column in model.schema:
       self._validate_alter_column(model)
     else:
       assert self._field.nullable()

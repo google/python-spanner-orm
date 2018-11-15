@@ -106,7 +106,7 @@ class ModelTest(unittest.TestCase):
                       ' string STRING(MAX) NOT NULL, string_2 STRING(MAX),'
                       ' timestamp TIMESTAMP NOT NULL, string_array'
                       ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, string)')
-    self.assertEqual(models.UnittestModel.create_table_ddl(), test_model_ddl)
+    self.assertEqual(models.UnittestModel.creation_ddl, test_model_ddl)
 
   def test_model_class_attribute(self):
     self.assertIsInstance(models.SmallTestModel.key, field.Field)

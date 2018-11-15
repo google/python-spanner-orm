@@ -32,9 +32,8 @@ class SpannerMetadata(object):
   def column_update(cls, schema_change):
     """Handles an ALTER TABLE schema update."""
     if not isinstance(schema_change, update.ColumnUpdate):
-      raise error.SpannerError(
-          'column_update must be provided a ColumnUpdate')
-    klass = cls.models()[schema_change.table()]
+      raise error.SpannerError('column_update must be provided a ColumnUpdate')
+    klass = cls.models()[schema_change.table]
     schema_change.validate(klass)
 
     api.SpannerAdminApi.update_schema(schema_change.ddl(klass))
@@ -46,9 +45,8 @@ class SpannerMetadata(object):
       raise error.SpannerError(
           'create_table must be provided a CreateTableUpdate')
     all_models = cls.models()
-    if schema_change.table() in all_models:
-      raise error.SpannerError(
-          'Cannot create a table that already exists')
+    if schema_change.table in all_models:
+      raise error.SpannerError('Cannot create a table that already exists')
     schema_change.validate()
 
     api.SpannerAdminApi.update_schema(schema_change.ddl())
@@ -57,9 +55,8 @@ class SpannerMetadata(object):
   def index_update(cls, schema_change):
     """Handles a CREATE INDEX or DROP INDEX schema update."""
     if not isinstance(schema_change, update.IndexUpdate):
-      raise error.SpannerError(
-          'index_update must be provided a IndexUpdate')
-    klass = cls.models()[schema_change.table()]
+      raise error.SpannerError('index_update must be provided a IndexUpdate')
+    klass = cls.models()[schema_change.table]
     schema_change.validate(klass)
 
     api.SpannerAdminApi.update_schema(schema_change.ddl(klass))
@@ -71,20 +68,13 @@ class SpannerMetadata(object):
     indexes = cls._indexes(transaction)
     results = {}
 
-    def make_method(retval):
-      return lambda: retval
-
-    def make_classmethod(retval):
-      return classmethod(lambda _: retval)
-
-    for table_name, schema in tables.items():
+    for table_name, fields in tables.items():
       primary_index = indexes[table_name]['PRIMARY_KEY']['columns']
-      klass = type(
-          'Model_{}'.format(table_name), (model.Model,), {
-              'primary_keys': make_method(primary_index),
-              'schema': make_classmethod(schema),
-              'table': make_classmethod(table_name)
-          })
+      klass = model.ModelBase('Model_{}'.format(table_name), (model.Model,), {})
+      for f in fields.values():
+        if f.name in primary_index:
+          f._primary_key = True  # pylint: disable=protected-access
+      klass.meta = model.Metadata(table=table_name, fields=fields)
       results[table_name] = klass
     return results
 
@@ -98,6 +88,7 @@ class SpannerMetadata(object):
     for column in columns:
       new_field = field.Field(column.field_type(), nullable=column.nullable())
       new_field.name = column.column_name
+      new_field.index = column.ordinal_position
       tables[column.table_name][column.column_name] = new_field
     return tables
 
