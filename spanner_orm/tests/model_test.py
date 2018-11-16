@@ -15,16 +15,17 @@
 
 import datetime
 import logging
-import unittest
+from unittest import mock
 
+from absl.testing import parameterized
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.tests import models
 
 
-class ModelTest(unittest.TestCase):
+class ModelTest(parameterized.TestCase):
 
-  def test_set_attr_item(self):
+  def test_set_attr(self):
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     string_array = ['foo', 'bar']
 
@@ -39,30 +40,23 @@ class ModelTest(unittest.TestCase):
             'timestamp': timestamp
         })
 
-  def test_cannot_set_primary_keys(self):
+  def test_set_error_on_primary_key(self):
     test_model = models.UnittestModel({'int_': 0, 'string': ''})
     with self.assertRaises(AttributeError):
       test_model.int_ = 2
+
+  @parameterized.parameters(('int_2', 'foo'), ('string_2', 5),
+                            ('string_array', 'foo'), ('timestamp', 5))
+  def test_set_error_on_invalid_type(self, attribute, value):
+    test_model = models.UnittestModel({'int_': 0, 'string': ''})
+    with self.assertRaises(AttributeError):
+      setattr(test_model, attribute, value)
 
   def test_get_attr(self):
     test_model = models.UnittestModel({'int_': 5, 'string': 'foo'})
     self.assertEqual(test_model.int_, 5)
     self.assertEqual(test_model.string, 'foo')
     self.assertEqual(test_model.timestamp, None)
-
-  def test_cannot_set_invalid_type(self):
-    test_model = models.UnittestModel({'int_': 0, 'string': ''})
-    with self.assertRaises(AttributeError):
-      test_model.int_2 = 'foo'
-
-    with self.assertRaises(AttributeError):
-      test_model.string_2 = 5
-
-    with self.assertRaises(AttributeError):
-      test_model.string_array = 'foo'
-
-    with self.assertRaises(AttributeError):
-      test_model.timestamp = 5
 
   def test_id(self):
     primary_key = {'string': 'foo', 'int_': 5}
@@ -73,9 +67,6 @@ class ModelTest(unittest.TestCase):
     })
     test_model = models.UnittestModel(all_data)
     self.assertEqual(test_model.id(), primary_key)
-
-    with self.assertRaises(error.SpannerError):
-      models.UnittestModel({})
 
   def test_changes(self):
     test_model = models.UnittestModel({'int_': 0, 'string': '', 'int_2': 0})
@@ -101,18 +92,26 @@ class ModelTest(unittest.TestCase):
     test_model.string_array.append('bat')
     self.assertIn('string_array', test_model.changes())
 
-  def test_create_statement(self):
+  def test_creation_ddl(self):
     test_model_ddl = ('CREATE TABLE table (int_ INT64 NOT NULL, int_2 INT64,'
                       ' string STRING(MAX) NOT NULL, string_2 STRING(MAX),'
                       ' timestamp TIMESTAMP NOT NULL, string_array'
                       ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, string)')
     self.assertEqual(models.UnittestModel.creation_ddl, test_model_ddl)
 
-  def test_model_class_attribute(self):
+  def test_field_exists_on_model_class(self):
     self.assertIsInstance(models.SmallTestModel.key, field.Field)
     self.assertEqual(models.SmallTestModel.key.field_type(), field.String)
     self.assertFalse(models.SmallTestModel.key.nullable())
     self.assertEqual(models.SmallTestModel.key.name, 'key')
+
+  def test_field_inheritance(self):
+    self.assertEqual(models.InheritanceTestModel.key, models.SmallTestModel.key)
+
+    values = {'key': 'key', 'value_3': 'value_3'}
+    test_model = models.InheritanceTestModel(values)
+    for name, value in values.items():
+      self.assertEqual(getattr(test_model, name), value)
 
   def test_relation_get(self):
     test_model = models.ChildTestModel({
@@ -122,7 +121,7 @@ class ModelTest(unittest.TestCase):
     })
     self.assertEqual(test_model.parent, [])
 
-  def test_error_on_unretrieved_relation_get(self):
+  def test_relation_get_error_on_unretrieved(self):
     test_model = models.ChildTestModel({
         'parent_key': 'parent',
         'child_key': 'child'
@@ -130,13 +129,52 @@ class ModelTest(unittest.TestCase):
     with self.assertRaises(AttributeError):
       _ = test_model.parent
 
-  def test_inherited_fields(self):
-    self.assertEqual(models.InheritanceTestModel.key, models.SmallTestModel.key)
+  @mock.patch('spanner_orm.model.ModelMeta.find')
+  def test_reload(self, find):
+    values = {'key': 'key', 'value_1': 'value_1'}
+    model = models.SmallTestModel(values, persisted=False)
 
-    values = {'key': 'key', 'value_3': 'value_3'}
-    test_model = models.InheritanceTestModel(values)
-    for name, value in values.items():
-      self.assertEqual(getattr(test_model, name), value)
+    self.assertIsNone(model.reload())
+    find.assert_called_once()
+    (transaction,), kwargs = find.call_args
+    self.assertIsNone(transaction)
+    self.assertEqual(kwargs, model.id())
+
+  @mock.patch('spanner_orm.model.ModelMeta.create')
+  def test_save_creates(self, create):
+    values = {'key': 'key', 'value_1': 'value_1'}
+    model = models.SmallTestModel(values, persisted=False)
+    model.save()
+
+    create.assert_called_once()
+    (transaction,), kwargs = create.call_args
+    self.assertIsNone(transaction)
+    self.assertEqual(kwargs, values)
+
+  @mock.patch('spanner_orm.model.ModelMeta.update')
+  def test_save_updates(self, update):
+    values = {'key': 'key', 'value_1': 'value_1'}
+    model = models.SmallTestModel(values, persisted=True)
+
+    values['value_1'] = 'new_value'
+    model.value_1 = values['value_1']
+    model.save()
+
+    update.assert_called_once()
+    (transaction,), kwargs = update.call_args
+    self.assertIsNone(transaction)
+    self.assertEqual(kwargs, values)
+
+  @mock.patch('spanner_orm.model.ModelMeta.update')
+  def test_save_no_changes(self, update):
+    values = {'key': 'key', 'value_1': 'value_1'}
+    model = models.SmallTestModel(values, persisted=True)
+    model.save()
+    update.assert_not_called()
+
+  def test_reload(self):
+    pass
+
 
 if __name__ == '__main__':
   logging.basicConfig()
