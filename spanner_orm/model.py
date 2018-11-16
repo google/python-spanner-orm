@@ -14,6 +14,7 @@
 # limitations under the License.
 """Holds table-specific information to make querying spanner eaiser."""
 
+import collections
 import copy
 
 from spanner_orm import api
@@ -205,22 +206,23 @@ class ModelMeta(ModelBase):
   def create_or_update(cls, transaction=None, **kwargs):
     cls._execute_write(api.SpannerApi.upsert, transaction, [kwargs])
 
-  def save_batch(cls, transaction, models):
+  def save_batch(cls, transaction, models, force_write=False):
     """Persist all model changes in list of models to Spanner."""
+    work = collections.defaultdict(list)
     to_create, to_update = [], []
     columns = cls.columns
     for model in models:
       value = {column: getattr(model, column) for column in columns}
-      if model._persisted:  # pylint: disable=protected-access
-        if model.changes():
-          to_update.append(value)
+      if force_write:
+        api_method = api.SpannerApi.upsert
+      elif model._persisted:  # pylint: disable=protected-access
+        api_method = api.SpannerApi.update
       else:
-        model._persisted = True  # pylint: disable=protected-access
-        to_create.append(value)
-    if to_create:
-      cls._execute_write(api.SpannerApi.insert, transaction, to_create)
-    if to_update:
-      cls._execute_write(api.SpannerApi.update, transaction, to_update)
+        api_method = api.SpannerApi.insert
+      work[api_method].append(value)
+      model._persisted = True  # pylint: disable=protected-access
+    for api_method, values in work.items():
+      cls._execute_write(api_method, transaction, values)
 
   def update(cls, transaction=None, **kwargs):
     cls._execute_write(api.SpannerApi.update, transaction, [kwargs])
@@ -229,7 +231,7 @@ class ModelMeta(ModelBase):
     """Validates all write value types and commits write to Spanner."""
     columns, values = None, []
     for dictionary in dictionaries:
-      invalid_keys = set(dictionary.keys()) - cls.columns
+      invalid_keys = set(dictionary.keys()) - set(cls.columns)
       if invalid_keys:
         raise error.SpannerError('Invalid keys set on {model}: {keys}'.format(
             model=cls.__name__, keys=invalid_keys))
@@ -330,7 +332,7 @@ class Model(object, metaclass=ModelMeta):
     return {key: self.values[key] for key in self._primary_keys}
 
   def reload(self, transaction=None):
-    updated_object = self.find(transaction, **self.id())
+    updated_object = self._metaclass.find(transaction, **self.id())
     if updated_object is None:
       return None
     self.values = updated_object.values
@@ -342,8 +344,8 @@ class Model(object, metaclass=ModelMeta):
       changed_values = self.changes()
       if changed_values:
         changed_values.update(self.id())
-        self.update(transaction, **changed_values)
+        self._metaclass.update(transaction, **changed_values)
     else:
-      self.create(transaction, **self.values)
+      self._metaclass.create(transaction, **self.values)
       self._persisted = True
     return self
