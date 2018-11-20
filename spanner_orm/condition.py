@@ -178,7 +178,7 @@ class IncludesCondition(Condition):
 
 
 class LimitCondition(Condition):
-  """Used to specify a LIMIT condition in a Spanner query"""
+  """Used to specify a LIMIT condition in a Spanner query."""
 
   def __init__(self, value, offset=0):
     super().__init__()
@@ -225,13 +225,67 @@ class LimitCondition(Condition):
     del model
 
 
+class OrCondition(Condition):
+  """Used to join multiple conditions with an OR in a Spanner query."""
+
+  def __init__(self, *condition_lists):
+    super().__init__()
+    if len(condition_lists) < 2:
+      raise error.SpannerError(
+          'OrCondition requires at least two lists of conditions')
+    self.condition_lists = condition_lists
+    self.all_conditions = []
+    for conditions in condition_lists:
+      self.all_conditions.extend(conditions)
+
+  def bind(self, model):
+    super().bind(model)
+    for condition in self.all_conditions:
+      condition.bind(model)
+
+  def _params(self):
+    result = {}
+    for condition in self.all_conditions:
+      condition.suffix = str(int(self.suffix or 0) + len(result))
+      result.update(condition.params())
+    return result
+
+  def _sql(self):
+    segments = []
+    params = 0
+    # Set proper suffix for each condition first
+    for condition in self.all_conditions:
+      condition.suffix = str(params + int(self.suffix or 0))
+      params += len(condition.params())
+
+    for conditions in self.condition_lists:
+      new_segment = ' AND '.join([condition.sql() for condition in conditions])
+      segments.append('({new_segment})'.format(new_segment=new_segment))
+    return '({segments})'.format(segments=' OR '.join(segments))
+
+  @staticmethod
+  def segment():
+    return Segment.WHERE
+
+  def _types(self):
+    result = {}
+    for condition in self.all_conditions:
+      condition.suffix = str(int(self.suffix or 0) + len(result))
+      result.update(condition.types())
+    return result
+
+  def _validate(self, model):
+    # condition is valid if all child conditions are valid
+    del model
+
+
 class OrderType(enum.Enum):
   ASC = 1
   DESC = 2
 
 
 class OrderByCondition(Condition):
-  """Used to specify an ORDER BY condition in a Spanner query"""
+  """Used to specify an ORDER BY condition in a Spanner query."""
 
   def __init__(self, *orderings):
     super().__init__()
@@ -266,22 +320,18 @@ class OrderByCondition(Condition):
 
 
 class ComparisonCondition(Condition):
-  """Used to specify a comparison between a column and a value in the WHERE"""
+  """Used to specify a comparison between a column and a value in the WHERE."""
   _segment = Segment.WHERE
 
-  def __init__(self, column, value):
+  def __init__(self, operator, column, value):
     super().__init__()
+    self.operator = operator
     self.column = column
     self.value = value
 
   @property
   def _column_key(self):
     return self.key(self.column)
-
-  @staticmethod
-  @abc.abstractmethod
-  def operator():
-    raise NotImplementedError
 
   def _params(self):
     return {self._column_key: self.value}
@@ -294,7 +344,7 @@ class ComparisonCondition(Condition):
     return '{alias}.{column} {operator} @{column_key}'.format(
         alias=self.model.column_prefix,
         column=self.column,
-        operator=self.operator(),
+        operator=self.operator,
         column_key=self._column_key)
 
   def _types(self):
@@ -307,42 +357,14 @@ class ComparisonCondition(Condition):
     schema[self.column].validate(self.value)
 
 
-class GreaterThanCondition(ComparisonCondition):
-
-  @staticmethod
-  def operator():
-    return '>'
-
-
-class GreaterThanOrEqualCondition(ComparisonCondition):
-
-  @staticmethod
-  def operator():
-    return '>='
-
-
-class LessThanCondition(ComparisonCondition):
-
-  @staticmethod
-  def operator():
-    return '<'
-
-
-class LessThanOrEqualCondition(ComparisonCondition):
-
-  @staticmethod
-  def operator():
-    return '<='
-
-
 class ListComparisonCondition(ComparisonCondition):
-  """Used to compare between a column and a list of values"""
+  """Used to compare between a column and a list of values."""
 
   def _sql(self):
     return '{alias}.{column} {operator} UNNEST(@{column_key})'.format(
         alias=self.model.column_prefix,
         column=self.column,
-        operator=self.operator(),
+        operator=self.operator,
         column_key=self._column_key)
 
   def _types(self):
@@ -358,30 +380,15 @@ class ListComparisonCondition(ComparisonCondition):
       schema[self.column].validate(value)
 
 
-class InListCondition(ListComparisonCondition):
-
-  @staticmethod
-  def operator():
-    return 'IN'
-
-
-class NotInListCondition(ListComparisonCondition):
-
-  @staticmethod
-  def operator():
-    return 'NOT IN'
-
-
 class NullableComparisonCondition(ComparisonCondition):
-  """Used to compare between a nullable column and a value or None"""
+  """Used to compare between a nullable column and a value or None."""
+
+  def __init__(self, operator, nullable_operator, column, value):
+    super().__init__(operator, column, value)
+    self.nullable_operator = nullable_operator
 
   def is_null(self):
     return self.value is None
-
-  @staticmethod
-  @abc.abstractmethod
-  def nullable_operator():
-    raise NotImplementedError
 
   def _params(self):
     if self.is_null():
@@ -393,7 +400,7 @@ class NullableComparisonCondition(ComparisonCondition):
       return '{alias}.{column} {operator} NULL'.format(
           alias=self.model.column_prefix,
           column=self.column,
-          operator=self.nullable_operator())
+          operator=self.nullable_operator)
     return super()._sql()
 
   def _types(self):
@@ -408,28 +415,20 @@ class NullableComparisonCondition(ComparisonCondition):
 
 
 class EqualityCondition(NullableComparisonCondition):
-  """Represents an equality comparison in a Spanner query"""
+  """Represents an equality comparison in a Spanner query."""
+
+  def __init__(self, column, value):
+    super().__init__('=', 'IS', column, value)
 
   def __eq__(self, obj):
     return isinstance(obj, EqualityCondition) and self.value == obj.value
 
-  def nullable_operator(self):
-    return 'IS'
-
-  @staticmethod
-  def operator():
-    return '='
-
 
 class InequalityCondition(NullableComparisonCondition):
+  """Represents an inequality comparison in a Spanner query."""
 
-  @staticmethod
-  def nullable_operator():
-    return 'IS NOT'
-
-  @staticmethod
-  def operator():
-    return '!='
+  def __init__(self, column, value):
+    super().__init__('!=', 'IS NOT', column, value)
 
 
 def columns_equal(origin_column, dest_model, dest_column):
@@ -441,11 +440,11 @@ def equal_to(column, value):
 
 
 def greater_than(column, value):
-  return GreaterThanCondition(column, value)
+  return ComparisonCondition('>', column, value)
 
 
 def greater_than_or_equal_to(column, value):
-  return GreaterThanOrEqualCondition(column, value)
+  return ComparisonCondition('>=', column, value)
 
 
 def includes(relation, conditions=None):
@@ -453,15 +452,15 @@ def includes(relation, conditions=None):
 
 
 def in_list(column, value):
-  return InListCondition(column, value)
+  return ListComparisonCondition('IN', column, value)
 
 
 def less_than(column, value):
-  return LessThanCondition(column, value)
+  return ComparisonCondition('<', column, value)
 
 
 def less_than_or_equal_to(column, value):
-  return LessThanOrEqualCondition(column, value)
+  return ComparisonCondition('<=', column, value)
 
 
 def limit(value, offset=0):
@@ -477,11 +476,15 @@ def not_greater_than(column, value):
 
 
 def not_in_list(column, value):
-  return NotInListCondition(column, value)
+  return ListComparisonCondition('NOT IN', column, value)
 
 
 def not_less_than(column, value):
   return greater_than_or_equal_to(column, value)
+
+
+def or_(*condition_lists):
+  return OrCondition(*condition_lists)
 
 
 def order_by(*orderings):

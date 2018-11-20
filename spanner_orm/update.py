@@ -68,8 +68,8 @@ class ColumnUpdate(SchemaUpdate):
     assert self._column in model.schema
     # Verify no indices exist on the column we're trying to drop
     num_index_columns = schemas.IndexColumnSchema.count(
-        None, condition.EqualityCondition('column_name', self._column),
-        condition.EqualityCondition('table_name', self._table))
+        None, condition.equal_to('column_name', self._column),
+        condition.equal_to('table_name', self._table))
     assert num_index_columns == 0
 
   def validate(self, model):

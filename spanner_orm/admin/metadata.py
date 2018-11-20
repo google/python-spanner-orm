@@ -33,7 +33,7 @@ class SpannerMetadata(object):
     """Handles an ALTER TABLE schema update."""
     if not isinstance(schema_change, update.ColumnUpdate):
       raise error.SpannerError('column_update must be provided a ColumnUpdate')
-    klass = cls.models()[schema_change.table]
+    klass = cls.models()[schema_change.table()]
     schema_change.validate(klass)
 
     api.SpannerAdminApi.update_schema(schema_change.ddl(klass))
@@ -45,7 +45,7 @@ class SpannerMetadata(object):
       raise error.SpannerError(
           'create_table must be provided a CreateTableUpdate')
     all_models = cls.models()
-    if schema_change.table in all_models:
+    if schema_change.table() in all_models:
       raise error.SpannerError('Cannot create a table that already exists')
     schema_change.validate()
 
@@ -56,7 +56,7 @@ class SpannerMetadata(object):
     """Handles a CREATE INDEX or DROP INDEX schema update."""
     if not isinstance(schema_change, update.IndexUpdate):
       raise error.SpannerError('index_update must be provided a IndexUpdate')
-    klass = cls.models()[schema_change.table]
+    klass = cls.models()[schema_change.table()]
     schema_change.validate(klass)
 
     api.SpannerAdminApi.update_schema(schema_change.ddl(klass))
@@ -83,8 +83,8 @@ class SpannerMetadata(object):
     """Compiles table information from column schema."""
     tables = collections.defaultdict(dict)
     columns = schemas.ColumnSchema.where(
-        transaction, condition.EqualityCondition('table_catalog', ''),
-        condition.EqualityCondition('table_schema', ''))
+        transaction, condition.equal_to('table_catalog', ''),
+        condition.equal_to('table_schema', ''))
     for column in columns:
       new_field = field.Field(column.field_type(), nullable=column.nullable())
       new_field.name = column.column_name
@@ -100,11 +100,10 @@ class SpannerMetadata(object):
     # order. None indicates that the key isn't really a part of the index, so we
     # skip those
     index_column_schemas = schemas.IndexColumnSchema.where(
-        transaction, condition.EqualityCondition('table_catalog', ''),
-        condition.EqualityCondition('table_schema', ''),
-        condition.InequalityCondition('ordinal_position', None),
-        condition.OrderByCondition(('ordinal_position',
-                                    condition.OrderType.ASC)))
+        transaction, condition.equal_to('table_catalog', ''),
+        condition.equal_to('table_schema', ''),
+        condition.not_equal_to('ordinal_position', None),
+        condition.order_by(('ordinal_position', condition.OrderType.ASC)))
 
     index_columns = collections.defaultdict(list)
     for schema in index_column_schemas:
@@ -112,8 +111,8 @@ class SpannerMetadata(object):
       index_columns[key].append(schema.column_name)
 
     index_schemas = schemas.IndexSchema.where(
-        transaction, condition.EqualityCondition('table_catalog', ''),
-        condition.EqualityCondition('table_schema', ''))
+        transaction, condition.equal_to('table_catalog', ''),
+        condition.equal_to('table_schema', ''))
     indexes = collections.defaultdict(dict)
     for schema in index_schemas:
       indexes[schema.table_name][schema.index_name] = {

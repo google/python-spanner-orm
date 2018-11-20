@@ -112,7 +112,7 @@ class QueryTest(parameterized.TestCase):
 
       column_key = '{}0'.format(column)
       expected_where = ' WHERE table.{} {} @{}'.format(
-          column, current_condition.operator(), column_key)
+          column, current_condition.operator, column_key)
       self.assertEndsWith(select_query.sql(), expected_where)
       self.assertEqual(select_query.parameters(), {column_key: value})
       self.assertEqual(select_query.types(), {column_key: grpc_type})
@@ -129,7 +129,7 @@ class QueryTest(parameterized.TestCase):
 
       column_key = '{}0'.format(column)
       expected_sql = ' WHERE table.{} {} UNNEST(@{})'.format(
-          column, current_condition.operator(), column_key)
+          column, current_condition.operator, column_key)
       list_type = type_pb2.Type(
           code=type_pb2.ARRAY, array_element_type=grpc_type)
       self.assertEndsWith(select_query.sql(), expected_sql)
@@ -232,6 +232,16 @@ class QueryTest(parameterized.TestCase):
   def test_includes_error_on_invalid_subconditions(self, column, value):
     with self.assertRaises(AssertionError):
       self.includes('parent', condition.equal_to(column, value))
+
+  def test_or(self):
+    condition_1 = condition.equal_to('int_', 1)
+    condition_2 = condition.equal_to('int_', 2)
+    select_query = self.select(condition.or_([condition_1], [condition_2]))
+
+    expected_sql = '((table.int_ = @int_0) OR (table.int_ = @int_1))'
+    self.assertEndsWith(select_query.sql(), expected_sql)
+    self.assertEqual(select_query.parameters(), {'int_0': 1, 'int_1': 2})
+    self.assertEqual(select_query.types(), {'int_0': field.Integer.grpc_type(), 'int_1': field.Integer.grpc_type()})
 
 
 if __name__ == '__main__':
