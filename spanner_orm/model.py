@@ -206,13 +206,25 @@ class ModelMeta(ModelBase):
   def create_or_update(cls, transaction=None, **kwargs):
     cls._execute_write(api.SpannerApi.upsert, transaction, [kwargs])
 
+  def delete_batch(cls, transaction, models):
+    key_list = []
+    for model in models:
+      key_list.append([getattr(model, column) for column in cls.primary_keys])
+    keyset = spanner.KeySet(keys=key_list)
+
+    db_api = api.SpannerApi.delete
+    args = [cls.table, keyset]
+    if transaction is not None:
+      return db_api(transaction, *args)
+    else:
+      return api.SpannerApi.run_write(db_api, *args)
+
   def save_batch(cls, transaction, models, force_write=False):
     """Persist all model changes in list of models to Spanner."""
     work = collections.defaultdict(list)
     to_create, to_update = [], []
-    columns = cls.columns
     for model in models:
-      value = {column: getattr(model, column) for column in columns}
+      value = {column: getattr(model, column) for column in cls.columns}
       if force_write:
         api_method = api.SpannerApi.upsert
       elif model._persisted:  # pylint: disable=protected-access
@@ -301,6 +313,10 @@ class Model(object, metaclass=ModelMeta):
   def _relations(self):
     return self._metaclass.relations
 
+  @property
+  def _table(self):
+    return self._metaclass.table
+
   def __getattr__(self, name):
     if name in self._fields:
       return self.values.get(name)
@@ -327,6 +343,17 @@ class Model(object, metaclass=ModelMeta):
         for key in self._columns
         if self.values.get(key) != self.start_values.get(key)
     }
+
+  def delete(self, transaction=None):
+    key = [getattr(self, column) for column in self._primary_keys]
+    keyset = spanner.KeySet([key])
+
+    db_api = api.SpannerApi.delete
+    args = [self._table, keyset]
+    if transaction is not None:
+      return db_api(transaction, *args)
+    else:
+      return api.SpannerApi.run_write(db_api, *args)
 
   def id(self):
     return {key: self.values[key] for key in self._primary_keys}

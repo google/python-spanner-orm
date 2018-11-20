@@ -100,3 +100,16 @@ class ModelApiTest(unittest.TestCase):
     models.SmallTestModel.save_batch(
         mock_transaction, [not_persisted], force_write=True)
     self.assert_api_called(upsert, mock_transaction)
+
+  @mock.patch('spanner_orm.api.SpannerApi.delete')
+  def test_delete_batch_deletes(self, delete):
+    mock_transaction = mock.Mock()
+    values = {'key': 'key', 'value_1': 'value'}
+    model = models.SmallTestModel(values)
+    models.SmallTestModel.delete_batch(mock_transaction, [model])
+
+    delete.assert_called_once()
+    (transaction, table, keyset), _ = delete.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.SmallTestModel.table)
+    self.assertEqual(keyset.keys, [[model.key]])

@@ -71,6 +71,11 @@ class SpannerWriteApi(abc.ABC):
     """Wraps write and read-write queries in a transaction."""
     return cls._connection().run_in_transaction(*args, **kwargs)
 
+  @staticmethod
+  def delete(transaction, table_name, keyset):
+    _logger.debug('Delete table=%s keys=%s', table_name, keyset.keys)
+    transaction.delete(table=table_Name, keyset=keyset)
+
   # Write methods
   @staticmethod
   def insert(transaction, table_name, columns, values):

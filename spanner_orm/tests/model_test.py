@@ -134,6 +134,7 @@ class ModelTest(parameterized.TestCase):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=False)
 
+    find.return_value = None
     self.assertIsNone(model.reload())
     find.assert_called_once()
     (transaction,), kwargs = find.call_args
@@ -172,8 +173,18 @@ class ModelTest(parameterized.TestCase):
     model.save()
     update.assert_not_called()
 
-  def test_reload(self):
-    pass
+  @mock.patch('spanner_orm.api.SpannerApi.delete')
+  def test_delete_deletes(self, delete):
+    mock_transaction = mock.Mock()
+    values = {'key': 'key', 'value_1': 'value_1'}
+    model = models.SmallTestModel(values)
+    model.delete(mock_transaction)
+
+    delete.assert_called_once()
+    (transaction, table, keyset), _ = delete.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.SmallTestModel.table)
+    self.assertEqual(keyset.keys, [[model.key]])
 
 
 if __name__ == '__main__':
