@@ -220,7 +220,10 @@ class ModelMeta(ModelBase):
       return api.SpannerApi.run_write(db_api, *args)
 
   def save_batch(cls, transaction, models, force_write=False):
-    """Persist all model changes in list of models to Spanner."""
+    """Persist all model changes in list of models to Spanner.
+
+    Note that if the transaction provided is None, multiple transactions may
+    be created when calling this method."""
     work = collections.defaultdict(list)
     to_create, to_update = [], []
     for model in models:
