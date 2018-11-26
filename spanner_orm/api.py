@@ -74,7 +74,7 @@ class SpannerWriteApi(abc.ABC):
   @staticmethod
   def delete(transaction, table_name, keyset):
     _logger.debug('Delete table=%s keys=%s', table_name, keyset.keys)
-    transaction.delete(table=table_Name, keyset=keyset)
+    transaction.delete(table=table_name, keyset=keyset)
 
   # Write methods
   @staticmethod
