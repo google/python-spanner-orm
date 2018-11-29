@@ -12,11 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Sets up shorcuts for imports from the library."""
+"""Sets up shortcuts for imports from the library."""
 import logging
 
 from spanner_orm import api
 from spanner_orm import condition
+from spanner_orm import decorator
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import model
@@ -57,3 +58,6 @@ not_less_than = condition.not_less_than
 order_by = condition.order_by
 ORDER_ASC = condition.OrderType.ASC
 ORDER_DESC = condition.OrderType.DESC
+
+transactional_read = decorator.transactional_read
+transactional_write = decorator.transactional_write

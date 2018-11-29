@@ -1,0 +1,100 @@
+# python3
+# Copyright 2018 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Transaction decorators."""
+from typing import Any, Callable
+
+from spanner_orm import api
+
+
+def transactional_read(func: Callable[..., Any]) -> Callable[..., Any]:
+  """Injects a read-only transaction object as first argument to given function.
+
+    For example:
+
+    @transactional_read
+    def get_book(transaction, book_id):
+      return Book(book_id)
+
+    Client would then call this by skipping the 'transaction' argument:
+    book_reader.get_book(123)
+
+    To call a decorated function if you already have a transaction:
+
+    @transactional_read
+    def list_books(transaction, book_ids):
+      for book_id in book_ids:
+        get_book(book_id, transaction=transaction)
+
+    list_books method would call get_book method using same transaction
+
+  Args:
+    func: Callable which will be called with read-only transaction and original
+      arguments. `func` can also be passed an optional 'transaction' kwarg to
+      use a given transaction, instead of creating a new one. This means `func`
+      cannot define a keyword arg of its own called 'transaction'.
+
+  Returns:
+    decorated function
+  """
+
+  def wrapper(*args, **kwargs) -> Any:
+    if 'transaction' in kwargs:
+      transaction = kwargs['transaction']
+      del kwargs['transaction']
+      return func(transaction, *args, **kwargs)
+    return api.SpannerApi.run_read_only(func, *args, **kwargs)
+
+  return wrapper
+
+
+def transactional_write(func: Callable[..., Any]) -> Callable[..., Any]:
+  """Injects a write transaction object as first argument to given function.
+
+    For example:
+
+    @transactional_write
+    def save_book(transaction, book_id):
+      ...
+
+    Client would then call this by skipping the 'transaction' argument:
+    book_reader.save_book(123)
+
+    To call a decorated function if you already have a transaction:
+
+    @transactional_write
+    def save_books(transaction, book_ids):
+      for book_id in book_ids:
+        save_book(book_id, transaction=transaction)
+
+    save_books method would call save_book method using same transaction
+
+  Args:
+    func: Callable which will be called with write transaction and original
+      arguments. `func` can also be passed an optional 'transaction' kwarg to
+      use a given transaction, instead of creating a new one. This means `func`
+      cannot define a keyword arg of its own called 'transaction'.
+
+  Returns:
+    decorated function
+  """
+
+  def wrapper(*args, **kwargs) -> Any:
+    if 'transaction' in kwargs:
+      transaction = kwargs['transaction']
+      del kwargs['transaction']
+      return func(transaction, *args, **kwargs)
+    return api.SpannerApi.run_write(func, *args, **kwargs)
+
+  return wrapper
