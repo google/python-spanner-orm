@@ -1,4 +1,3 @@
-from unittest import mock
 # python3
 # Copyright 2018 Google LLC
 #
@@ -13,13 +12,12 @@ from unittest import mock
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from unittest import mock
 
 from absl.testing import parameterized
 from spanner_orm import decorator
 
 
-# pylint: disable=redundant-keyword-arg
-# pylint: disable=no-value-for-parameter
 class DecoratorTest(parameterized.TestCase):
 
   @parameterized.parameters(
@@ -27,10 +25,10 @@ class DecoratorTest(parameterized.TestCase):
       (decorator.transactional_write, 'run_write'),
   )
   @mock.patch('spanner_orm.api.SpannerApi', autospec=True)
-  def test_transactional_injects_new_transaction(self, decorator_in_test,
-                                                 api_to_mock, mock_api):
+  def test_transactional_injects_new_transaction(
+      self, decorator_in_test, method_name_to_mock, mock_spanner_api):
     mock_tx = mock.Mock()
-    mock_api_method = getattr(mock_api, api_to_mock)
+    mock_api_method = getattr(mock_spanner_api, method_name_to_mock)
     mock_api_method.side_effect = mock_spanner_method(mock_tx)
 
     def get_book(transaction, book_id, genre=None):
@@ -40,16 +38,13 @@ class DecoratorTest(parameterized.TestCase):
 
       return 200
 
-    # save pre decorated function to be able to assert it later
-    get_book_pre_decorator = get_book
-
     # decorate it
-    get_book = decorator_in_test(get_book)
+    decorated_get_book = decorator_in_test(get_book)
 
-    result = get_book(123, genre='horror')
+    result = decorated_get_book(123, genre='horror')
     self.assertEqual(200, result)
     mock_api_method.assert_called_once_with(
-        get_book_pre_decorator, 123, genre='horror')
+        get_book, 123, genre='horror')
 
   @parameterized.parameters(decorator.transactional_read,
                             decorator.transactional_write)
@@ -64,7 +59,8 @@ class DecoratorTest(parameterized.TestCase):
 
       return 200
 
-    result = get_book(123, genre='horror', transaction=mock_tx)
+    result = get_book(123, genre='horror', transaction=mock_tx)  # pylint: disable=redundant-keyword-arg, no-value-for-parameter
+
     self.assertEqual(200, result)
 
   @parameterized.parameters(decorator.transactional_read,
@@ -84,7 +80,8 @@ class DecoratorTest(parameterized.TestCase):
 
       return 200
 
-    result = get_book(123, genre='horror', transaction=mock_my_own_tx)
+    result = get_book(123, genre='horror', transaction=mock_my_own_tx)  # pylint: disable=no-value-for-parameter
+
     self.assertEqual(200, result)
 
 
