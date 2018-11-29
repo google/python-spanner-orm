@@ -58,7 +58,7 @@ def transactional_write(func: Callable[..., T]) -> Callable[..., T]:
     For example:
 
     @transactional_write
-    def save_book(transaction, book_id):
+    def save_book(book_id, transaction=None):
       ...
 
     Client would then call this by skipping the 'transaction' argument:
@@ -67,7 +67,7 @@ def transactional_write(func: Callable[..., T]) -> Callable[..., T]:
     To call a decorated function if you already have a transaction:
 
     @transactional_write
-    def save_books(transaction, book_ids):
+    def save_books(book_ids, transaction=None):
       for book_id in book_ids:
         save_book(book_id, transaction=transaction)
 
@@ -75,9 +75,8 @@ def transactional_write(func: Callable[..., T]) -> Callable[..., T]:
 
   Args:
     func: Callable which will be called with write transaction and original
-      arguments. `func` can also be passed an optional 'transaction' kwarg to
-      use a given transaction, instead of creating a new one. This means `func`
-      cannot define a keyword arg of its own called 'transaction'.
+      arguments. Decorated `func` can also be passed an optional 'transaction'
+      kwarg to use a given transaction, instead of creating a new one.
 
   Returns:
     decorated function
