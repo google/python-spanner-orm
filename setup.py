@@ -23,6 +23,6 @@ setup(
     url='https://github.com/google/python-spanner-orm',
     packages=['spanner_orm', 'spanner_orm.admin', 'spanner_orm.schemas'],
     install_requires=[
-        'googleapis-common-protos==1.5.3', 'google-cloud-spanner'
+        'google-cloud-spanner >= 1.6, <2.0.0dev'
     ],
     tests_require=['absl-py'])
