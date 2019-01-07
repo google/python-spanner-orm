@@ -329,6 +329,11 @@ class ComparisonCondition(Condition):
     self.column = column
     self.value = value
 
+  def __eq__(self, obj):
+    return (isinstance(obj, self.__class__) and
+            self.operator == obj.operator and self.column == obj.column and
+            self.value == obj.value)
+
   @property
   def _column_key(self):
     return self.key(self.column)
@@ -419,10 +424,6 @@ class EqualityCondition(NullableComparisonCondition):
 
   def __init__(self, column, value):
     super().__init__('=', 'IS', column, value)
-
-  def __eq__(self, obj):
-    return (isinstance(obj, EqualityCondition) and self.value == obj.value and
-            self.column == obj.column)
 
 
 class InequalityCondition(NullableComparisonCondition):

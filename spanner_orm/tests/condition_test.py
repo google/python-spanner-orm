@@ -14,23 +14,34 @@
 # limitations under the License.
 
 import unittest
-
+from absl.testing import parameterized
 from spanner_orm import condition
 
 
-class ConditionTest(unittest.TestCase):
+class ConditionTest(parameterized.TestCase):
 
-  def test_equality(self):
+  @parameterized.parameters(condition.EqualityCondition,
+                            condition.InequalityCondition)
+  def test_equality(self, condition_class):
     self.assertEqual(
-        condition.EqualityCondition('column_A', 'value_A'),
-        condition.EqualityCondition('column_A', 'value_A'))
+        condition_class('column_A', 'value_A'),
+        condition_class('column_A', 'value_A'))
 
-  def test_column_inequality(self):
+  @parameterized.parameters(condition.EqualityCondition,
+                            condition.InequalityCondition)
+  def test_column_inequality(self, condition_class):
+    self.assertNotEqual(
+        condition_class('column_A', 'value_A'),
+        condition_class('column_B', 'value_A'))
+
+  @parameterized.parameters(condition.EqualityCondition,
+                            condition.InequalityCondition)
+  def test_value_inequality(self, condition_class):
+    self.assertNotEqual(
+        condition_class('column_A', 'value_A'),
+        condition_class('column_A', 'value_B'))
+
+  def test_class_inequality(self):
     self.assertNotEqual(
         condition.EqualityCondition('column_A', 'value_A'),
-        condition.EqualityCondition('column_B', 'value_A'))
-
-  def test_value_inequality(self):
-    self.assertNotEqual(
-        condition.EqualityCondition('column_A', 'value_A'),
-        condition.EqualityCondition('column_A', 'value_B'))
+        condition.InequalityCondition('column_A', 'value_A'))
