@@ -421,7 +421,8 @@ class EqualityCondition(NullableComparisonCondition):
     super().__init__('=', 'IS', column, value)
 
   def __eq__(self, obj):
-    return isinstance(obj, EqualityCondition) and self.value == obj.value
+    return (isinstance(obj, EqualityCondition) and self.value == obj.value and
+            self.column == obj.column)
 
 
 class InequalityCondition(NullableComparisonCondition):
