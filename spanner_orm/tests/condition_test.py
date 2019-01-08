@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 from absl.testing import parameterized
 from spanner_orm import condition
 from spanner_orm.tests import models
