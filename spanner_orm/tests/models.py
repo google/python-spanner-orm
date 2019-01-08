@@ -32,10 +32,32 @@ class ChildTestModel(model.Model):
                                       {'parent_key': 'key'})
 
 
+class IdenticalChildTestModel(model.Model):
+  """Model class for testing relationships"""
+
+  __table__ = 'ChildTestModel'
+  parent_key = field.Field(field.String, primary_key=True)
+  child_key = field.Field(field.String, primary_key=True)
+  parent = relationship.Relationship(
+      'spanner_orm.tests.models.SmallTestModel', {'parent_key': 'key'},
+      single=True)
+  parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
+                                      {'parent_key': 'key'})
+
+
 class SmallTestModel(model.Model):
   """Model class used for testing"""
 
   __table__ = 'SmallTestModel'
+  key = field.Field(field.String, primary_key=True)
+  value_1 = field.Field(field.String)
+  value_2 = field.Field(field.String, nullable=True)
+
+
+class IdenticalSmallTestModel(model.Model):
+  """Model class used for testing"""
+
+  __table__ = 'IdenticalSmallTestModel'
   key = field.Field(field.String, primary_key=True)
   value_1 = field.Field(field.String)
   value_2 = field.Field(field.String, nullable=True)

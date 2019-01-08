@@ -37,6 +37,9 @@ class Condition(abc.ABC):
     self.model = None
     self.suffix = None
 
+  def __eq__(self, obj):
+    return isinstance(obj, self.__class__) and self.model == obj.model
+
   def bind(self, model):
     self._validate(model)
     self.model = model
@@ -93,6 +96,13 @@ class ColumnsEqualCondition(Condition):
     self.destination_model = destination_model
     self.destination_column = destination_column
 
+  def __eq__(self, obj):
+    return (super().__eq__(obj) and
+            isinstance(obj, self.__class__) and
+            self.column == obj.column and
+            self.destination_model == obj.destination_model and
+            self.destination_column == obj.destination_column)
+
   def _params(self):
     return {}
 
@@ -127,6 +137,13 @@ class IncludesCondition(Condition):
     self.name = name
     self._conditions = conditions or []
     self.relation = None
+
+  def __eq__(self, obj):
+    return (super().__eq__(obj) and
+            isinstance(obj, self.__class__) and
+            self.name == obj.name and
+            self._conditions == obj._conditions and
+            self.relation == obj.relation)
 
   def bind(self, model):
     super().bind(model)
@@ -190,6 +207,12 @@ class LimitCondition(Condition):
     self.limit = value
     self.offset = offset
 
+  def __eq__(self, obj):
+    return (super().__eq__(obj) and
+            isinstance(obj, self.__class__) and
+            self.limit == obj.limit and
+            self.offset == obj.offset)
+
   @property
   def _limit_key(self):
     return self.key('limit')
@@ -237,6 +260,11 @@ class OrCondition(Condition):
     self.all_conditions = []
     for conditions in condition_lists:
       self.all_conditions.extend(conditions)
+
+  def __eq__(self, obj):
+    return (super().__eq__(obj) and
+            isinstance(obj, self.__class__) and
+            self.all_conditions == obj.all_conditions)
 
   def bind(self, model):
     super().bind(model)
@@ -295,6 +323,11 @@ class OrderByCondition(Condition):
             '{order} is not of type OrderType'.format(order=order_type))
     self.orderings = orderings
 
+  def __eq__(self, obj):
+    return (super().__eq__(obj) and
+            isinstance(obj, self.__class__) and
+            self.orderings == obj.orderings)
+
   def _params(self):
     return {}
 
@@ -330,8 +363,10 @@ class ComparisonCondition(Condition):
     self.value = value
 
   def __eq__(self, obj):
-    return (isinstance(obj, self.__class__) and
-            self.operator == obj.operator and self.column == obj.column and
+    return (super().__eq__(obj) and
+            isinstance(obj, self.__class__) and
+            self.operator == obj.operator and
+            self.column == obj.column and
             self.value == obj.value)
 
   @property
@@ -391,6 +426,11 @@ class NullableComparisonCondition(ComparisonCondition):
   def __init__(self, operator, nullable_operator, column, value):
     super().__init__(operator, column, value)
     self.nullable_operator = nullable_operator
+
+  def __eq__(self, obj):
+    return (super().__eq__(obj) and
+            isinstance(obj, self.__class__) and
+            self.nullable_operator == obj.nullable_operator)
 
   def is_null(self):
     return self.value is None
