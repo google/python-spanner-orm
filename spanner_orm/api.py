@@ -114,7 +114,7 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 
   # Spanner connection methods
   @classmethod
-  def connect(cls, project, instance, database, credentials=None):
+  def connect(cls, project, instance, database, credentials=None, pool=None):
     """Connects to the specified Spanner database."""
     connection_info = (project, instance, database, credentials)
     if cls._spanner_connection is not None:
@@ -124,7 +124,7 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 
     client = spanner.Client(project=project, credentials=credentials)
     instance = client.instance(instance)
-    cls._spanner_connection = instance.database(database)
+    cls._spanner_connection = instance.database(database, pool=pool)
     cls._connection_info = connection_info
 
   @classmethod
