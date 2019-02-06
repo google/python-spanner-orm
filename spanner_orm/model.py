@@ -45,9 +45,7 @@ class Metadata(object):
   def process_fields(self):
     sorted_fields = list(sorted(self.fields.values(), key=lambda f: f.index))
     self.columns = [f.name for f in sorted_fields]
-    self.primary_keys = [
-        f.name for f in sorted_fields if f.primary_key()
-    ]
+    self.primary_keys = [f.name for f in sorted_fields if f.primary_key()]
 
 
 class ModelBase(type):
@@ -223,7 +221,8 @@ class ModelMeta(ModelBase):
     """Persist all model changes in list of models to Spanner.
 
     Note that if the transaction provided is None, multiple transactions may
-    be created when calling this method."""
+    be created when calling this method.
+    """
     work = collections.defaultdict(list)
     to_create, to_update = [], []
     for model in models:
@@ -273,8 +272,9 @@ class Model(object, metaclass=ModelMeta):
 
   # Instance methods
   def __init__(self, values, persisted=False):
-    self.related = {}
     self.start_values = {}
+    self._persisted = persisted
+
     # Ensure that we have the primary index keys (unique id) set for all objects
     missing_keys = set(self._primary_keys) - set(values.keys())
     if missing_keys:
@@ -283,18 +283,24 @@ class Model(object, metaclass=ModelMeta):
               keys=missing_keys))
 
     for key, value in values.items():
-      if key in self._relations:
-        self.related[key] = value
-      elif key in self._columns:
+      if key in self._columns:
+        self.start_values[key] = copy.copy(value)
         if value is not None:
           self._metaclass.validate_value(key, value, ValueError)
-          self.start_values[key] = copy.copy(value)
-      else:
-        raise ValueError('{name} is not part of {klass}'.format(
-            name=key, klass=type(self).__name__))
 
-    self.values = copy.deepcopy(self.start_values)
-    self._persisted = persisted
+    for column in self._columns:
+      super().__setattr__(column, values.get(column))
+
+    for relation in self._relations:
+      if relation in values:
+        super().__setattr__(relation, values[relation])
+
+  def __setattr__(self, name, value):
+    if name in self._primary_keys or name in self._relations:
+      raise AttributeError(name)
+    if name in self._fields:
+      self._metaclass.validate_value(name, value, AttributeError)
+    super().__setattr__(name, value)
 
   @property
   def _metaclass(self):
@@ -320,31 +326,16 @@ class Model(object, metaclass=ModelMeta):
   def _table(self):
     return self._metaclass.table
 
-  def __getattr__(self, name):
-    if name in self._fields:
-      return self.values.get(name)
-    elif name in self._relations:
-      if name in self.related:
-        return self.related[name]
-      raise AttributeError('{name} was not included in query'.format(name=name))
-    raise AttributeError(name)
-
-  def __setattr__(self, name, value):
-    if name in self._primary_keys:
-      raise AttributeError(name)
-    elif name in self._fields:
-      self._metaclass.validate_value(name, value, AttributeError)
-      self.values[name] = copy.copy(value)
-    elif name in self._relations:
-      raise AttributeError('{name} is not settable'.format(name=name))
-    else:
-      super().__setattr__(name, value)
+  @property
+  def values(self):
+    return {key: getattr(self, key) for key in self._columns}
 
   def changes(self):
+    values = self.values
     return {
-        key: self.values[key]
+        key: values[key]
         for key in self._columns
-        if self.values.get(key) != self.start_values.get(key)
+        if values[key] != self.start_values.get(key)
     }
 
   def delete(self, transaction=None):
@@ -365,7 +356,8 @@ class Model(object, metaclass=ModelMeta):
     updated_object = self._metaclass.find(transaction, **self.id())
     if updated_object is None:
       return None
-    self.values = updated_object.values
+    for column in self._columns:
+      setattr(self, column, getattr(updated_object, column))
     self._persisted = True
     return self
 

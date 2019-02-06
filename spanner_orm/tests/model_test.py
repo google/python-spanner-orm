@@ -35,7 +35,9 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(
         test_model.values, {
             'int_': 0,
+            'int_2': None,
             'string': '',
+            'string_2': None,
             'string_array': string_array,
             'timestamp': timestamp
         })
@@ -83,10 +85,6 @@ class ModelTest(parameterized.TestCase):
         'string': '',
         'string_array': array
     })
-
-    # Make sure that changes to object off of model don't change the model
-    array.append('bat')
-    self.assertNotEqual(test_model.string_array, array)
 
     # Make sure that changing an object on the model shows up in changes()
     test_model.string_array.append('bat')
@@ -150,7 +148,7 @@ class ModelTest(parameterized.TestCase):
     create.assert_called_once()
     (transaction,), kwargs = create.call_args
     self.assertIsNone(transaction)
-    self.assertEqual(kwargs, values)
+    self.assertEqual(kwargs, {**values, 'value_2': None})
 
   @mock.patch('spanner_orm.model.ModelMeta.update')
   def test_save_updates(self, update):
