@@ -24,16 +24,16 @@ class SpannerQuery(abc.ABC):
   """Helps build SQL for complex Spanner queries."""
 
   def __init__(self, model, conditions):
+    self.param_offset = 0
     self._model = model
     self._conditions = conditions
-    self._param_offset = 0
     self._sql = ''
     self._parameters = {}
     self._types = {}
     self._build()
 
   def _next_param_index(self):
-    return self._param_offset + len(self._parameters)
+    return self.param_offset + len(self._parameters)
 
   def parameters(self):
     return self._parameters
@@ -60,11 +60,7 @@ class SpannerQuery(abc.ABC):
   def _build(self):
     """Builds the Spanner query from the given model and conditions."""
     segment_builders = [
-        self._select,
-        self._from,
-        self._where,
-        self._order,
-        self._limit
+        self._select, self._from, self._where, self._order, self._limit
     ]
 
     self._sql, self._parameters, self._types = '', {}, {}
@@ -145,6 +141,16 @@ class CountQuery(SpannerQuery):
 class SelectQuery(SpannerQuery):
   """Handles SELECT Spanner queries."""
 
+  def __init__(self, model, conditions):
+    self._model = model
+    self._conditions = conditions
+    self._joins = self._segments(condition.Segment.JOIN)
+    self._subqueries = [
+        _SelectSubQuery(join.destination, join.conditions)
+        for join in self._joins
+    ]
+    super().__init__(model, conditions)
+
   def _select_prefix(self):
     return 'SELECT'
 
@@ -155,11 +161,8 @@ class SelectQuery(SpannerQuery):
             alias=self._model.column_prefix, column=column)
         for column in self._model.columns
     ]
-    joins = self._segments(condition.Segment.JOIN)
-    for join in joins:
-      subquery = _SelectSubQuery(join.destination, join.conditions,
-                                 param_offset=self._next_param_index())
-
+    for subquery in self._subqueries:
+      subquery.param_offset = self._next_param_index()
       columns.append('ARRAY({subquery})'.format(subquery=subquery.sql()))
       parameters.update(subquery.parameters())
       types.update(subquery.types())
@@ -173,10 +176,8 @@ class SelectQuery(SpannerQuery):
   def _process_row(self, row):
     """Parses a row of results from a Spanner query based on the conditions."""
     values = dict(zip(self._model.columns, row))
-    joins = self._segments(condition.Segment.JOIN)
     join_values = row[len(self._model.columns):]
-    for join, join_value in zip(joins, join_values):
-      subquery = _SelectSubQuery(join.destination, join.conditions)
+    for join, subquery, join_value in zip(self._joins, self._subqueries, join_values):
       models = subquery.process_results(join_value)
       if join.single:
         if len(models) > 1:
@@ -189,10 +190,6 @@ class SelectQuery(SpannerQuery):
 
 
 class _SelectSubQuery(SelectQuery):
-
-  def __init__(self, model, conditions, param_offset=0):
-    super().__init__(model, conditions)
-    self._param_offset = param_offset
 
   def _select_prefix(self):
     return 'SELECT AS STRUCT'
