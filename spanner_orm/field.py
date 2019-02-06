@@ -47,7 +47,7 @@ class Field(object):
 
   def validate(self, value):
     if value is None:
-      assert self._nullable
+      assert self._nullable, 'None set for non-nullable field'
     else:
       self._type.validate_type(value)
 

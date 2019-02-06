@@ -46,7 +46,9 @@ class AdminTest(unittest.TestCase):
           'table_schema': '',
           'table_name': models.SmallTestModel.table,
           'index_name': 'PRIMARY_KEY',
-          'column_name': row
+          'column_name': row,
+          'is_nullable': 'FALSE',
+          'spanner_type': 'STRING'
       })
     return [schemas.IndexColumnSchema(row) for row in columns]
 
@@ -59,6 +61,7 @@ class AdminTest(unittest.TestCase):
             'index_name': 'PRIMARY_KEY',
             'index_type': 'PRIMARY_KEY',
             'is_unique': True,
+            'is_null_filtered': False,
             'index_state': 'READ_WRITE'
         })
     ]
