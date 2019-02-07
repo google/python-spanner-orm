@@ -270,26 +270,26 @@ class ModelMeta(ModelBase):
 class Model(object, metaclass=ModelMeta):
   """Maps to a table in spanner and has basic functions for querying tables."""
 
-  # Instance methods
   def __init__(self, values, persisted=False):
     self.start_values = {}
     self._persisted = persisted
 
-    # Ensure that we have the primary index keys (unique id) set for all objects
-    missing_keys = set(self._primary_keys) - set(values.keys())
-    if missing_keys:
-      raise error.SpannerError(
-          'All primary keys must be specified. Missing: {keys}'.format(
-              keys=missing_keys))
+    # If the values came from Spanner, trust them and skip validation
+    if not persisted:
+      # An object is invalid if primary key values are missing
+      missing_keys = set(self._primary_keys) - set(values.keys())
+      if missing_keys:
+        raise error.SpannerError(
+            'All primary keys must be specified. Missing: {keys}'.format(
+                keys=missing_keys))
 
-    for key, value in values.items():
-      if key in self._columns:
-        self.start_values[key] = copy.copy(value)
-        if value is not None:
-          self._metaclass.validate_value(key, value, ValueError)
+      for column in self._columns:
+        self._metaclass.validate_value(column, values.get(column), ValueError)
 
     for column in self._columns:
-      super().__setattr__(column, values.get(column))
+      value = values.get(column)
+      self.start_values[column] = copy.copy(value)
+      super().__setattr__(column, value)
 
     for relation in self._relations:
       if relation in values:

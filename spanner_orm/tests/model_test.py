@@ -12,9 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import datetime
 import logging
+import unittest
 from unittest import mock
 
 from absl.testing import parameterized
@@ -26,39 +26,40 @@ from spanner_orm.tests import models
 class ModelTest(parameterized.TestCase):
 
   def test_set_attr(self):
-    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
-    string_array = ['foo', 'bar']
-
-    test_model = models.UnittestModel({'int_': 0, 'string': ''})
-    test_model.timestamp = timestamp
-    test_model.string_array = string_array
+    test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
+    test_model.value_1 = 'value_1'
+    test_model.value_2 = 'value_2'
     self.assertEqual(
         test_model.values, {
-            'int_': 0,
-            'int_2': None,
-            'string': '',
-            'string_2': None,
-            'string_array': string_array,
-            'timestamp': timestamp
+            'key': 'key',
+            'value_1': 'value_1',
+            'value_2': 'value_2',
         })
 
   def test_set_error_on_primary_key(self):
-    test_model = models.UnittestModel({'int_': 0, 'string': ''})
+    test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
     with self.assertRaises(AttributeError):
-      test_model.int_ = 2
+      test_model.key = 'error'
 
   @parameterized.parameters(('int_2', 'foo'), ('string_2', 5),
                             ('string_array', 'foo'), ('timestamp', 5))
   def test_set_error_on_invalid_type(self, attribute, value):
-    test_model = models.UnittestModel({'int_': 0, 'string': ''})
+    string_array = ['foo', 'bar']
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+    test_model = models.UnittestModel({
+        'int_': 0,
+        'string': '',
+        'string_array': string_array,
+        'timestamp': timestamp
+    })
     with self.assertRaises(AttributeError):
       setattr(test_model, attribute, value)
 
   def test_get_attr(self):
-    test_model = models.UnittestModel({'int_': 5, 'string': 'foo'})
-    self.assertEqual(test_model.int_, 5)
-    self.assertEqual(test_model.string, 'foo')
-    self.assertEqual(test_model.timestamp, None)
+    test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
+    self.assertEqual(test_model.key, 'key')
+    self.assertEqual(test_model.value_1, 'value')
+    self.assertEqual(test_model.value_2, None)
 
   def test_id(self):
     primary_key = {'string': 'foo', 'int_': 5}
@@ -71,19 +72,21 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(test_model.id(), primary_key)
 
   def test_changes(self):
-    test_model = models.UnittestModel({'int_': 0, 'string': '', 'int_2': 0})
-    test_model.int_2 = 5
-    self.assertEqual(test_model.changes(), {'int_2': 5})
+    test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
+    test_model.value_1 = 'change'
+    self.assertEqual(test_model.changes(), {'value_1': 'change'})
 
-    test_model.int_2 = 0
+    test_model.value_1 = 'value'
     self.assertEqual(test_model.changes(), {})
 
   def test_object_changes(self):
     array = ['foo', 'bar']
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     test_model = models.UnittestModel({
         'int_': 0,
         'string': '',
-        'string_array': array
+        'string_array': array,
+        'timestamp': timestamp
     })
 
     # Make sure that changing an object on the model shows up in changes()
@@ -106,7 +109,7 @@ class ModelTest(parameterized.TestCase):
   def test_field_inheritance(self):
     self.assertEqual(models.InheritanceTestModel.key, models.SmallTestModel.key)
 
-    values = {'key': 'key', 'value_3': 'value_3'}
+    values = {'key': 'key', 'value_1': 'value_1', 'value_3': 'value_3'}
     test_model = models.InheritanceTestModel(values)
     for name, value in values.items():
       self.assertEqual(getattr(test_model, name), value)

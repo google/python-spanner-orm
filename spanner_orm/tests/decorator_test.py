@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
+import unittest
 from unittest import mock
 
 from absl.testing import parameterized
@@ -67,3 +69,8 @@ def mock_spanner_method(mock_transaction):
     return method(mock_transaction, *args, **kwargs)
 
   return _mock_spanner_method
+
+
+if __name__ == '__main__':
+  logging.basicConfig()
+  unittest.main()
