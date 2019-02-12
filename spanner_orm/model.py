@@ -158,12 +158,7 @@ class ModelMeta(ModelBase):
 
   def find(cls, transaction=None, **keys):
     """Grabs the row with the given primary key."""
-    key_values = [keys[column] for column in cls.primary_keys]
-    keyset = spanner.KeySet(keys=[key_values])
-
-    args = [cls.table, cls.columns, keyset]
-    results = cls._execute_read(api.SpannerApi.find, transaction, args)
-    resources = cls._results_to_models(results)
+    resources = cls.find_multi(transaction, [keys])
     return resources[0] if resources else None
 
   def find_multi(cls, transaction, keys):
