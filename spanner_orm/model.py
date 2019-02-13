@@ -362,7 +362,8 @@ class Model(object, metaclass=ModelMeta):
     if updated_object is None:
       return None
     for column in self._columns:
-      setattr(self, column, getattr(updated_object, column))
+      if column not in self._primary_keys:
+        setattr(self, column, getattr(updated_object, column))
     self._persisted = True
     return self
 
