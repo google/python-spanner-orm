@@ -25,10 +25,6 @@ from google.cloud import spanner
 
 class ModelApiTest(unittest.TestCase):
 
-  def test_find_error_on_invalid_keys(self):
-    with self.assertRaises(error.SpannerError):
-      models.UnittestModel.find(int_=1)
-
   @mock.patch('spanner_orm.api.SpannerApi.find')
   def test_find_calls_api(self, find):
     mock_transaction = mock.Mock()
@@ -50,6 +46,33 @@ class ModelApiTest(unittest.TestCase):
     self.assertEqual(result.key, 'key')
     self.assertEqual(result.value_1, 'value_1')
     self.assertIsNone(result.value_2)
+
+  @mock.patch('spanner_orm.api.SpannerApi.find')
+  def test_find_multi_calls_api(self, find):
+    mock_transaction = mock.Mock()
+    models.UnittestModel.find_multi(mock_transaction, [{
+        'string': 'string',
+        'int_': 1
+    }])
+
+    find.assert_called_once()
+    (transaction, table, columns, keyset), _ = find.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.UnittestModel.table)
+    self.assertEqual(columns, models.UnittestModel.columns)
+    self.assertEqual(keyset.keys, [[1, 'string']])
+
+  @mock.patch('spanner_orm.api.SpannerApi.find')
+  def test_find_multi_result(self, find):
+    mock_transaction = mock.Mock()
+    find.return_value = [['key', 'value_1', None]]
+    results = models.SmallTestModel.find_multi(mock_transaction, [{
+        'key': 'key'
+    }])
+
+    self.assertEqual(results[0].key, 'key')
+    self.assertEqual(results[0].value_1, 'value_1')
+    self.assertIsNone(results[0].value_2)
 
   @mock.patch('spanner_orm.api.SpannerApi.insert')
   def test_create_calls_api(self, insert):
