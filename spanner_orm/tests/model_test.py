@@ -142,6 +142,16 @@ class ModelTest(parameterized.TestCase):
     self.assertIsNone(transaction)
     self.assertEqual(kwargs, model.id())
 
+  @mock.patch('spanner_orm.model.ModelMeta.find')
+  def test_reload_reloads(self, find):
+    values = {'key': 'key', 'value_1': 'value_1'}
+    model = models.SmallTestModel(values, persisted=False)
+
+    updated_values = {'key': 'key', 'value_1': 'value_2'}
+    find.return_value = models.SmallTestModel(updated_values)
+    model.reload()
+    self.assertEqual(model.value_1, updated_values['value_1'])
+
   @mock.patch('spanner_orm.model.ModelMeta.create')
   def test_save_creates(self, create):
     values = {'key': 'key', 'value_1': 'value_1'}
