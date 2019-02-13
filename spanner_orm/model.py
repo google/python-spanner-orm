@@ -273,8 +273,9 @@ class Model(object, metaclass=ModelMeta):
   """Maps to a table in spanner and has basic functions for querying tables."""
 
   def __init__(self, values, persisted=False):
-    self.start_values = {}
-    self._persisted = persisted
+    start_values = {}
+    self.__dict__['start_values'] = start_values
+    self.__dict__['_persisted'] = persisted
 
     # If the values came from Spanner, trust them and skip validation
     if not persisted:
@@ -290,17 +291,19 @@ class Model(object, metaclass=ModelMeta):
 
     for column in self._columns:
       value = values.get(column)
-      self.start_values[column] = copy.copy(value)
-      super().__setattr__(column, value)
+      start_values[column] = copy.copy(value)
+      self.__dict__[column] = value
 
     for relation in self._relations:
       if relation in values:
-        super().__setattr__(relation, values[relation])
+        self.__dict__[relation] = values[relation]
 
   def __setattr__(self, name, value):
-    if name in self._primary_keys or name in self._relations:
+    if name in self._relations:
       raise AttributeError(name)
-    if name in self._fields:
+    elif name in self._fields:
+      if name in self._primary_keys:
+        raise AttributeError(name)
       self._metaclass.validate_value(name, value, AttributeError)
     super().__setattr__(name, value)
 
