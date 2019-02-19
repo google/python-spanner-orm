@@ -14,8 +14,6 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
-import importlib
-
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import model
@@ -25,14 +23,15 @@ class Relationship(object):
   """Helps define a foreign key relationship between two models."""
 
   def __init__(self,
-               destination_name,
+               destination_handle,
                constraints,
                is_parent=False,
                single=False):
     """Creates a ModelRelationship.
 
     Args:
-      destination_name: Fully qualified class name of the destination model
+      destination_handle: Destination model class or fully qualified class name
+        of the destination model
       constraints: Dictionary where the keys are names of columns from the
         origin model and the value for a key is the name of the column in the
         destination model that the key should be equal to in order for there to
@@ -41,7 +40,7 @@ class Relationship(object):
       single: True if the destination should be treated as a single object
         instead of a list of objects
     """
-    self._destination_name = destination_name
+    self._destination_handle = destination_handle
     self._destination = None
     self._constraints = constraints
     self._is_parent = is_parent
@@ -56,7 +55,7 @@ class Relationship(object):
   @property
   def destination(self):
     if not self._destination:
-      self._destination = self._load_model(self._destination_name)
+      self._destination = model.load_model(self._destination_handle)
     return self._destination
 
   @property
@@ -81,13 +80,3 @@ class Relationship(object):
                                           origin_column))
 
     return conditions
-
-  def _load_model(self, model_name):
-    parts = model_name.split('.')
-    path = '.'.join(parts[:-1])
-    module = importlib.import_module(path)
-    klass = getattr(module, parts[-1])
-    if not issubclass(klass, model.Model):
-      raise error.SpannerError(
-          '{model} is not a Model'.format(model=model_name))
-    return klass
