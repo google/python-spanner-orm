@@ -16,6 +16,7 @@
 
 import collections
 import copy
+import importlib
 
 from spanner_orm import api
 from spanner_orm import condition
@@ -30,16 +31,18 @@ from google.cloud import spanner
 class Metadata(object):
   """Holds Spanner table metadata corresponding to a Model."""
 
-  def __init__(self, table=None, fields=None, relations=None):
+  def __init__(self, table=None, fields=None, relations=None, interleaved=None):
     self.table = table or ''
     self.fields = fields or {}
     self.relations = relations or {}
+    self.interleaved = interleaved
     self.process_fields()
 
   def add_metadata(self, metadata):
     self.table = metadata.table or self.table
     self.fields.update(metadata.fields)
     self.relations.update(metadata.relations)
+    self.interleaved = metadata.interleaved or self.interleaved
     self.process_fields()
 
   def process_fields(self):
@@ -65,6 +68,8 @@ class ModelBase(type):
     for key, value in attrs.items():
       if key == '__table__':
         metadata.table = value
+      elif key == '__interleaved__':
+        metadata.interleaved = value
       if isinstance(value, field.Field):
         value.name = key
         value.index = len(metadata.fields)
@@ -96,7 +101,14 @@ class ModelBase(type):
     ]
     field_ddl = '({})'.format(', '.join(fields))
     index_ddl = 'PRIMARY KEY ({})'.format(', '.join(cls.primary_keys))
-    return 'CREATE TABLE {} {} {}'.format(cls.table, field_ddl, index_ddl)
+    trailing_statements = [index_ddl]
+    if cls.interleaved:
+      interleave_ddl = 'INTERLEAVE IN PARENT {parent} ON CASCADE DELETE'.format(
+          parent=cls.interleaved.table)
+      trailing_statements.append(interleave_ddl)
+    trailing_ddl = ', '.join(trailing_statements)
+    return 'CREATE TABLE {table_name} {fields} {trailing}'.format(
+        table_name=cls.table, fields=field_ddl, trailing=trailing_ddl)
 
   @property
   def column_prefix(cls):
@@ -106,6 +118,12 @@ class ModelBase(type):
   @property
   def columns(cls):
     return cls.meta.columns
+
+  @property
+  def interleaved(cls):
+    if cls.meta.interleaved and not isinstance(cls.meta.interleaved, ModelBase):
+      cls.meta.interleaved = load_model(cls.meta.interleaved)
+    return cls.meta.interleaved
 
   @property
   def primary_keys(cls):
@@ -226,7 +244,6 @@ class ModelMeta(ModelBase):
     be created when calling this method.
     """
     work = collections.defaultdict(list)
-    to_create, to_update = [], []
     for model in models:
       value = {column: getattr(model, column) for column in cls.columns}
       if force_write:
@@ -377,3 +394,16 @@ class Model(object, metaclass=ModelMeta):
       self._metaclass.create(transaction, **self.values)
       self._persisted = True
     return self
+
+
+def load_model(model_handle):
+  if isinstance(model_handle, Model):
+    return model_handle
+  parts = model_handle.split('.')
+  path = '.'.join(parts[:-1])
+  module = importlib.import_module(path)
+  klass = getattr(module, parts[-1])
+  if not issubclass(klass, Model):
+    raise error.SpannerError(
+        '{model} is not a Model'.format(model=model_handle))
+  return klass

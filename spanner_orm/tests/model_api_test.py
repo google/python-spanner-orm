@@ -16,11 +16,8 @@ import logging
 import unittest
 from unittest import mock
 
-from spanner_orm import api
 from spanner_orm import error
 from spanner_orm.tests import models
-
-from google.cloud import spanner
 
 
 class ModelApiTest(unittest.TestCase):

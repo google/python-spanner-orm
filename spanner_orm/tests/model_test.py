@@ -18,7 +18,6 @@ import unittest
 from unittest import mock
 
 from absl.testing import parameterized
-from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.tests import models
 
@@ -99,6 +98,14 @@ class ModelTest(parameterized.TestCase):
                       ' timestamp TIMESTAMP NOT NULL, string_array'
                       ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, string)')
     self.assertEqual(models.UnittestModel.creation_ddl, test_model_ddl)
+
+  def test_interleaved_creation_ddl(self):
+    test_model_ddl = ('CREATE TABLE ChildTestModel ('
+                      'parent_key STRING(MAX) NOT NULL, '
+                      'child_key STRING(MAX) NOT NULL) '
+                      'PRIMARY KEY (parent_key, child_key), '
+                      'INTERLEAVE IN PARENT SmallTestModel ON CASCADE DELETE')
+    self.assertEqual(models.ChildTestModel.creation_ddl, test_model_ddl)
 
   def test_field_exists_on_model_class(self):
     self.assertIsInstance(models.SmallTestModel.key, field.Field)

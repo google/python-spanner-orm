@@ -19,19 +19,6 @@ from spanner_orm import model
 from spanner_orm import relationship
 
 
-class ChildTestModel(model.Model):
-  """Model class for testing relationships"""
-
-  __table__ = 'ChildTestModel'
-  parent_key = field.Field(field.String, primary_key=True)
-  child_key = field.Field(field.String, primary_key=True)
-  parent = relationship.Relationship(
-      'spanner_orm.tests.models.SmallTestModel', {'parent_key': 'key'},
-      single=True)
-  parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
-                                      {'parent_key': 'key'})
-
-
 class SmallTestModel(model.Model):
   """Model class used for testing"""
 
@@ -39,6 +26,20 @@ class SmallTestModel(model.Model):
   key = field.Field(field.String, primary_key=True)
   value_1 = field.Field(field.String)
   value_2 = field.Field(field.String, nullable=True)
+
+
+class ChildTestModel(model.Model):
+  """Model class for testing relationships"""
+
+  __table__ = 'ChildTestModel'
+  __interleaved__ = SmallTestModel
+  parent_key = field.Field(field.String, primary_key=True)
+  child_key = field.Field(field.String, primary_key=True)
+  parent = relationship.Relationship(
+      'spanner_orm.tests.models.SmallTestModel', {'parent_key': 'key'},
+      single=True)
+  parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
+                                      {'parent_key': 'key'})
 
 
 class InheritanceTestModel(SmallTestModel):

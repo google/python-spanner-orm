@@ -209,7 +209,7 @@ class QueryTest(parameterized.TestCase):
     child_values, parent_values, rows = self.includes_result(related=2)
     result = select_query.process_results(rows)[0]
 
-    self.assertEqual(len(result.parents), 2)
+    self.assertLen(result.parents, 2)
     for name, value in child_values.items():
       self.assertEqual(getattr(result, name), value)
 
@@ -240,7 +240,10 @@ class QueryTest(parameterized.TestCase):
     expected_sql = '((table.int_ = @int_0) OR (table.int_ = @int_1))'
     self.assertEndsWith(select_query.sql(), expected_sql)
     self.assertEqual(select_query.parameters(), {'int_0': 1, 'int_1': 2})
-    self.assertEqual(select_query.types(), {'int_0': field.Integer.grpc_type(), 'int_1': field.Integer.grpc_type()})
+    self.assertEqual(select_query.types(), {
+        'int_0': field.Integer.grpc_type(),
+        'int_1': field.Integer.grpc_type()
+    })
 
 
 if __name__ == '__main__':

@@ -177,7 +177,8 @@ class SelectQuery(SpannerQuery):
     """Parses a row of results from a Spanner query based on the conditions."""
     values = dict(zip(self._model.columns, row))
     join_values = row[len(self._model.columns):]
-    for join, subquery, join_value in zip(self._joins, self._subqueries, join_values):
+    for join, subquery, join_value in zip(self._joins, self._subqueries,
+                                          join_values):
       models = subquery.process_results(join_value)
       if join.single:
         if len(models) > 1:
