@@ -51,6 +51,10 @@ class SpannerMetadata(object):
     return cls._models
 
   @classmethod
+  def model(cls, table_name):
+    return cls.models().get(table_name)
+
+  @classmethod
   def tables(cls):
     """Compiles table information from column schema."""
     if cls._tables is None:
@@ -72,9 +76,9 @@ class SpannerMetadata(object):
     """Compiles index information from index and index columns schemas."""
     if cls._indexes is None:
       # ordinal_position is the position of the column in the indicated index.
-      # Results are ordered by that so the index columns are added in the correct
-      # order. None indicates that the key isn't really a part of the index, so we
-      # skip those
+      # Results are ordered by that so the index columns are added in the
+      # correct order. None indicates that the key isn't really a part of the
+      # index, so we skip those
       index_column_schemas = index_column.IndexColumnSchema.where(
           None, condition.equal_to('table_catalog', ''),
           condition.equal_to('table_schema', ''),

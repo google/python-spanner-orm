@@ -28,13 +28,13 @@ class SpannerAdminApi(api.SpannerReadApi):
 
   @classmethod
   def connect(cls,
-              project,
               instance,
               database,
+              project=None,
               credentials=None,
               create_ddl=None):
     """Connects to the specified database, optionally creating tables."""
-    connection_info = (project, instance, database, credentials)
+    connection_info = (instance, database, project, credentials)
     if cls._spanner_connection is not None:
       if connection_info == cls._connection_info:
         return
@@ -72,4 +72,4 @@ class SpannerAdminApi(api.SpannerReadApi):
   @classmethod
   def update_schema(cls, change):
     operation = cls._connection().update_ddl([change])
-    operation.result()
+    return operation.result()

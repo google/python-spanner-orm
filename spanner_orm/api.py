@@ -25,7 +25,7 @@ _logger = logging.getLogger(__name__)
 
 
 class SpannerReadApi(abc.ABC):
-  """Handles sending read requests to Spanner"""
+  """Handles sending read requests to Spanner."""
 
   @classmethod
   @abc.abstractmethod
@@ -42,8 +42,8 @@ class SpannerReadApi(abc.ABC):
   @staticmethod
   def find(transaction, table_name, columns, keyset):
     """Obtains rows with primary_keys from the given table."""
-    _logger.debug('Find table=%s columns=%s keys=%s',
-                  table_name, columns, keyset.keys)
+    _logger.debug('Find table=%s columns=%s keys=%s', table_name, columns,
+                  keyset.keys)
     stream_results = transaction.read(
         table=table_name, columns=columns, keyset=keyset)
     return list(stream_results)
@@ -51,8 +51,8 @@ class SpannerReadApi(abc.ABC):
   @staticmethod
   def sql_query(transaction, query, parameters, parameter_types):
     """Runs a read only SQL query."""
-    _logger.debug('Executing SQL:\n%s\n%s\n%s',
-                  query, parameters, parameter_types)
+    _logger.debug('Executing SQL:\n%s\n%s\n%s', query, parameters,
+                  parameter_types)
     stream_results = transaction.execute_sql(
         query, params=parameters, param_types=parameter_types)
     return list(stream_results)
@@ -80,22 +80,22 @@ class SpannerWriteApi(abc.ABC):
   @staticmethod
   def insert(transaction, table_name, columns, values):
     """Add rows to a table."""
-    _logger.debug('Insert table=%s columns=%s values=%s',
-                  table_name, columns, values)
+    _logger.debug('Insert table=%s columns=%s values=%s', table_name, columns,
+                  values)
     transaction.insert(table=table_name, columns=columns, values=values)
 
   @staticmethod
   def update(transaction, table_name, columns, values):
     """Updates rows of a table."""
-    _logger.debug('Update table=%s columns=%s values=%s',
-                  table_name, columns, values)
+    _logger.debug('Update table=%s columns=%s values=%s', table_name, columns,
+                  values)
     transaction.update(table=table_name, columns=columns, values=values)
 
   @staticmethod
   def upsert(transaction, table_name, columns, values):
     """Updates existing rows of a table or adds rows if they don't exist."""
-    _logger.debug('Upsert table=%s columns=%s values=%s',
-                  table_name, columns, values)
+    _logger.debug('Upsert table=%s columns=%s values=%s', table_name, columns,
+                  values)
     transaction.insert_or_update(
         table=table_name, columns=columns, values=values)
 
@@ -114,9 +114,14 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 
   # Spanner connection methods
   @classmethod
-  def connect(cls, project, instance, database, credentials=None, pool=None):
+  def connect(cls,
+              instance,
+              database,
+              project=None,
+              credentials=None,
+              pool=None):
     """Connects to the specified Spanner database."""
-    connection_info = (project, instance, database, credentials)
+    connection_info = (instance, database, project, credentials)
     if cls._spanner_connection is not None:
       if connection_info == cls._connection_info:
         return

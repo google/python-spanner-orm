@@ -29,10 +29,6 @@ class SchemaUpdate(abc.ABC):
   def ddl(self):
     raise NotImplementedError
 
-  def _get_model(self, table_name):
-    models = metadata.SpannerMetadata.models()
-    return models.get(table_name)
-
   def execute(self):
     self.validate()
     api.SpannerAdminApi.update_schema(self.ddl())
@@ -42,6 +38,38 @@ class SchemaUpdate(abc.ABC):
     raise NotImplementedError
 
 
+class CreateTableUpdate(SchemaUpdate):
+  """Update that allows creating a new table."""
+
+  def __init__(self, model):
+    self._model = model
+    self._existing_model = metadata.SpannerMetadata.model(model.table)
+
+  def ddl(self):
+    return self._model.creation_ddl
+
+  def _validate_parent(self):
+    parent_primary_keys = self._model.interleaved.primary_keys
+    primary_keys = self._model.primary_keys, ('Non-matching primary keys in '
+                                              'interleaved table')
+    assert len(parent_primary_keys) <= len(primary_keys)
+    for parent_key, key in zip(parent_primary_keys, primary_keys):
+      assert parent_key == key, 'Non-matching primary keys in interleaved table'
+
+  def _validate_primary_keys(self):
+    assert self._model.primary_keys, 'Creating a table with no primary key'
+    for key in self._model.primary_keys:
+      assert key in self._model.schema, 'Trying to index fields not in table'
+
+  def validate(self):
+    assert self._model.table, 'Trying to create a table with no name'
+    assert not self._existing_model, ('Trying to create a table that already '
+                                      'exists')
+    if self._model.interleaved:
+      self._validate_parent()
+    self._validate_primary_keys()
+
+
 class ColumnUpdate(SchemaUpdate):
   """Specifies column updates such as ADD, DROP, and ALTER."""
 
@@ -49,7 +77,7 @@ class ColumnUpdate(SchemaUpdate):
     self._table = table_name
     self._column = column_name
     self._field = field
-    self._model = self._get_model(table_name)
+    self._model = metadata.SpannerMetadata.model(table_name)
 
   def ddl(self):
     if self._field is None:
@@ -94,7 +122,7 @@ class IndexUpdate(SchemaUpdate):
     self._table = table_name
     self._index = index_name
     self._columns = columns
-    self._model = self._get_model(table_name)
+    self._model = metadata.SpannerMetadata.model(table_name)
 
   # TODO(dbrandao): implement
   def ddl(self):
@@ -106,33 +134,13 @@ class IndexUpdate(SchemaUpdate):
     raise NotImplementedError
 
 
-class CreateTableUpdate(SchemaUpdate):
-  """Update that allows creating a new table."""
-
-  def __init__(self, model):
-    self._model = model
-    self._existing_model = self._get_model(model.table)
-
+class NoUpdate(SchemaUpdate):
+  """Update that does nothing, for migrations that don't update db schemas."""
   def ddl(self):
-    return self._model.creation_ddl
+    return ''
 
-  def _validate_parent(self):
-    parent_primary_keys = self._model.interleaved.primary_keys
-    primary_keys = self._model.primary_keys, ('Non-matching primary keys in '
-                                              'interleaved table')
-    assert len(parent_primary_keys) <= len(primary_keys)
-    for parent_key, key in zip(parent_primary_keys, primary_keys):
-      assert parent_key == key, 'Non-matching primary keys in interleaved table'
-
-  def _validate_primary_keys(self):
-    assert self._model.primary_keys, 'Creating a table with no primary key'
-    for key in self._model.primary_keys:
-      assert key in self._model.schema, 'Trying to index fields not in table'
+  def execute(self):
+    pass
 
   def validate(self):
-    assert self._model.table, 'Trying to create a table with no name'
-    assert not self._existing_model, ('Trying to create a table that already '
-                                      'exists')
-    if self._model.interleaved:
-      self._validate_parent()
-    self._validate_primary_keys()
+    pass
