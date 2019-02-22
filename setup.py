@@ -16,12 +16,12 @@
 from setuptools import setup
 setup(
     name='spanner-orm',
-    version='0.1.7',
+    version='0.1.8',
     description='Basic ORM for Spanner',
     maintainer='Derek Brandao',
     maintainer_email='dbrandao@google.com',
     url='https://github.com/google/python-spanner-orm',
-    packages=['spanner_orm', 'spanner_orm.admin', 'spanner_orm.schemas'],
+    packages=['spanner_orm', 'spanner_orm.admin'],
     install_requires=[
         'google-cloud-spanner >= 1.6, <2.0.0dev'
     ],
