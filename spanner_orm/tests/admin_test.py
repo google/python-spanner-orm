@@ -16,7 +16,9 @@ import logging
 import unittest
 from unittest import mock
 
-from spanner_orm import schemas
+from spanner_orm.admin import column
+from spanner_orm.admin import index
+from spanner_orm.admin import index_column
 from spanner_orm.admin import metadata
 from spanner_orm.tests import models
 
@@ -36,7 +38,7 @@ class AdminTest(unittest.TestCase):
           'spanner_type': row.field_type().ddl()
       })
       iteration += 1
-    return [schemas.ColumnSchema(row) for row in columns]
+    return [column.ColumnSchema(row) for row in columns]
 
   def smalltestmodel_index_columns(self):
     columns = []
@@ -50,11 +52,11 @@ class AdminTest(unittest.TestCase):
           'is_nullable': 'FALSE',
           'spanner_type': 'STRING'
       })
-    return [schemas.IndexColumnSchema(row) for row in columns]
+    return [index_column.IndexColumnSchema(row) for row in columns]
 
   def smalltestmodel_indexes(self):
     return [
-        schemas.IndexSchema({
+        index.IndexSchema({
             'table_catalog': '',
             'table_schema': '',
             'table_name': models.SmallTestModel.table,
@@ -66,9 +68,9 @@ class AdminTest(unittest.TestCase):
         })
     ]
 
-  @mock.patch('spanner_orm.schemas.index.IndexSchema.where')
-  @mock.patch('spanner_orm.schemas.index_column.IndexColumnSchema.where')
-  @mock.patch('spanner_orm.schemas.column.ColumnSchema.where')
+  @mock.patch('spanner_orm.admin.index.IndexSchema.where')
+  @mock.patch('spanner_orm.admin.index_column.IndexColumnSchema.where')
+  @mock.patch('spanner_orm.admin.column.ColumnSchema.where')
   def test_metadata(self, columns, index_columns, indexes):
     model = models.SmallTestModel
     columns.return_value = self.smalltestmodel_columns()

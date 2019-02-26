@@ -12,22 +12,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Model for interacting with Spanner index schema table."""
+"""Model for interacting with Spanner column schema table."""
 
+from spanner_orm import error
 from spanner_orm import field
-from spanner_orm.schemas import schema
+from spanner_orm.admin import schema
 
 
-class IndexSchema(schema.Schema):
-  """Model for interacting with Spanner index schema table."""
+class ColumnSchema(schema.Schema):
+  """Model for interacting with Spanner column schema table."""
 
-  __table__ = 'information_schema.indexes'
+  __table__ = 'information_schema.columns'
   table_catalog = field.Field(field.String, primary_key=True)
   table_schema = field.Field(field.String, primary_key=True)
   table_name = field.Field(field.String, primary_key=True)
-  index_name = field.Field(field.String, primary_key=True)
-  index_type = field.Field(field.String)
-  parent_table_name = field.Field(field.String, nullable=True)
-  is_unique = field.Field(field.Boolean)
-  is_null_filtered = field.Field(field.Boolean)
-  index_state = field.Field(field.String)
+  column_name = field.Field(field.String, primary_key=True)
+  ordinal_position = field.Field(field.Integer)
+  is_nullable = field.Field(field.String)
+  spanner_type = field.Field(field.String)
+
+  def nullable(self):
+    return self.is_nullable == 'YES'
+
+  def field_type(self):
+    for field_type in field.ALL_TYPES:
+      if self.spanner_type == field_type.ddl():
+        return field_type
+
+    raise error.SpannerError('No corresponding Type for {}'.format(
+        self.spanner_type))

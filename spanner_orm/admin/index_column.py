@@ -15,7 +15,7 @@
 """Model for interacting with Spanner index column schema table."""
 
 from spanner_orm import field
-from spanner_orm.schemas import schema
+from spanner_orm.admin import schema
 
 
 class IndexColumnSchema(schema.Schema):
