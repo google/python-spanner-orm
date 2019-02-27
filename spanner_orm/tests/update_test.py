@@ -22,7 +22,7 @@ from spanner_orm.admin import update
 from spanner_orm.tests import models
 
 
-class MigrationTest(unittest.TestCase):
+class UpdateTest(unittest.TestCase):
 
   @mock.patch('spanner_orm.admin.update.SchemaUpdate._get_model')
   def test_column_update_add_column(self, get_model):

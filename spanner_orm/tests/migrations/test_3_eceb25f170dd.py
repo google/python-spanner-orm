@@ -12,18 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""spanner_orm setup file."""
-from setuptools import setup
-setup(
-    name='spanner-orm',
-    version='0.1.8',
-    description='Basic ORM for Spanner',
-    maintainer='Derek Brandao',
-    maintainer_email='dbrandao@google.com',
-    url='https://github.com/google/python-spanner-orm',
-    packages=['spanner_orm', 'spanner_orm.admin'],
-    install_requires=[
-        'google-cloud-spanner >= 1.6, <2.0.0dev'
-    ],
-    tests_require=['absl-py'],
-    entry_points={'console_scripts': ['spanner-orm = spanner_orm.admin.scripts:main']})
+"""test_3
+
+Migration ID: eceb25f170dd
+Created: 2019-02-27 18:52
+"""
+
+migration_id = 'eceb25f170dd'
+prev_migration = '5c078bbb4d43'
+
+from spanner_orm.admin import update
+
+# Returns a SchemaUpdate object that tells what should be changed
+def upgrade():
+  pass
+
+# Returns a SchemaUpdate object that tells how to roll back the changes
+def downgrade():
+  pass
