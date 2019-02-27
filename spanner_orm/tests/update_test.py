@@ -16,7 +16,6 @@ import logging
 import unittest
 from unittest import mock
 
-from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.admin import update
 from spanner_orm.tests import models

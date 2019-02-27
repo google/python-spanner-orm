@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""test_2
+"""test_2.
 
 Migration ID: 5c078bbb4d43
 Created: 2019-02-27 18:52
@@ -21,11 +21,11 @@ Created: 2019-02-27 18:52
 migration_id = '5c078bbb4d43'
 prev_migration = '4a7a7dee0718'
 
-from spanner_orm.admin import update
 
 # Returns a SchemaUpdate object that tells what should be changed
 def upgrade():
   pass
+
 
 # Returns a SchemaUpdate object that tells how to roll back the changes
 def downgrade():

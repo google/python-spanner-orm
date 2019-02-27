@@ -22,8 +22,8 @@ setup(
     maintainer_email='dbrandao@google.com',
     url='https://github.com/google/python-spanner-orm',
     packages=['spanner_orm', 'spanner_orm.admin'],
-    install_requires=[
-        'google-cloud-spanner >= 1.6, <2.0.0dev'
-    ],
+    install_requires=['google-cloud-spanner >= 1.6, <2.0.0dev'],
     tests_require=['absl-py'],
-    entry_points={'console_scripts': ['spanner-orm = spanner_orm.admin.scripts:main']})
+    entry_points={
+        'console_scripts': ['spanner-orm = spanner_orm.admin.scripts:main']
+    })
