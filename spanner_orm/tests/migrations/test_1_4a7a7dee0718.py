@@ -19,7 +19,7 @@ Created: 2019-02-27 18:52
 """
 
 migration_id = '4a7a7dee0718'
-prev_migration = None
+prev_migration_id = None
 
 
 # Returns a SchemaUpdate object that tells what should be changed

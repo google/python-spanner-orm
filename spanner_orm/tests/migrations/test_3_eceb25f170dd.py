@@ -19,7 +19,7 @@ Created: 2019-02-27 18:52
 """
 
 migration_id = 'eceb25f170dd'
-prev_migration = '5c078bbb4d43'
+prev_migration_id = '5c078bbb4d43'
 
 
 # Returns a SchemaUpdate object that tells what should be changed

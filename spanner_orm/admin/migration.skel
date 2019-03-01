@@ -4,8 +4,8 @@ Migration ID: $migration_id
 Created: $current_date
 """
 
-migration_id = '$migration_id'
-prev_migration = $prev_migration_id
+migration_id = $migration_id
+prev_migration_id = $prev_migration_id
 
 from spanner_orm.admin import update
 

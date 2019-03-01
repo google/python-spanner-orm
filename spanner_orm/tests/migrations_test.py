@@ -22,16 +22,16 @@ from spanner_orm.admin import migration_manager
 
 class TestMigration(object):
 
-  def __init__(self, migration_id, prev_migration):
+  def __init__(self, migration_id, prev_migration_id):
     self._id = migration_id
-    self._prev = prev_migration
+    self._prev = prev_migration_id
 
   @property
   def migration_id(self):
     return self._id
 
   @property
-  def prev_migration(self):
+  def prev_migration_id(self):
     return self._prev
 
   def upgrade(self):
@@ -49,8 +49,10 @@ class MigrationsTest(unittest.TestCase):
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
     migrations = manager.migrations
     self.assertEqual(len(migrations), 3)
-    self.assertEqual(migrations[2].prev_migration, migrations[1].migration_id)
-    self.assertEqual(migrations[1].prev_migration, migrations[0].migration_id)
+    self.assertEqual(migrations[2].prev_migration_id,
+                     migrations[1].migration_id)
+    self.assertEqual(migrations[1].prev_migration_id,
+                     migrations[0].migration_id)
 
   def test_generate(self):
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
@@ -58,11 +60,9 @@ class MigrationsTest(unittest.TestCase):
       path = manager.generate('test migration')
       migration = manager._migration_from_file(path)
       self.assertIsNotNone(migration.migration_id)
-      self.assertIsNotNone(migration.prev_migration)
+      self.assertIsNotNone(migration.prev_migration_id)
       self.assertIsNotNone(migration.upgrade)
       self.assertIsNotNone(migration.downgrade)
-    except Exception as ex:
-      raise ex
     finally:
       os.remove(path)
 
@@ -113,6 +113,16 @@ class MigrationsTest(unittest.TestCase):
 
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
     with self.assertRaisesRegex(error.SpannerError, 'No valid migration'):
+      manager._order_migrations(migrations)
+
+  def test_order_migrations_error_on_no_successor(self):
+    first = TestMigration('1', None)
+    second = TestMigration('2', '3')
+    third = TestMigration('3', '2')
+    migrations = [third, first, second]
+
+    manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
+    with self.assertRaisesRegex(error.SpannerError, 'no successor'):
       manager._order_migrations(migrations)
 
 

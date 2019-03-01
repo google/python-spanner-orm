@@ -38,7 +38,6 @@ class MigrationManager(object):
     """Creates a new migration that is the last migration to be executed."""
     migration_id = uuid.uuid4().hex[-12:]
     prev_id = self.migrations[-1].migration_id if self.migrations else None
-    prev = "'{}'".format(prev_id) if prev_id else 'None'
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 
     skeleton_directory = os.path.dirname(os.path.abspath(__file__))
@@ -47,8 +46,8 @@ class MigrationManager(object):
       migration_skeleton = string.Template(skeleton.read())
     migration_content = migration_skeleton.substitute(
         migration_name=migration_name,
-        migration_id=migration_id,
-        prev_migration_id=prev,
+        migration_id=repr(migration_id),
+        prev_migration_id=repr(prev_id),
         current_date=now)
 
     filename = '{name}_{migration_id}.py'.format(
@@ -94,8 +93,8 @@ class MigrationManager(object):
     id_map = {migration.migration_id: migration for migration in migrations}
     start_migration = None
     for migration_id, migration in id_map.items():
-      if migration.prev_migration and migration.prev_migration in id_map:
-        current = id_map[migration.prev_migration]
+      if migration.prev_migration_id and migration.prev_migration_id in id_map:
+        current = id_map[migration.prev_migration_id]
         if hasattr(current, 'next'):
           raise error.SpannerError(
               '{name} has unclear successor migration'.format(
