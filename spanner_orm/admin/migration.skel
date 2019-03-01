@@ -1,0 +1,18 @@
+"""$migration_name
+
+Migration ID: $migration_id
+Created: $current_date
+"""
+
+migration_id = $migration_id
+prev_migration_id = $prev_migration_id
+
+from spanner_orm.admin import update
+
+# Returns a SchemaUpdate object that tells what should be changed
+def upgrade():
+  pass
+
+# Returns a SchemaUpdate object that tells how to roll back the changes
+def downgrade():
+  pass
