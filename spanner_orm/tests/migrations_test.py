@@ -15,16 +15,25 @@
 import logging
 import os
 import unittest
+from unittest import mock
 
 from spanner_orm import error
+from spanner_orm.admin import migration_executor
 from spanner_orm.admin import migration_manager
+from spanner_orm.admin import update
 
 
 class TestMigration(object):
 
-  def __init__(self, migration_id, prev_migration_id):
+  def __init__(self,
+               migration_id,
+               prev_migration_id,
+               upgrade_update=None,
+               downgrade_update=None):
     self._id = migration_id
     self._prev = prev_migration_id
+    self._upgrade_update = upgrade_update or update.NoUpdate()
+    self._downgrade_update = downgrade_update or update.NoUpdate()
 
   @property
   def migration_id(self):
@@ -35,10 +44,10 @@ class TestMigration(object):
     return self._prev
 
   def upgrade(self):
-    pass
+    return self._upgrade_update
 
   def downgrade(self):
-    pass
+    return self._downgrade_update
 
 
 class MigrationsTest(unittest.TestCase):
@@ -124,6 +133,129 @@ class MigrationsTest(unittest.TestCase):
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
     with self.assertRaisesRegex(error.SpannerError, 'no successor'):
       manager._order_migrations(migrations)
+
+  def test_filter_migrations(self):
+    executor = migration_executor.MigrationExecutor('', '')
+    first = TestMigration('1', None)
+    second = TestMigration('2', 1)
+    third = TestMigration('3', 2)
+    migrations = [first, second, third]
+
+    migrated = {'1': True, '2': False, '3': False}
+    with mock.patch.object(executor, '_migration_status_map', migrated):
+      filtered = executor._filter_migrations(migrations, False, None)
+      self.assertEqual(filtered, [second, third])
+
+      filtered = executor._filter_migrations(migrations, False, '2')
+      self.assertEqual(filtered, [second])
+
+      filtered = executor._filter_migrations(reversed(migrations), True, '1')
+      self.assertEqual(filtered, [first])
+
+  def test_filter_migrations_error_on_bad_last_migration(self):
+    executor = migration_executor.MigrationExecutor('', '')
+    first = TestMigration('1', None)
+    second = TestMigration('2', 1)
+    third = TestMigration('3', 2)
+    migrations = [first, second, third]
+
+    migrated = {'1': True, '2': False, '3': False}
+    with mock.patch.object(executor, '_migration_status_map', migrated):
+      with self.assertRaises(error.SpannerError):
+        executor._filter_migrations(migrations, False, '1')
+
+      with self.assertRaises(error.SpannerError):
+        executor._filter_migrations(migrations, False, '4')
+
+  def test_validate_migrations(self):
+    executor = migration_executor.MigrationExecutor('', '')
+    first = TestMigration('1', None)
+    second = TestMigration('2', 1)
+    third = TestMigration('3', 2)
+    with mock.patch.object(executor, 'migrations') as migrations:
+      migrations.return_value = [first, second, third]
+
+      migrated = {'1': True, '2': False, '3': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        executor._validate_migrations()
+
+      migrated = {'1': False, '2': False, '3': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        executor._validate_migrations()
+
+  def test_validate_migrations_error_on_unmigrated_after_migrated(self):
+    executor = migration_executor.MigrationExecutor('', '')
+    first = TestMigration('1', None)
+    second = TestMigration('2', 1)
+    third = TestMigration('3', 2)
+    with mock.patch.object(executor, 'migrations') as migrations:
+      migrations.return_value = [first, second, third]
+
+      migrated = {'1': False, '2': True, '3': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        with self.assertRaises(error.SpannerError):
+          executor._validate_migrations()
+
+      migrated = {'1': False, '2': False, '3': True}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        with self.assertRaises(error.SpannerError):
+          executor._validate_migrations()
+
+  def test_validate_migrations_error_on_unmigrated_first(self):
+    executor = migration_executor.MigrationExecutor('', '')
+    first = TestMigration('2', 1)
+    with mock.patch.object(executor, 'migrations') as migrations:
+      migrations.return_value = [first]
+
+      migrated = {'1': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        with self.assertRaises(error.SpannerError):
+          executor._validate_migrations()
+
+      migrated = {}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        with self.assertRaises(error.SpannerError):
+          executor._validate_migrations()
+
+  @mock.patch('spanner_orm.admin.api.SpannerAdminApi')
+  @mock.patch('spanner_orm.api.SpannerApi')
+  def test_migrate(self, api, admin_api):
+    api.connect = mock.Mock()
+    admin_api.connect = mock.Mock()
+
+    executor = migration_executor.MigrationExecutor(
+        1, 2, credentials=3, project=4)
+    first = TestMigration('1', None)
+    second = TestMigration('2', 1)
+    third = TestMigration('3', 2)
+    with mock.patch.object(executor, 'migrations') as migrations:
+      migrations.return_value = [first, second, third]
+      migrated = {'1': True, '2': False, '3': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        executor.migrate()
+        self.assertEqual(migrated, {'1': True, '2': True, '3': True})
+    api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
+    admin_api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
+
+  @mock.patch('spanner_orm.admin.api.SpannerAdminApi')
+  @mock.patch('spanner_orm.api.SpannerApi')
+  def test_rollback(self, api, admin_api):
+    api.connect = mock.Mock()
+    admin_api.connect = mock.Mock()
+
+    executor = migration_executor.MigrationExecutor(
+        1, 2, credentials=3, project=4)
+    first = TestMigration('1', None)
+    second = TestMigration('2', 1)
+    third = TestMigration('3', 2)
+    with mock.patch.object(executor, 'migrations') as migrations:
+      migrations.return_value = [first, second, third]
+      migrated = {'1': True, '2': False, '3': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        executor.rollback('1')
+        self.assertEqual(migrated, {'1': False, '2': False, '3': False})
+    api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
+    admin_api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
 
 
 if __name__ == '__main__':

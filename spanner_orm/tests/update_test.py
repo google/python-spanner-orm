@@ -19,11 +19,12 @@ from unittest import mock
 from spanner_orm import field
 from spanner_orm.admin import update
 from spanner_orm.tests import models
+from spanner_orm.admin import metadata
 
 
 class UpdateTest(unittest.TestCase):
 
-  @mock.patch('spanner_orm.admin.update.SchemaUpdate._get_model')
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_column_update_add_column(self, get_model):
     get_model.return_value = models.SmallTestModel
     new_field = field.Field(field.String, nullable=True)
@@ -33,7 +34,7 @@ class UpdateTest(unittest.TestCase):
                      'ALTER TABLE foo ADD COLUMN bar STRING(MAX)')
 
   @mock.patch('spanner_orm.admin.index_column.IndexColumnSchema.count')
-  @mock.patch('spanner_orm.admin.update.SchemaUpdate._get_model')
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_column_update_error_on_primary_key(self, get_model, index_count):
     index_count.return_value = 1
     get_model.return_value = models.SmallTestModel
@@ -41,14 +42,14 @@ class UpdateTest(unittest.TestCase):
     with self.assertRaisesRegex(AssertionError, 'indexed column'):
       test_update.validate()
 
-  @mock.patch('spanner_orm.admin.update.SchemaUpdate._get_model')
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_create_table(self, get_model):
     get_model.return_value = None
     new_model = models.SmallTestModel
     test_update = update.CreateTableUpdate(new_model)
     self.assertEqual(test_update.ddl(), new_model.creation_ddl)
 
-  @mock.patch('spanner_orm.admin.update.SchemaUpdate._get_model')
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_create_table_error_on_existing_table(self, get_model):
     get_model.return_value = models.SmallTestModel
     new_model = models.SmallTestModel
