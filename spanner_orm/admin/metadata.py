@@ -22,6 +22,7 @@ from spanner_orm import model
 from spanner_orm.admin import column
 from spanner_orm.admin import index
 from spanner_orm.admin import index_column
+from spanner_orm.admin import table
 
 
 class SpannerMetadata(object):
@@ -36,18 +37,27 @@ class SpannerMetadata(object):
     if cls._models is None:
       tables = cls.tables()
       indexes = cls.indexes()
-      results = {}
+      models = {}
 
-      for table_name, fields in tables.items():
-        primary_index = indexes[table_name]['PRIMARY_KEY']['columns']
+      for table_name, table_data in tables.items():
+        primary_index = set(indexes[table_name]['PRIMARY_KEY']['columns'])
         klass = model.ModelBase('Model_{}'.format(table_name), (model.Model,),
                                 {})
-        for f in fields.values():
-          if f.name in primary_index:
-            f._primary_key = True  # pylint: disable=protected-access
-        klass.meta = model.Metadata(table=table_name, fields=fields)
-        results[table_name] = klass
-      cls._models = results
+        fields = table_data['fields']
+        for field in fields.values():
+          if field.name in primary_index:
+            field._primary_key = True  # pylint: disable=protected-access
+        klass.meta = model.Metadata(
+            table=table_name,
+            fields=fields,
+            interleaved=table_data['parent_table'])
+        models[table_name] = klass
+
+      for table_model in models.values():
+        if table_model.meta.interleaved:
+          table_model.meta.interleaved = models[table_model.meta.interleaved]
+
+      cls._models = models
     return cls._models
 
   @classmethod
@@ -58,7 +68,7 @@ class SpannerMetadata(object):
   def tables(cls):
     """Compiles table information from column schema."""
     if cls._tables is None:
-      tables = collections.defaultdict(dict)
+      column_data = collections.defaultdict(dict)
       columns = column.ColumnSchema.where(
           None, condition.equal_to('table_catalog', ''),
           condition.equal_to('table_schema', ''))
@@ -67,8 +77,17 @@ class SpannerMetadata(object):
             column_row.field_type(), nullable=column_row.nullable())
         new_field.name = column_row.column_name
         new_field.index = column_row.ordinal_position
-        tables[column_row.table_name][column_row.column_name] = new_field
-      cls._tables = tables
+        column_data[column_row.table_name][column_row.column_name] = new_field
+
+      table_data = collections.defaultdict(dict)
+      tables = table.TableSchema.where(
+          None, condition.equal_to('table_catalog', ''),
+          condition.equal_to('table_schema', ''))
+      for table_row in tables:
+        name = table_row.table_name
+        table_data[name]['parent_table'] = table_row.parent_table_name
+        table_data[name]['fields'] = column_data[name]
+      cls._tables = table_data
     return cls._tables
 
   @classmethod
