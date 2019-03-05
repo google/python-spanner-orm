@@ -16,8 +16,9 @@ import logging
 import unittest
 from unittest import mock
 
+from spanner_orm import index
 from spanner_orm.admin import column
-from spanner_orm.admin import index
+from spanner_orm.admin import index as index_schema
 from spanner_orm.admin import index_column
 from spanner_orm.admin import table
 from spanner_orm.admin import metadata
@@ -25,6 +26,11 @@ from spanner_orm.tests import models
 
 
 class AdminTest(unittest.TestCase):
+
+  def clear_metadata(self):
+    metadata.SpannerMetadata._models = None
+    metadata.SpannerMetadata._indexes = None
+    metadata.SpannerMetadata._tables = None
 
   def make_test_tables(self, model, parent_table=None):
     tables = [{
@@ -51,28 +57,40 @@ class AdminTest(unittest.TestCase):
       iteration += 1
     return [column.ColumnSchema(row) for row in columns]
 
-  def make_test_index_columns(self, model):
-    columns = []
-    for row in model.primary_keys:
-      columns.append({
+  def make_test_index_columns(self, model, name=None, columns=None):
+    name = name or index.Index.PRIMARY_INDEX
+    columns = columns or model.primary_keys
+
+    results, iteration = [], 1
+    for row in columns:
+      results.append({
           'table_catalog': '',
           'table_schema': '',
           'table_name': model.table,
-          'index_name': 'PRIMARY_KEY',
+          'index_name': name,
           'column_name': row,
+          'ordinal_position': iteration,
+          'column_ordering': 'ASC',
           'is_nullable': 'FALSE',
           'spanner_type': 'STRING'
       })
-    return [index_column.IndexColumnSchema(row) for row in columns]
+      iteration += 1
+    return [index_column.IndexColumnSchema(row) for row in results]
 
-  def make_test_indexes(self, model):
+  def make_test_index(self, model, name=None):
+    if name is None:
+      name = index.Index.PRIMARY_INDEX
+      index_type = 'PRIMARY_KEY'
+    else:
+      index_type = 'INDEX'
+
     return [
-        index.IndexSchema({
+        index_schema.IndexSchema({
             'table_catalog': '',
             'table_schema': '',
             'table_name': model.table,
-            'index_name': 'PRIMARY_KEY',
-            'index_type': 'PRIMARY_KEY',
+            'index_name': name,
+            'index_type': index_type,
             'is_unique': True,
             'is_null_filtered': False,
             'index_state': 'READ_WRITE'
@@ -84,11 +102,12 @@ class AdminTest(unittest.TestCase):
   @mock.patch('spanner_orm.admin.column.ColumnSchema.where')
   @mock.patch('spanner_orm.admin.table.TableSchema.where')
   def test_metadata(self, tables, columns, index_columns, indexes):
+    self.clear_metadata()
     model = models.SmallTestModel
     tables.return_value = self.make_test_tables(model)
     columns.return_value = self.make_test_columns(model)
     index_columns.return_value = self.make_test_index_columns(model)
-    indexes.return_value = self.make_test_indexes(model)
+    indexes.return_value = self.make_test_index(model)
 
     meta = metadata.SpannerMetadata.models()[model.table]
 
@@ -100,12 +119,15 @@ class AdminTest(unittest.TestCase):
       self.assertEqual(meta.schema[row].nullable(),
                        model.schema[row].nullable())
     self.assertEqual(meta.primary_keys, model.primary_keys)
+    self.assertEqual(
+        getattr(meta, index.Index.PRIMARY_INDEX).columns, model.primary_keys)
 
   @mock.patch('spanner_orm.admin.index.IndexSchema.where')
   @mock.patch('spanner_orm.admin.index_column.IndexColumnSchema.where')
   @mock.patch('spanner_orm.admin.column.ColumnSchema.where')
   @mock.patch('spanner_orm.admin.table.TableSchema.where')
   def test_interleaved(self, tables, columns, index_columns, indexes):
+    self.clear_metadata()
     model = models.SmallTestModel
     parent_model = models.UnittestModel
     tables.return_value = (
@@ -113,13 +135,39 @@ class AdminTest(unittest.TestCase):
         self.make_test_tables(parent_model))
     columns.return_value = (
         self.make_test_columns(model) + self.make_test_columns(parent_model))
-    index_columns.return_value = (self.make_test_index_columns(model) + self.make_test_index_columns(parent_model))
-    indexes.return_value = (self.make_test_indexes(model) + self.make_test_indexes(parent_model))
+    index_columns.return_value = (
+        self.make_test_index_columns(model) +
+        self.make_test_index_columns(parent_model))
+    indexes.return_value = (
+        self.make_test_index(model) + self.make_test_index(parent_model))
 
     meta = metadata.SpannerMetadata.models()['SmallTestModel']
 
     self.assertEqual(meta.table, model.table)
     self.assertEqual(meta.interleaved.table, parent_model.table)
+
+  @mock.patch('spanner_orm.admin.index.IndexSchema.where')
+  @mock.patch('spanner_orm.admin.index_column.IndexColumnSchema.where')
+  @mock.patch('spanner_orm.admin.column.ColumnSchema.where')
+  @mock.patch('spanner_orm.admin.table.TableSchema.where')
+  def test_secondary_index(self, tables, columns, index_columns, indexes):
+    self.clear_metadata()
+    model = models.SmallTestModel
+    name = 'secondary_index'
+    index_cols = ['value_1']
+    tables.return_value = self.make_test_tables(model)
+    columns.return_value = self.make_test_columns(model)
+    index_columns.return_value = (
+        self.make_test_index_columns(model) +
+        self.make_test_index_columns(model, name=name, columns=index_cols))
+    indexes.return_value = (
+        self.make_test_index(model) + self.make_test_index(model, name=name))
+
+    meta = metadata.SpannerMetadata.models()[model.table]
+    self.assertEqual(meta.table, model.table)
+    self.assertIn(name, meta.indexes)
+    self.assertEqual(meta.indexes[name].columns, index_cols)
+    self.assertEqual(getattr(meta, name).columns, index_cols)
 
 
 if __name__ == '__main__':

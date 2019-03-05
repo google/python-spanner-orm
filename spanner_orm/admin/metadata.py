@@ -19,8 +19,9 @@ import collections
 from spanner_orm import condition
 from spanner_orm import field
 from spanner_orm import model
+from spanner_orm import index
 from spanner_orm.admin import column
-from spanner_orm.admin import index
+from spanner_orm.admin import index as index_schema
 from spanner_orm.admin import index_column
 from spanner_orm.admin import table
 
@@ -40,22 +41,25 @@ class SpannerMetadata(object):
       models = {}
 
       for table_name, table_data in tables.items():
-        primary_index = set(indexes[table_name]['PRIMARY_KEY']['columns'])
+        primary_index = indexes[table_name][index.Index.PRIMARY_INDEX]
+        primary_keys = set(primary_index.columns)
         klass = model.ModelBase('Model_{}'.format(table_name), (model.Model,),
                                 {})
-        fields = table_data['fields']
-        for field in fields.values():
-          if field.name in primary_index:
-            field._primary_key = True  # pylint: disable=protected-access
+        for field in table_data['fields'].values():
+          field._primary_key = field.name in primary_keys  # pylint: disable=protected-access
+
         klass.meta = model.Metadata(
             table=table_name,
-            fields=fields,
-            interleaved=table_data['parent_table'])
+            fields=table_data['fields'],
+            interleaved=table_data['parent_table'],
+            indexes=indexes[table_name],
+            model_class=klass)
         models[table_name] = klass
 
       for table_model in models.values():
         if table_model.meta.interleaved:
           table_model.meta.interleaved = models[table_model.meta.interleaved]
+        table_model.meta.finalize()
 
       cls._models = models
     return cls._models
@@ -76,7 +80,7 @@ class SpannerMetadata(object):
         new_field = field.Field(
             column_row.field_type(), nullable=column_row.nullable())
         new_field.name = column_row.column_name
-        new_field.index = column_row.ordinal_position
+        new_field.position = column_row.ordinal_position
         column_data[column_row.table_name][column_row.column_name] = new_field
 
       table_data = collections.defaultdict(dict)
@@ -96,30 +100,34 @@ class SpannerMetadata(object):
     if cls._indexes is None:
       # ordinal_position is the position of the column in the indicated index.
       # Results are ordered by that so the index columns are added in the
-      # correct order. None indicates that the key isn't really a part of the
-      # index, so we skip those
+      # correct order.
       index_column_schemas = index_column.IndexColumnSchema.where(
           None, condition.equal_to('table_catalog', ''),
           condition.equal_to('table_schema', ''),
-          condition.not_equal_to('ordinal_position', None),
           condition.order_by(('ordinal_position', condition.OrderType.ASC)))
 
       index_columns = collections.defaultdict(list)
+      storing_columns = collections.defaultdict(list)
       for schema in index_column_schemas:
         key = (schema.table_name, schema.index_name)
-        index_columns[key].append(schema.column_name)
+        if schema.ordinal_position is not None:
+          index_columns[key].append(schema.column_name)
+        else:
+          storing_columns[key].append(schema.column_name)
 
-      index_schemas = index.IndexSchema.where(
+      index_schemas = index_schema.IndexSchema.where(
           None, condition.equal_to('table_catalog', ''),
           condition.equal_to('table_schema', ''))
       indexes = collections.defaultdict(dict)
       for schema in index_schemas:
-        indexes[schema.table_name][schema.index_name] = {
-            'columns': index_columns[(schema.table_name, schema.index_name)],
-            'type': schema.index_type,
-            'unique': schema.is_unique,
-            'state': schema.index_state
-        }
+        key = (schema.table_name, schema.index_name)
+        indexes[schema.table_name][schema.index_name] = index.Index(
+            index_columns[key],
+            schema.index_name,
+            parent=schema.parent_table_name,
+            null_filtered=schema.is_null_filtered,
+            unique=schema.is_unique,
+            storing_columns=storing_columns[key])
       cls._indexes = indexes
 
     return cls._indexes
