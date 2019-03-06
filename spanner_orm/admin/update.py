@@ -17,6 +17,8 @@
 import abc
 
 from spanner_orm import condition
+from spanner_orm import error
+from spanner_orm import index
 from spanner_orm.admin import api
 from spanner_orm.admin import index_column
 from spanner_orm.admin import metadata
@@ -38,7 +40,7 @@ class SchemaUpdate(abc.ABC):
     raise NotImplementedError
 
 
-class CreateTableUpdate(SchemaUpdate):
+class CreateTable(SchemaUpdate):
   """Update that allows creating a new table."""
 
   def __init__(self, model):
@@ -48,30 +50,80 @@ class CreateTableUpdate(SchemaUpdate):
   def ddl(self):
     return self._model.creation_ddl
 
-  def _validate_parent(self):
-    parent_primary_keys = self._model.interleaved.primary_keys
-    primary_keys = self._model.primary_keys, ('Non-matching primary keys in '
-                                              'interleaved table')
-    assert len(parent_primary_keys) <= len(primary_keys)
-    for parent_key, key in zip(parent_primary_keys, primary_keys):
-      assert parent_key == key, 'Non-matching primary keys in interleaved table'
-
-  def _validate_primary_keys(self):
-    assert self._model.primary_keys, 'Creating a table with no primary key'
-    for key in self._model.primary_keys:
-      assert key in self._model.schema, 'Trying to index fields not in table'
-
   def validate(self):
-    assert self._model.table, 'Trying to create a table with no name'
-    assert not self._existing_model, ('Trying to create a table that already '
-                                      'exists')
+    if not self._model.table:
+      raise error.SpannerError('New table has no name')
+
+    if self._existing_model:
+      raise error.SpannerError('Table {} already exists'.format(
+          self._model.table))
+
     if self._model.interleaved:
       self._validate_parent()
+
     self._validate_primary_keys()
 
+  def _validate_parent(self):
+    parent_primary_keys = self._model.interleaved.primary_keys
+    primary_keys = self._model.primary_keys
 
-class ColumnUpdate(SchemaUpdate):
-  """Specifies column updates such as ADD, DROP, and ALTER."""
+    message = 'Table {} is not a child of parent table {}'.format(
+        self._model.table, self._model.interleaved.table)
+    for parent_key, key in zip(parent_primary_keys, primary_keys):
+      if parent_key != key:
+        raise error.SpnnerError(message)
+    if len(parent_primary_keys) > len(primary_keys):
+      raise error.SpannerError(message)
+
+  def _validate_primary_keys(self):
+    if not self._model.primary_keys:
+      raise error.SpannerError('Table {} has no primary key'.format(
+          self._model.table))
+
+    for key in self._model.primary_keys:
+      if key not in self._model.schema:
+        raise error.SpannerError(
+            'Table {} column {} in primary key but not in schema'.format(
+                self._model.table, key))
+
+
+class DropTable(SchemaUpdate):
+  """Update for dropping an existing table."""
+
+  def __init__(self, table_name):
+    self._table = table_name
+    self._existing_model = metadata.SpannerMetadata.model(table_name)
+
+  def ddl(self):
+    return 'DROP TABLE {}'.format(self._table)
+
+  def validate(self):
+    if not self._existing_model:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+
+    # Model indexes include the primary index
+    if len(self._existing_model.indexes) > 1:
+      raise error.SpannerError('Table {} has a secondary index'.format(
+          self._table))
+
+    self._validate_not_interleaved()
+
+  def _validate_not_interleaved(self):
+    for model in metadata.SpannerMetadata.models().values():
+      if model.interleaved == self._existing_model:
+        raise error.SpannerError('Table {} has interleaved table {}'.format(
+            self._table, model.table))
+      for index in model.indexes.values():
+        if index.parent == self._table:
+          raise error.SpannerError('Table {} has interleaved index {}'.format(
+              self._table, index.name))
+
+
+class AddColumn(SchemaUpdate):
+  """Update for adding a column to an existing table.
+
+  Only supports adding nullable columns
+  """
 
   def __init__(self, table_name, column_name, field):
     self._table = table_name
@@ -80,62 +132,173 @@ class ColumnUpdate(SchemaUpdate):
     self._model = metadata.SpannerMetadata.model(table_name)
 
   def ddl(self):
-    if self._field is None:
-      return 'ALTER TABLE {} DROP COLUMN {}'.format(self._table, self._column)
-    elif self._column in self._model.schema:
-      operation = 'ALTER COLUMN'
-    else:
-      operation = 'ADD COLUMN'
-    return 'ALTER TABLE {} {} {} {}'.format(self._table, operation,
-                                            self._column, self._field.ddl())
-
-  def _validate_alter_column(self):
-    assert self._column in self._model.schema, 'Altering a nonexistent column'
-    old_field = self._model.schema[self._column]
-    # Validate that the only alteration is to change column nullability
-    assert self._field.field_type() == old_field.field_type(
-    ), 'Changing the type of a column'
-    assert self._field.nullable() != old_field.nullable()
-
-  def _validate_drop_column(self):
-    assert self._column in self._model.schema, 'Dropping a nonexistent column'
-    # Verify no indices exist on the column we're trying to drop
-    num_index_columns = index_column.IndexColumnSchema.count(
-        None, condition.equal_to('column_name', self._column),
-        condition.equal_to('table_name', self._table))
-    assert num_index_columns == 0, 'Dropping an indexed column'
+    return 'ALTER TABLE {} ADD COLUMN {} {}'.format(self._table, self._column,
+                                                    self._field.ddl())
 
   def validate(self):
-    assert self._model
-    if self._field is None:
-      self._validate_drop_column()
-    elif self._column in self._model.schema:
-      self._validate_alter_column()
-    else:
-      assert self._field.nullable(), 'Adding a non-nullable column'
+    if not self._model:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+    if not self._field.nullable():
+      raise error.SpannerError('Column {} is not nullable'.format(self._column))
+    if self._field.primary_key():
+      raise error.SpannerError('Column {} is a primary key'.format(
+          self._column))
 
 
-class IndexUpdate(SchemaUpdate):
-  """Specifies index updates such as ADD and DROP."""
+class DropColumn(SchemaUpdate):
+  """Update for dropping a column from an existing table."""
 
-  def __init__(self, table_name, index_name, columns):
+  def __init__(self, table_name, column_name):
+    self._table = table_name
+    self._column = column_name
+    self._model = metadata.SpannerMetadata.model(table_name)
+
+  def ddl(self):
+    return 'ALTER TABLE {} DROP COLUMN {}'.format(self._table, self._column)
+
+  def validate(self):
+    if not self._model:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+
+    if self._column not in self._model.schema:
+      raise error.SpannerError('Column {} does not exist on {}'.format(
+          self._column, self._table))
+
+    # Verify no indices exist on the column we're trying to drop
+    num_indexed_columns = index_column.IndexColumnSchema.count(
+        None, condition.equal_to('column_name', self._column),
+        condition.equal_to('table_name', self._table))
+    if num_indexed_columns > 0:
+      raise error.SpannerError('Column {} is indexed'.format(self._column))
+
+
+class AlterColumn(SchemaUpdate):
+  """Update for altering a column an existing table.
+
+  Only supports changing the nullability of a column
+  """
+
+  def __init__(self, table_name, column_name, field):
+    self._table = table_name
+    self._column = column_name
+    self._field = field
+    self._model = metadata.SpannerMetadata.model(table_name)
+
+  def ddl(self):
+    return 'ALTER TABLE {} ALTER COLUMN {} {}'.format(self._table, self._column,
+                                                      self._field.ddl())
+
+  def validate(self):
+    if not self._model:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+
+    if self._column not in self._model.schema:
+      raise error.SpannerError('Column {} does not exist on {}'.format(
+          self._column, self._table))
+
+    if self._column in self._model.primary_keys:
+      raise error.SpannerError('Column {} is a primary key on {}'.format(
+          self._column, self._table))
+
+    old_field = self._model.schema[self._column]
+    # Validate that the only alteration is to change column nullability
+    if self._field.field_type() != old_field.field_type():
+      raise error.SpannerError('Column {} is changing type'.format(
+          self._column))
+    if self._field.nullable() == old_field.nullable():
+      raise error.SpannerError('Column {} has no changes'.format(self._column))
+
+
+class CreateIndex(SchemaUpdate):
+  """Update for creating an index on an existing table."""
+
+  def __init__(self,
+               table_name,
+               index_name,
+               columns,
+               interleaved=None,
+               storing_columns=None):
     self._table = table_name
     self._index = index_name
     self._columns = columns
+    self._parent_table = interleaved
+    self._storing_columns = storing_columns or []
     self._model = metadata.SpannerMetadata.model(table_name)
 
-  # TODO(dbrandao): implement
   def ddl(self):
-    raise NotImplementedError
+    statement = 'CREATE INDEX {} ON {} ({})'.format(self._index, self._table,
+                                                    ', '.join(self._columns))
+    if self._storing_columns:
+      statement += 'STORING ({})'.format(', '.join(self._storing_columns))
+    if self._parent_table:
+      statement += ', INTERLEAVE IN {}'.format(self._parent_table)
+    return statement
 
-  # TODO(dbrandao): implement
   def validate(self):
-    assert self._model
-    raise NotImplementedError
+    if not self._model:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+
+    if not self._columns:
+      raise error.SpannerError('Index {} has no columns'.format(self._index))
+
+    if self._index in self._model.indexes:
+      raise error.SpannerError('Index {} already exists'.format(self._index))
+
+    self._validate_columns()
+
+    if self._parent_table:
+      self._validate_parent()
+
+  def _validate_columns(self):
+    for column in self._columns:
+      if not column in self._model.columns:
+        raise error.SpannerError('Table {} has no column {}'.format(
+            self._table, column))
+
+    for column in self._storing_columns:
+      if not column in self._model.columns:
+        raise error.SpannerError('Table {} has no column {}'.format(
+            self._table, column))
+      if column in self._model.primary_keys:
+        raise error.SpannerError('{} is part of the primary key for {}'.format(
+            column, self._table))
+
+  def validate_parent(self):
+    parent = self._model.interleaved
+    while parent:
+      if parent == self._parent_table:
+        break
+      parent = parent.interleaved
+    if not parent:
+      raise error.SpannerError('{} is not a parent of table {}'.format(
+          self._parent_table, self._table))
+
+
+class DropIndex(SchemaUpdate):
+  """Update for dropping a secondary index on an existing table."""
+
+  def __init__(self, table_name, index_name):
+    self._table = table_name
+    self._index = index_name
+    self._model = metadata.SpannerMetadata.model(table_name)
+
+  def ddl(self):
+    return 'DROP INDEX {}'.format(self._index)
+
+  def validate(self):
+    if not self._model:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+
+    if self._index not in self._model.indexes:
+      raise error.SpannerError('Index {} does not exist'.format(self._index))
+    if self._index == index.Index.PRIMARY_INDEX:
+      raise error.SpannerError('Index {} is the primary index'.format(
+          self._index))
 
 
 class NoUpdate(SchemaUpdate):
   """Update that does nothing, for migrations that don't update db schemas."""
+
   def ddl(self):
     return ''
 

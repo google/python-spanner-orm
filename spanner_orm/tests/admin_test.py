@@ -27,11 +27,6 @@ from spanner_orm.tests import models
 
 class AdminTest(unittest.TestCase):
 
-  def clear_metadata(self):
-    metadata.SpannerMetadata._models = None
-    metadata.SpannerMetadata._indexes = None
-    metadata.SpannerMetadata._tables = None
-
   def make_test_tables(self, model, parent_table=None):
     tables = [{
         'table_catalog': '',
@@ -102,7 +97,6 @@ class AdminTest(unittest.TestCase):
   @mock.patch('spanner_orm.admin.column.ColumnSchema.where')
   @mock.patch('spanner_orm.admin.table.TableSchema.where')
   def test_metadata(self, tables, columns, index_columns, indexes):
-    self.clear_metadata()
     model = models.SmallTestModel
     tables.return_value = self.make_test_tables(model)
     columns.return_value = self.make_test_columns(model)
@@ -127,7 +121,6 @@ class AdminTest(unittest.TestCase):
   @mock.patch('spanner_orm.admin.column.ColumnSchema.where')
   @mock.patch('spanner_orm.admin.table.TableSchema.where')
   def test_interleaved(self, tables, columns, index_columns, indexes):
-    self.clear_metadata()
     model = models.SmallTestModel
     parent_model = models.UnittestModel
     tables.return_value = (
@@ -151,7 +144,6 @@ class AdminTest(unittest.TestCase):
   @mock.patch('spanner_orm.admin.column.ColumnSchema.where')
   @mock.patch('spanner_orm.admin.table.TableSchema.where')
   def test_secondary_index(self, tables, columns, index_columns, indexes):
-    self.clear_metadata()
     model = models.SmallTestModel
     name = 'secondary_index'
     index_cols = ['value_1']
