@@ -92,21 +92,6 @@ class ModelTest(parameterized.TestCase):
     test_model.string_array.append('bat')
     self.assertIn('string_array', test_model.changes())
 
-  def test_creation_ddl(self):
-    test_model_ddl = ('CREATE TABLE table (int_ INT64 NOT NULL, int_2 INT64,'
-                      ' string STRING(MAX) NOT NULL, string_2 STRING(MAX),'
-                      ' timestamp TIMESTAMP NOT NULL, string_array'
-                      ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, string)')
-    self.assertEqual(models.UnittestModel.creation_ddl, test_model_ddl)
-
-  def test_interleaved_creation_ddl(self):
-    test_model_ddl = ('CREATE TABLE ChildTestModel ('
-                      'parent_key STRING(MAX) NOT NULL, '
-                      'child_key STRING(MAX) NOT NULL) '
-                      'PRIMARY KEY (parent_key, child_key), '
-                      'INTERLEAVE IN PARENT SmallTestModel ON CASCADE DELETE')
-    self.assertEqual(models.ChildTestModel.creation_ddl, test_model_ddl)
-
   def test_field_exists_on_model_class(self):
     self.assertIsInstance(models.SmallTestModel.key, field.Field)
     self.assertEqual(models.SmallTestModel.key.field_type(), field.String)
@@ -122,7 +107,7 @@ class ModelTest(parameterized.TestCase):
       self.assertEqual(getattr(test_model, name), value)
 
   def test_relation_get(self):
-    test_model = models.ChildTestModel({
+    test_model = models.RelationshipTestModel({
         'parent_key': 'parent',
         'child_key': 'child',
         'parent': []
@@ -130,7 +115,7 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(test_model.parent, [])
 
   def test_relation_get_error_on_unretrieved(self):
-    test_model = models.ChildTestModel({
+    test_model = models.RelationshipTestModel({
         'parent_key': 'parent',
         'child_key': 'child'
     })
