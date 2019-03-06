@@ -22,6 +22,7 @@ from spanner_orm import api
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import index
 from spanner_orm import query
 from spanner_orm import relationship
 
@@ -31,24 +32,62 @@ from google.cloud import spanner
 class Metadata(object):
   """Holds Spanner table metadata corresponding to a Model."""
 
-  def __init__(self, table=None, fields=None, relations=None, interleaved=None):
+  def __init__(self,
+               table=None,
+               fields=None,
+               relations=None,
+               indexes=None,
+               interleaved=None,
+               model_class=None):
     self.table = table or ''
     self.fields = fields or {}
     self.relations = relations or {}
+    self.indexes = indexes or {}
     self.interleaved = interleaved
-    self.process_fields()
+    self.model_class = model_class
+    self._finalized = False
+
+  def finalize(self):
+    """Finish generating metadata state.
+
+    Some metadata depends on having all configuration data set before it can
+    be calculated--the primary index, for example, needs all fields to be added
+    before it can be calculated. This method is called to indicate that all
+    relevant state has been added and the calculation of the final data should
+    now happen"""
+    assert not self._finalized
+    sorted_fields = list(sorted(self.fields.values(), key=lambda f: f.position))
+
+    if index.Index.PRIMARY_INDEX not in self.indexes:
+      primary_keys = [f.name for f in sorted_fields if f.primary_key()]
+      primary_index = index.Index(primary_keys, index.Index.PRIMARY_INDEX)
+      self.indexes[primary_index.name] = primary_index
+    self.primary_keys = self.indexes[index.Index.PRIMARY_INDEX].columns
+
+    self.columns = [f.name for f in sorted_fields]
+
+    for _, relation in self.relations.items():
+      relation.origin = self.model_class
+    self._finalized = True
 
   def add_metadata(self, metadata):
     self.table = metadata.table or self.table
     self.fields.update(metadata.fields)
     self.relations.update(metadata.relations)
     self.interleaved = metadata.interleaved or self.interleaved
-    self.process_fields()
 
-  def process_fields(self):
-    sorted_fields = list(sorted(self.fields.values(), key=lambda f: f.index))
-    self.columns = [f.name for f in sorted_fields]
-    self.primary_keys = [f.name for f in sorted_fields if f.primary_key()]
+  def add_field(self, name, new_field):
+    new_field.name = name
+    new_field.position = len(self.fields)
+    self.fields[name] = new_field
+
+  def add_relation(self, name, new_relation):
+    new_relation.name = name
+    self.relations[name] = new_relation
+
+  def add_index(self, name, new_index):
+    new_index.name = name
+    self.relations[name] = new_index
 
 
 class ModelBase(type):
@@ -71,19 +110,21 @@ class ModelBase(type):
       elif key == '__interleaved__':
         metadata.interleaved = value
       if isinstance(value, field.Field):
-        value.name = key
-        value.index = len(metadata.fields)
-        metadata.fields[key] = value
+        metadata.add_field(key, value)
+      elif isinstance(value, index.Index):
+        metadata.add_index(key, value)
       elif isinstance(value, relationship.Relationship):
-        value.name = key
-        metadata.relations[key] = value
+        metadata.add_relation(key, value)
       else:
         non_model_attrs[key] = value
-    metadata.process_fields()
 
     cls = super().__new__(mcs, name, bases, non_model_attrs, **kwargs)
-    for _, relation in metadata.relations.items():
-      relation.origin = cls
+
+    # If a table is set, this class represents a complete model, so finalize
+    # the metadata
+    if metadata.table:
+      metadata.model_class = cls
+      metadata.finalize()
     cls.meta = metadata
     return cls
 
@@ -92,6 +133,8 @@ class ModelBase(type):
       return cls.schema[name]
     elif name in cls.relations:
       return cls.relations[name]
+    elif name in cls.indexes:
+      return cls.indexes[name]
     raise AttributeError(name)
 
   @property
@@ -118,6 +161,10 @@ class ModelBase(type):
   @property
   def columns(cls):
     return cls.meta.columns
+
+  @property
+  def indexes(cls):
+    return cls.meta.indexes
 
   @property
   def interleaved(cls):
