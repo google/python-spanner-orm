@@ -24,10 +24,11 @@ from google.cloud.spanner_v1.proto import type_pb2
 
 class Segment(enum.Enum):
   """The segment of the SQL query that a Condition belongs to."""
-  WHERE = 1
-  ORDER_BY = 2
-  LIMIT = 3
-  JOIN = 4
+  FROM = 1
+  JOIN = 2
+  WHERE = 3
+  ORDER_BY = 4
+  LIMIT = 5
 
 
 class Condition(abc.ABC):
@@ -117,6 +118,35 @@ class ColumnsEqualCondition(Condition):
 
     assert (origin.field_type() == dest.field_type() and
             origin.nullable() == dest.nullable())
+
+class ForceIndexCondition(Condition):
+  """Used to indicate which index should be used in a Spanner query."""
+
+  def __init__(self, name):
+    super().__init__()
+    self.name = name
+    self.index = None
+
+  def bind(self, model):
+    super().bind(model)
+    self.index = self.model.indexes[self.name]
+
+  def _params(self):
+    return {}
+
+  @staticmethod
+  def segment():
+    return Segment.FROM
+
+  def _sql(self):
+    return '@{{FORCE_INDEX={}}}'.format(self.index.name)
+
+  def _types(self):
+    return {}
+
+  def _validate(self, model):
+    assert self.name in model.indexes
+    assert not model.indexes[self.name].primary
 
 
 class IncludesCondition(Condition):
@@ -437,6 +467,10 @@ def columns_equal(origin_column, dest_model, dest_column):
 
 def equal_to(column, value):
   return EqualityCondition(column, value)
+
+
+def force_index(index):
+  return ForceIndexCondition(index)
 
 
 def greater_than(column, value):

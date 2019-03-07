@@ -113,11 +113,12 @@ class SpannerMetadata(object):
     indexes = collections.defaultdict(dict)
     for schema in index_schemas:
       key = (schema.table_name, schema.index_name)
-      indexes[schema.table_name][schema.index_name] = index.Index(
+      new_index = index.Index(
           index_columns[key],
-          schema.index_name,
           parent=schema.parent_table_name,
           null_filtered=schema.is_null_filtered,
           unique=schema.is_unique,
           storing_columns=storing_columns[key])
+      new_index.name = schema.index_name
+      indexes[schema.table_name][schema.index_name] = new_index
     return indexes

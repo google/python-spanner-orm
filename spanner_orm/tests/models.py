@@ -15,6 +15,7 @@
 """Models used by unit tests."""
 
 from spanner_orm import field
+from spanner_orm import index
 from spanner_orm import model
 from spanner_orm import relationship
 
@@ -57,3 +58,5 @@ class UnittestModel(model.Model):
   string_2 = field.Field(field.String, nullable=True)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
+
+  test_index = index.Index(['string_2'])

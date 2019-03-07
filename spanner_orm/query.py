@@ -77,7 +77,17 @@ class SpannerQuery(abc.ABC):
 
   def _from(self):
     """Processes the FROM segment of the SQL query."""
-    return (' FROM {}'.format(self._model.table), {}, {})
+    froms = self._segments(condition.Segment.FROM)
+    index_sql = ''
+    if froms:
+      if len(froms) != 1:
+        raise error.SpannerError('Only one index can be specified')
+      force_index = froms[0]
+      index_sql = force_index.sql()
+
+    sql = ' FROM {}{}'.format(self._model.table, index_sql)
+
+    return (sql, {}, {})
 
   def _where(self):
     """Processes the WHERE segment of the SQL query."""
