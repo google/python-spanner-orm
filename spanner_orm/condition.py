@@ -18,6 +18,9 @@ import abc
 import enum
 
 from spanner_orm import error
+from spanner_orm import field
+from spanner_orm import index
+from spanner_orm import relationship
 
 from google.cloud.spanner_v1.proto import type_pb2
 
@@ -55,11 +58,10 @@ class Condition(abc.ABC):
 
   @abc.abstractmethod
   def _params(self):
-    pass
+    raise NotImplementedError
 
-  @staticmethod
   @abc.abstractmethod
-  def segment():
+  def segment(self):
     raise NotImplementedError
 
   def sql(self):
@@ -122,10 +124,14 @@ class ColumnsEqualCondition(Condition):
 class ForceIndexCondition(Condition):
   """Used to indicate which index should be used in a Spanner query."""
 
-  def __init__(self, name):
+  def __init__(self, index_or_name):
     super().__init__()
-    self.name = name
-    self.index = None
+    if isinstance(index_or_name, index.Index):
+      self.name = index_or_name.name
+      self.index = index_or_name
+    else:
+      self.name = index_or_name
+      self.index = None
 
   def bind(self, model):
     super().bind(model)
@@ -139,24 +145,31 @@ class ForceIndexCondition(Condition):
     return Segment.FROM
 
   def _sql(self):
-    return '@{{FORCE_INDEX={}}}'.format(self.index.name)
+    return '@{{FORCE_INDEX={}}}'.format(self.name)
 
   def _types(self):
     return {}
 
   def _validate(self, model):
     assert self.name in model.indexes
+    if self.index:
+      assert self.index == model.indexes[self.name]
+
     assert not model.indexes[self.name].primary
 
 
 class IncludesCondition(Condition):
   """Used to include related models via a relation in a Spanner query."""
 
-  def __init__(self, name, conditions=None):
+  def __init__(self, relation_or_name, conditions=None):
     super().__init__()
-    self.name = name
+    if isinstance(relation_or_name, relationship.Relationship):
+      self.name = relation_or_name.name
+      self.relation = relation_or_name
+    else:
+      self.name = relation_or_name
+      self.relation = None
     self._conditions = conditions or []
-    self.relation = None
 
   def bind(self, model):
     super().bind(model)
@@ -202,6 +215,9 @@ class IncludesCondition(Condition):
 
   def _validate(self, model):
     assert self.name in model.relations
+    if self.relation:
+      assert self.relation == model.relations[self.name]
+
     other_model = model.relations[self.name].destination
     for condition in self._conditions:
       condition._validate(other_model)  # pylint: disable=protected-access
@@ -331,6 +347,8 @@ class OrderByCondition(Condition):
   def _sql(self):
     orders = []
     for (column, order_type) in self.orderings:
+      if isinstance(column, field.Field):
+        column = column.name
       orders.append('{alias}.{column} {order_type}'.format(
           alias=self.model.column_prefix,
           column=column,
@@ -346,6 +364,8 @@ class OrderByCondition(Condition):
 
   def _validate(self, model):
     for (column, _) in self.orderings:
+      if isinstance(column, field.Field):
+        column = column.name
       assert column in model.schema
 
 
@@ -353,11 +373,16 @@ class ComparisonCondition(Condition):
   """Used to specify a comparison between a column and a value in the WHERE."""
   _segment = Segment.WHERE
 
-  def __init__(self, operator, column, value):
+  def __init__(self, operator, field_or_name, value):
     super().__init__()
     self.operator = operator
-    self.column = column
     self.value = value
+    if isinstance(field_or_name, field.Field):
+      self.column = field_or_name.name
+      self.field = field_or_name
+    else:
+      self.column = field_or_name
+      self.field = None
 
   @property
   def _column_key(self):
@@ -381,10 +406,11 @@ class ComparisonCondition(Condition):
     return {self._column_key: self.model.schema[self.column].grpc_type()}
 
   def _validate(self, model):
-    schema = model.schema
-    assert self.column in schema
+    assert self.column in model.schema
+    if self.field:
+      assert self.field == model.schema[self.column]
     assert self.value is not None
-    schema[self.column].validate(self.value)
+    model.schema[self.column].validate(self.value)
 
 
 class ListComparisonCondition(ComparisonCondition):
@@ -403,11 +429,12 @@ class ListComparisonCondition(ComparisonCondition):
     return {self._column_key: list_type}
 
   def _validate(self, model):
-    schema = model.schema
     assert isinstance(self.value, list)
-    assert self.column in schema
+    assert self.column in model.schema
+    if self.field:
+      assert self.field == model.schema[self.column]
     for value in self.value:
-      schema[self.column].validate(value)
+      model.schema[self.column].validate(value)
 
 
 class NullableComparisonCondition(ComparisonCondition):
@@ -439,9 +466,10 @@ class NullableComparisonCondition(ComparisonCondition):
     return super()._types()
 
   def _validate(self, model):
-    schema = model.schema
-    assert self.column in schema
-    schema[self.column].validate(self.value)
+    assert self.column in model.schema
+    if self.field:
+      assert self.field == model.schema[self.column]
+    model.schema[self.column].validate(self.value)
 
 
 class EqualityCondition(NullableComparisonCondition):

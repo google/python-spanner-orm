@@ -97,6 +97,17 @@ class QueryTest(parameterized.TestCase):
     select_query = self.select()
     self.assertNotRegex(select_query.sql(), 'ORDER BY')
 
+  def test_query_order_by_with_object(self):
+    order = (models.UnittestModel.int_, condition.OrderType.DESC)
+    select_query = self.select(condition.order_by(order))
+
+    self.assertEndsWith(select_query.sql(), ' ORDER BY table.int_ DESC')
+    self.assertEmpty(select_query.parameters())
+    self.assertEmpty(select_query.types())
+
+    select_query = self.select()
+    self.assertNotRegex(select_query.sql(), 'ORDER BY')
+
   @parameterized.parameters(('int_', 5, field.Integer.grpc_type()),
                             ('string', 'foo', field.String.grpc_type()),
                             ('timestamp', now(), field.Timestamp.grpc_type()))
@@ -112,6 +123,26 @@ class QueryTest(parameterized.TestCase):
       column_key = '{}0'.format(column)
       expected_where = ' WHERE table.{} {} @{}'.format(
           column, current_condition.operator, column_key)
+      self.assertEndsWith(select_query.sql(), expected_where)
+      self.assertEqual(select_query.parameters(), {column_key: value})
+      self.assertEqual(select_query.types(), {column_key: grpc_type})
+
+  @parameterized.parameters(
+      (models.UnittestModel.int_, 5, field.Integer.grpc_type()),
+      (models.UnittestModel.string, 'foo', field.String.grpc_type()),
+      (models.UnittestModel.timestamp, now(), field.Timestamp.grpc_type()))
+  def test_query_where_comparison_with_object(self, column, value, grpc_type):
+    condition_generators = [
+        condition.greater_than, condition.not_less_than, condition.less_than,
+        condition.not_greater_than, condition.equal_to, condition.not_equal_to
+    ]
+    for condition_generator in condition_generators:
+      current_condition = condition_generator(column, value)
+      select_query = self.select(current_condition)
+
+      column_key = '{}0'.format(column.name)
+      expected_where = ' WHERE table.{} {} @{}'.format(
+          column.name, current_condition.operator, column_key)
       self.assertEndsWith(select_query.sql(), expected_where)
       self.assertEqual(select_query.parameters(), {column_key: value})
       self.assertEqual(select_query.types(), {column_key: grpc_type})
@@ -154,12 +185,31 @@ class QueryTest(parameterized.TestCase):
     expected_sql = 'FROM table@{FORCE_INDEX=test_index}'
     self.assertEndsWith(select_query.sql(), expected_sql)
 
+  def test_force_index_with_object(self):
+    select_query = self.select(
+        condition.force_index(models.UnittestModel.test_index))
+    expected_sql = 'FROM table@{FORCE_INDEX=test_index}'
+    self.assertEndsWith(select_query.sql(), expected_sql)
+
   def includes(self, relation, *conditions):
     include_condition = condition.includes(relation, list(conditions))
     return query.SelectQuery(models.ChildTestModel, [include_condition])
 
   def test_includes(self):
     select_query = self.includes('parent')
+
+    # The column order varies between test runs
+    expected_sql = (
+        r'SELECT ChildTestModel\S* ChildTestModel\S* ARRAY\(SELECT AS '
+        r'STRUCT SmallTestModel\S* SmallTestModel\S* SmallTestModel\S* FROM '
+        r'SmallTestModel WHERE SmallTestModel.key = '
+        r'ChildTestModel.parent_key\)')
+    self.assertRegex(select_query.sql(), expected_sql)
+    self.assertEmpty(select_query.parameters())
+    self.assertEmpty(select_query.types())
+
+  def test_includes_with_object(self):
+    select_query = self.includes(models.ChildTestModel.parent)
 
     # The column order varies between test runs
     expected_sql = (
