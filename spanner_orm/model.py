@@ -60,8 +60,9 @@ class Metadata(object):
 
     if index.Index.PRIMARY_INDEX not in self.indexes:
       primary_keys = [f.name for f in sorted_fields if f.primary_key()]
-      primary_index = index.Index(primary_keys, index.Index.PRIMARY_INDEX)
-      self.indexes[primary_index.name] = primary_index
+      primary_index = index.Index(primary_keys)
+      primary_index.name = index.Index.PRIMARY_INDEX
+      self.indexes[index.Index.PRIMARY_INDEX] = primary_index
     self.primary_keys = self.indexes[index.Index.PRIMARY_INDEX].columns
 
     self.columns = [f.name for f in sorted_fields]
@@ -87,7 +88,7 @@ class Metadata(object):
 
   def add_index(self, name, new_index):
     new_index.name = name
-    self.relations[name] = new_index
+    self.indexes[name] = new_index
 
 
 class ModelBase(type):
