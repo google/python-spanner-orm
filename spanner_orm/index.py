@@ -12,18 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Helps to deal with indices on Models."""
+"""Represents an index on a Model."""
+
+from typing import List, Optional
 
 
 class Index(object):
+  """Represents an index on a Model."""
   PRIMARY_INDEX = 'PRIMARY_KEY'
 
   def __init__(self,
-               columns,
-               parent=None,
-               null_filtered=False,
-               unique=False,
-               storing_columns=None):
+               columns: List[str],
+               parent: Optional[str] = None,
+               null_filtered: bool = False,
+               unique: bool = False,
+               storing_columns: Optional[List[str]] = None):
     assert columns, 'An index must have at least one column'
     self.columns = columns
     self.name = None
@@ -33,5 +36,5 @@ class Index(object):
     self.storing_columns = storing_columns or []
 
   @property
-  def primary(self):
+  def primary(self) -> bool:
     return self.name == self.PRIMARY_INDEX

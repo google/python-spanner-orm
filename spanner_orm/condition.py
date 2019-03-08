@@ -498,8 +498,8 @@ def equal_to(column, value):
   return EqualityCondition(column, value)
 
 
-def force_index(index):
-  return ForceIndexCondition(index)
+def force_index(forced_index):
+  return ForceIndexCondition(forced_index)
 
 
 def greater_than(column, value):
