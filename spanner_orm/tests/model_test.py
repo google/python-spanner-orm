@@ -14,6 +14,7 @@
 # limitations under the License.
 import datetime
 import logging
+from typing import List
 import unittest
 from unittest import mock
 
@@ -89,7 +90,8 @@ class ModelTest(parameterized.TestCase):
     })
 
     # Make sure that changing an object on the model shows up in changes()
-    test_model.string_array.append('bat')
+    string_array = test_model.string_array  # type: List
+    string_array.append('bat')
     self.assertIn('string_array', test_model.changes())
 
   def test_field_exists_on_model_class(self):

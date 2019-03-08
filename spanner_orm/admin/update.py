@@ -18,7 +18,6 @@ import abc
 
 from spanner_orm import condition
 from spanner_orm import error
-from spanner_orm import index
 from spanner_orm.admin import api
 from spanner_orm.admin import index_column
 from spanner_orm.admin import metadata
@@ -75,6 +74,7 @@ class CreateTable(SchemaUpdate):
     self._validate_primary_keys()
 
   def _validate_parent(self):
+    """Verifies that the parent table information is valid."""
     parent_primary_keys = self._model.interleaved.primary_keys
     primary_keys = self._model.primary_keys
 
@@ -87,6 +87,7 @@ class CreateTable(SchemaUpdate):
       raise error.SpannerError(message)
 
   def _validate_primary_keys(self):
+    """Verifies that the primary key data is valid."""
     if not self._model.primary_keys:
       raise error.SpannerError('Table {} has no primary key'.format(
           self._model.table))
@@ -117,9 +118,9 @@ class DropTable(SchemaUpdate):
       raise error.SpannerError('Table {} has a secondary index'.format(
           self._table))
 
-    self._validate_not_interleaved()
+    self._validate_not_interleaved(existing_model)
 
-  def _validate_not_interleaved(self):
+  def _validate_not_interleaved(self, existing_model):
     for model in metadata.SpannerMetadata.models().values():
       if model.interleaved == existing_model:
         raise error.SpannerError('Table {} has interleaved table {}'.format(
@@ -261,20 +262,22 @@ class CreateIndex(SchemaUpdate):
       self._validate_parent(model)
 
   def _validate_columns(self, model):
+    """Verifies all columns exist and are not part of the primary key."""
     for column in self._columns:
-      if not column in model.columns:
+      if column not in model.columns:
         raise error.SpannerError('Table {} has no column {}'.format(
             self._table, column))
 
     for column in self._storing_columns:
-      if not column in model.columns:
+      if column not in model.columns:
         raise error.SpannerError('Table {} has no column {}'.format(
             self._table, column))
       if column in model.primary_keys:
         raise error.SpannerError('{} is part of the primary key for {}'.format(
             column, self._table))
 
-  def validate_parent(self, model):
+  def _validate_parent(self, model):
+    """Verifies this index can be interleaved in the parent table."""
     parent = model.interleaved
     while parent:
       if parent == self._parent_table:
@@ -301,7 +304,7 @@ class DropIndex(SchemaUpdate):
     if not model:
       raise error.SpannerError('Table {} does not exist'.format(self._table))
 
-    db_index = self._model.indexes.get(self._index)
+    db_index = model.indexes.get(self._index)
     if not db_index:
       raise error.SpannerError('Index {} does not exist'.format(self._index))
     if db_index.primary_index:
@@ -323,6 +326,7 @@ class NoUpdate(SchemaUpdate):
 
 
 def model_creation_ddl(model):
+  """Returns the list of ddl statements needed to create the model's table."""
   ddl_list = [CreateTable(model).ddl()]
 
   for model_index in model.indexes:

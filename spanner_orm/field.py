@@ -27,6 +27,7 @@ class Field(object):
     self._type = field_type
     self._nullable = nullable
     self._primary_key = primary_key
+    self.name = None
 
   def ddl(self):
     if self._nullable:

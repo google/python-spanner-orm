@@ -20,8 +20,8 @@ from spanner_orm import index
 from spanner_orm.admin import column
 from spanner_orm.admin import index as index_schema
 from spanner_orm.admin import index_column
-from spanner_orm.admin import table
 from spanner_orm.admin import metadata
+from spanner_orm.admin import table
 from spanner_orm.tests import models
 
 

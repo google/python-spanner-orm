@@ -163,9 +163,9 @@ class QueryTest(parameterized.TestCase):
 
     # The column order varies between test runs
     expected_sql = (
-        r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* ARRAY\(SELECT AS '
-        r'STRUCT SmallTestModel\S* SmallTestModel\S* SmallTestModel\S* FROM '
-        r'SmallTestModel WHERE SmallTestModel.key = '
+        r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* '
+        r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
+        r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
         r'RelationshipTestModel.parent_key\)')
     self.assertRegex(select_query.sql(), expected_sql)
     self.assertEmpty(select_query.parameters())
@@ -173,8 +173,9 @@ class QueryTest(parameterized.TestCase):
 
   def test_includes_subconditions_query(self):
     select_query = self.includes('parents', condition.equal_to('key', 'value'))
-    expected_sql = ('WHERE SmallTestModel.key = RelationshipTestModel.parent_key '
-                    'AND SmallTestModel.key = @key0')
+    expected_sql = (
+        'WHERE SmallTestModel.key = RelationshipTestModel.parent_key '
+        'AND SmallTestModel.key = @key0')
     self.assertRegex(select_query.sql(), expected_sql)
 
   def includes_result(self, related=1):

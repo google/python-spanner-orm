@@ -133,6 +133,9 @@ class MigrationExecutor(object):
       migrations: List of migrations to filter
       migrated: Only add migrations whose migration status matches this flag
       last_migration: Stop adding migrations to the list after this one is found
+
+    Returns:
+      List of filtered migrations
     """
     filtered = []
     last_migration_found = False
@@ -156,7 +159,7 @@ class MigrationExecutor(object):
       model_from_db = metadata.SpannerMetadata.model(
           migration_status.MigrationStatus.table)
       if not model_from_db:
-        update.CreateTableUpdate(migration_status.MigrationStatus).execute()
+        update.CreateTable(migration_status.MigrationStatus).execute()
       self._migration_status_map = {
           migration.id: migration.migrated
           for migration in migration_status.MigrationStatus.all()

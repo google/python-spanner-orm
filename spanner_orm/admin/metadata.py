@@ -18,8 +18,8 @@ import collections
 
 from spanner_orm import condition
 from spanner_orm import field
-from spanner_orm import model
 from spanner_orm import index
+from spanner_orm import model
 from spanner_orm.admin import column
 from spanner_orm.admin import index as index_schema
 from spanner_orm.admin import index_column
@@ -41,8 +41,8 @@ class SpannerMetadata(object):
       primary_keys = set(primary_index.columns)
       klass = model.ModelBase('Model_{}'.format(table_name), (model.Model,),
                               {})
-      for field in table_data['fields'].values():
-        field._primary_key = field.name in primary_keys  # pylint: disable=protected-access
+      for model_field in table_data['fields'].values():
+        model_field._primary_key = model_field.name in primary_keys  # pylint: disable=protected-access
 
       klass.meta = model.Metadata(
           table=table_name,
