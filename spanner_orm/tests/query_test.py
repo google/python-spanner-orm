@@ -149,6 +149,11 @@ class QueryTest(parameterized.TestCase):
     with self.assertRaises(error.SpannerError):
       self.select(condition.limit(2), condition.limit(2))
 
+  def test_force_index(self):
+    select_query = self.select(condition.force_index('test_index'))
+    expected_sql = 'FROM table@{FORCE_INDEX=test_index}'
+    self.assertEndsWith(select_query.sql(), expected_sql)
+
   def includes(self, relation, *conditions):
     include_condition = condition.includes(relation, list(conditions))
     return query.SelectQuery(models.RelationshipTestModel, [include_condition])

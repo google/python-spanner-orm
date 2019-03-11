@@ -301,9 +301,10 @@ class DropIndex(SchemaUpdate):
     if not model:
       raise error.SpannerError('Table {} does not exist'.format(self._table))
 
-    if self._index not in model.indexes:
+    db_index = self._model.indexes.get(self._index)
+    if not db_index:
       raise error.SpannerError('Index {} does not exist'.format(self._index))
-    if self._index == index.Index.PRIMARY_INDEX:
+    if db_index.primary_index:
       raise error.SpannerError('Index {} is the primary index'.format(
           self._index))
 

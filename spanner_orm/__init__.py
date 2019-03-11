@@ -44,6 +44,7 @@ StringArray = field.StringArray
 Timestamp = field.Timestamp
 
 equal_to = condition.equal_to
+force_index = condition.force_index
 greater_than = condition.greater_than
 greater_than_or_equal_to = condition.greater_than_or_equal_to
 includes = condition.includes

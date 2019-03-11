@@ -20,15 +20,18 @@ class Index(object):
 
   def __init__(self,
                columns,
-               name,
                parent=None,
                null_filtered=False,
                unique=False,
                storing_columns=None):
     assert len(columns) > 0, 'An index must have at least one column'
     self.columns = columns
-    self.name = name
+    self.name = None
     self.parent = parent
     self.null_filtered = null_filtered
     self.unique = unique
     self.storing_columns = storing_columns or []
+
+  @property
+  def primary(self):
+    return self.name == self.PRIMARY_INDEX
