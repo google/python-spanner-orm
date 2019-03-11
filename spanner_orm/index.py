@@ -24,7 +24,7 @@ class Index(object):
                null_filtered=False,
                unique=False,
                storing_columns=None):
-    assert len(columns) > 0, 'An index must have at least one column'
+    assert columns, 'An index must have at least one column'
     self.columns = columns
     self.name = None
     self.parent = parent

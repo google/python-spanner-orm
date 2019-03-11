@@ -119,6 +119,7 @@ class ColumnsEqualCondition(Condition):
     assert (origin.field_type() == dest.field_type() and
             origin.nullable() == dest.nullable())
 
+
 class ForceIndexCondition(Condition):
   """Used to indicate which index should be used in a Spanner query."""
 

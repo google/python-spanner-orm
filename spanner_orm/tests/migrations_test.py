@@ -65,8 +65,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_generate(self):
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
+    path = manager.generate('test migration')
     try:
-      path = manager.generate('test migration')
       migration = manager._migration_from_file(path)
       self.assertIsNotNone(migration.migration_id)
       self.assertIsNotNone(migration.prev_migration_id)

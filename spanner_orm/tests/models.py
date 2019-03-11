@@ -31,6 +31,7 @@ class SmallTestModel(model.Model):
 
 class ChildTestModel(model.Model):
   """Model class for testing interleaved tables."""
+
   __table__ = 'ChildTestModel'
   __interleaved__ = SmallTestModel
 

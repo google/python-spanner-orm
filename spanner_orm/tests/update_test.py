@@ -20,7 +20,6 @@ from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.admin import update
 from spanner_orm.tests import models
-from spanner_orm.admin import metadata
 
 
 class UpdateTest(unittest.TestCase):
@@ -44,7 +43,6 @@ class UpdateTest(unittest.TestCase):
     get_model.return_value = models.SmallTestModel
     index_count.return_value = 0
 
-    new_field = field.Field(field.String, nullable=True)
     test_update = update.DropColumn(table_name, 'value_2')
     test_update.validate()
     self.assertEqual(test_update.ddl(),
