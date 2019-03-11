@@ -139,22 +139,6 @@ class ModelBase(type):
     raise AttributeError(name)
 
   @property
-  def creation_ddl(cls):
-    fields = [
-        '{} {}'.format(name, field.ddl()) for name, field in cls.schema.items()
-    ]
-    field_ddl = '({})'.format(', '.join(fields))
-    index_ddl = 'PRIMARY KEY ({})'.format(', '.join(cls.primary_keys))
-    trailing_statements = [index_ddl]
-    if cls.interleaved:
-      interleave_ddl = 'INTERLEAVE IN PARENT {parent} ON CASCADE DELETE'.format(
-          parent=cls.interleaved.table)
-      trailing_statements.append(interleave_ddl)
-    trailing_ddl = ', '.join(trailing_statements)
-    return 'CREATE TABLE {table_name} {fields} {trailing}'.format(
-        table_name=cls.table, fields=field_ddl, trailing=trailing_ddl)
-
-  @property
   def column_prefix(cls):
     return cls.table.split('.')[-1]
 

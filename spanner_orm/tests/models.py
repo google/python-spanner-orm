@@ -21,7 +21,7 @@ from spanner_orm import relationship
 
 
 class SmallTestModel(model.Model):
-  """Model class used for testing"""
+  """Model class used for testing."""
 
   __table__ = 'SmallTestModel'
   key = field.Field(field.String, primary_key=True)
@@ -30,10 +30,18 @@ class SmallTestModel(model.Model):
 
 
 class ChildTestModel(model.Model):
-  """Model class for testing relationships"""
-
+  """Model class for testing interleaved tables."""
   __table__ = 'ChildTestModel'
   __interleaved__ = SmallTestModel
+
+  key = field.Field(field.String, primary_key=True)
+  child_key = field.Field(field.String, primary_key=True)
+
+
+class RelationshipTestModel(model.Model):
+  """Model class for testing relationships."""
+
+  __table__ = 'RelationshipTestModel'
   parent_key = field.Field(field.String, primary_key=True)
   child_key = field.Field(field.String, primary_key=True)
   parent = relationship.Relationship(
@@ -44,12 +52,12 @@ class ChildTestModel(model.Model):
 
 
 class InheritanceTestModel(SmallTestModel):
-  """Model class used for testing model inheritance"""
+  """Model class used for testing model inheritance."""
   value_3 = field.Field(field.String, nullable=True)
 
 
 class UnittestModel(model.Model):
-  """Model class used for model testing"""
+  """Model class used for model testing."""
 
   __table__ = 'table'
   int_ = field.Field(field.Integer, primary_key=True)

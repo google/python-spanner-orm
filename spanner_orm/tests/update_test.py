@@ -63,10 +63,29 @@ class UpdateTest(unittest.TestCase):
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_create_table(self, get_model):
     get_model.return_value = None
-    new_model = models.SmallTestModel
+    new_model = models.UnittestModel
     test_update = update.CreateTable(new_model)
     test_update.validate()
-    self.assertEqual(test_update.ddl(), new_model.creation_ddl)
+
+    test_model_ddl = ('CREATE TABLE table (int_ INT64 NOT NULL, int_2 INT64,'
+                      ' string STRING(MAX) NOT NULL, string_2 STRING(MAX),'
+                      ' timestamp TIMESTAMP NOT NULL, string_array'
+                      ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, string)')
+    self.assertEqual(test_update.ddl(), test_model_ddl)
+
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
+  def test_create_table_interleaved(self, get_model):
+    get_model.return_value = None
+    new_model = models.ChildTestModel
+    test_update = update.CreateTable(new_model)
+    test_update.validate()
+
+    test_model_ddl = ('CREATE TABLE ChildTestModel ('
+                      'key STRING(MAX) NOT NULL, '
+                      'child_key STRING(MAX) NOT NULL) '
+                      'PRIMARY KEY (key, child_key), '
+                      'INTERLEAVE IN PARENT SmallTestModel ON CASCADE DELETE')
+    self.assertEqual(test_update.ddl(), test_model_ddl)
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_create_table_error_on_existing_table(self, get_model):

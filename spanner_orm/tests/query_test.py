@@ -156,30 +156,30 @@ class QueryTest(parameterized.TestCase):
 
   def includes(self, relation, *conditions):
     include_condition = condition.includes(relation, list(conditions))
-    return query.SelectQuery(models.ChildTestModel, [include_condition])
+    return query.SelectQuery(models.RelationshipTestModel, [include_condition])
 
   def test_includes(self):
     select_query = self.includes('parent')
 
     # The column order varies between test runs
     expected_sql = (
-        r'SELECT ChildTestModel\S* ChildTestModel\S* ARRAY\(SELECT AS '
+        r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* ARRAY\(SELECT AS '
         r'STRUCT SmallTestModel\S* SmallTestModel\S* SmallTestModel\S* FROM '
         r'SmallTestModel WHERE SmallTestModel.key = '
-        r'ChildTestModel.parent_key\)')
+        r'RelationshipTestModel.parent_key\)')
     self.assertRegex(select_query.sql(), expected_sql)
     self.assertEmpty(select_query.parameters())
     self.assertEmpty(select_query.types())
 
   def test_includes_subconditions_query(self):
     select_query = self.includes('parents', condition.equal_to('key', 'value'))
-    expected_sql = ('WHERE SmallTestModel.key = ChildTestModel.parent_key '
+    expected_sql = ('WHERE SmallTestModel.key = RelationshipTestModel.parent_key '
                     'AND SmallTestModel.key = @key0')
     self.assertRegex(select_query.sql(), expected_sql)
 
   def includes_result(self, related=1):
     child = {'parent_key': 'parent_key', 'child_key': 'child'}
-    result = [child[name] for name in models.ChildTestModel.columns]
+    result = [child[name] for name in models.RelationshipTestModel.columns]
     parent = {'key': 'key', 'value_1': 'value_1', 'value_2': None}
     parents = []
     for _ in range(related):
