@@ -14,6 +14,10 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
+from __future__ import annotations
+
+from typing import Dict, List, Type, Union
+
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import model
@@ -23,10 +27,10 @@ class Relationship(object):
   """Helps define a foreign key relationship between two models."""
 
   def __init__(self,
-               destination_handle,
-               constraints,
-               is_parent=False,
-               single=False):
+               destination_handle: Union[Type[model.Model], str],
+               constraints: Dict[str, str],
+               is_parent: bool = False,
+               single: bool = False):
     """Creates a ModelRelationship.
 
     Args:
@@ -48,21 +52,21 @@ class Relationship(object):
     self.origin = None
 
   @property
-  def conditions(self):
+  def conditions(self) -> List[condition.Condition]:
     assert self.origin, 'Origin must be set before conditions is called'
     return self._parse_constraints()
 
   @property
-  def destination(self):
+  def destination(self) -> Type[model.Model]:
     if not self._destination:
       self._destination = model.load_model(self._destination_handle)
     return self._destination
 
   @property
-  def single(self):
+  def single(self) -> bool:
     return self._single
 
-  def _parse_constraints(self):
+  def _parse_constraints(self) -> List[condition.Condition]:
     """Validates the dictionary of constraints and turns it into Conditions."""
     conditions = []
     for origin_column, destination_column in self._constraints.items():

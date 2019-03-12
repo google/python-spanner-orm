@@ -14,8 +14,11 @@
 # limitations under the License.
 """Helper to deal with field types in Spanner interactions."""
 
+from __future__ import annotations
+
 import abc
 import datetime
+from typing import Any, Type
 
 from google.cloud.spanner_v1.proto import type_pb2
 
@@ -23,30 +26,33 @@ from google.cloud.spanner_v1.proto import type_pb2
 class Field(object):
   """Represents a column in a table as a field in a model."""
 
-  def __init__(self, field_type, nullable=False, primary_key=False):
+  def __init__(self,
+               field_type: Type[FieldType],
+               nullable: bool = False,
+               primary_key: bool = False):
     self._type = field_type
     self._nullable = nullable
     self._primary_key = primary_key
     self.name = None
 
-  def ddl(self):
+  def ddl(self) -> str:
     if self._nullable:
       return self._type.ddl()
     return '{field_type} NOT NULL'.format(field_type=self._type.ddl())
 
-  def field_type(self):
+  def field_type(self) -> Type[FieldType]:
     return self._type
 
-  def grpc_type(self):
+  def grpc_type(self) -> str:
     return self._type.grpc_type()
 
-  def nullable(self):
+  def nullable(self) -> bool:
     return self._nullable
 
-  def primary_key(self):
+  def primary_key(self) -> bool:
     return self._primary_key
 
-  def validate(self, value):
+  def validate(self, value) -> None:
     if value is None:
       assert self._nullable, 'None set for non-nullable field'
     else:
@@ -58,17 +64,17 @@ class FieldType(abc.ABC):
 
   @staticmethod
   @abc.abstractmethod
-  def ddl():
+  def ddl() -> str:
     raise NotImplementedError
 
   @staticmethod
   @abc.abstractmethod
-  def grpc_type():
+  def grpc_type() -> type_pb2.Type:
     raise NotImplementedError
 
   @staticmethod
   @abc.abstractmethod
-  def validate_type(value):
+  def validate_type(value: Any) -> None:
     raise NotImplementedError
 
 
@@ -76,15 +82,15 @@ class Boolean(FieldType):
   """Represents a boolean type."""
 
   @staticmethod
-  def ddl():
+  def ddl() -> str:
     return 'BOOL'
 
   @staticmethod
-  def grpc_type():
+  def grpc_type() -> type_pb2.Type:
     return type_pb2.Type(code=type_pb2.BOOL)
 
   @staticmethod
-  def validate_type(value):
+  def validate_type(value: Any) -> None:
     assert isinstance(value, bool), '{} is not of type bool'.format(value)
 
 
@@ -92,15 +98,15 @@ class Integer(FieldType):
   """Represents an integer type."""
 
   @staticmethod
-  def ddl():
+  def ddl() -> str:
     return 'INT64'
 
   @staticmethod
-  def grpc_type():
+  def grpc_type() -> type_pb2.Type:
     return type_pb2.Type(code=type_pb2.INT64)
 
   @staticmethod
-  def validate_type(value):
+  def validate_type(value: Any) -> None:
     assert isinstance(value, int), '{} is not of type int'.format(value)
 
 
@@ -108,15 +114,15 @@ class String(FieldType):
   """Represents a string type."""
 
   @staticmethod
-  def ddl():
+  def ddl() -> str:
     return 'STRING(MAX)'
 
   @staticmethod
-  def grpc_type():
+  def grpc_type() -> type_pb2.Type:
     return type_pb2.Type(code=type_pb2.STRING)
 
   @staticmethod
-  def validate_type(value):
+  def validate_type(value) -> None:
     assert isinstance(value, str), '{} is not of type str'.format(value)
 
 
@@ -124,15 +130,15 @@ class StringArray(FieldType):
   """Represents an array of strings type."""
 
   @staticmethod
-  def ddl():
+  def ddl() -> str:
     return 'ARRAY<STRING(MAX)>'
 
   @staticmethod
-  def grpc_type():
+  def grpc_type() -> type_pb2.Type:
     return type_pb2.Type(code=type_pb2.ARRAY)
 
   @staticmethod
-  def validate_type(value):
+  def validate_type(value: Any) -> None:
     assert isinstance(value, list), '{} is not of type list'.format(value)
     for item in value:
       assert isinstance(item, str), '{} is not of type str'.format(item)
@@ -142,15 +148,15 @@ class Timestamp(FieldType):
   """Represents a timestamp type."""
 
   @staticmethod
-  def ddl():
+  def ddl() -> str:
     return 'TIMESTAMP'
 
   @staticmethod
-  def grpc_type():
+  def grpc_type() -> type_pb2.Type:
     return type_pb2.Type(code=type_pb2.TIMESTAMP)
 
   @staticmethod
-  def validate_type(value):
+  def validate_type(value: Any) -> None:
     assert isinstance(value, datetime.datetime)
 
 

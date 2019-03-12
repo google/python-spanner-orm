@@ -209,14 +209,14 @@ class QueryTest(parameterized.TestCase):
     self.assertEmpty(select_query.types())
 
   def test_includes_with_object(self):
-    select_query = self.includes(models.ChildTestModel.parent)
+    select_query = self.includes(models.RelationshipTestModel.parent)
 
     # The column order varies between test runs
     expected_sql = (
-        r'SELECT ChildTestModel\S* ChildTestModel\S* ARRAY\(SELECT AS '
-        r'STRUCT SmallTestModel\S* SmallTestModel\S* SmallTestModel\S* FROM '
-        r'SmallTestModel WHERE SmallTestModel.key = '
-        r'ChildTestModel.parent_key\)')
+        r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* '
+        r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
+        r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
+        r'RelationshipTestModel.parent_key\)')
     self.assertRegex(select_query.sql(), expected_sql)
     self.assertEmpty(select_query.parameters())
     self.assertEmpty(select_query.types())
