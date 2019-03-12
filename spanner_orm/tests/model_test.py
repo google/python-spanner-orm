@@ -127,7 +127,7 @@ class ModelTest(parameterized.TestCase):
   def test_interleaved(self):
     self.assertEqual(models.ChildTestModel.interleaved, models.SmallTestModel)
 
-  @mock.patch('spanner_orm.model.ModelMeta.find')
+  @mock.patch('spanner_orm.model.ModelApi.find')
   def test_reload(self, find):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=False)
@@ -139,7 +139,7 @@ class ModelTest(parameterized.TestCase):
     self.assertIsNone(transaction)
     self.assertEqual(kwargs, model.id())
 
-  @mock.patch('spanner_orm.model.ModelMeta.find')
+  @mock.patch('spanner_orm.model.ModelApi.find')
   def test_reload_reloads(self, find):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=False)
@@ -149,7 +149,7 @@ class ModelTest(parameterized.TestCase):
     model.reload()
     self.assertEqual(model.value_1, updated_values['value_1'])
 
-  @mock.patch('spanner_orm.model.ModelMeta.create')
+  @mock.patch('spanner_orm.model.ModelApi.create')
   def test_save_creates(self, create):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=False)
@@ -160,7 +160,7 @@ class ModelTest(parameterized.TestCase):
     self.assertIsNone(transaction)
     self.assertEqual(kwargs, {**values, 'value_2': None})
 
-  @mock.patch('spanner_orm.model.ModelMeta.update')
+  @mock.patch('spanner_orm.model.ModelApi.update')
   def test_save_updates(self, update):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=True)
@@ -174,7 +174,7 @@ class ModelTest(parameterized.TestCase):
     self.assertIsNone(transaction)
     self.assertEqual(kwargs, values)
 
-  @mock.patch('spanner_orm.model.ModelMeta.update')
+  @mock.patch('spanner_orm.model.ModelApi.update')
   def test_save_no_changes(self, update):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=True)

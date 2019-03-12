@@ -44,7 +44,7 @@ class SpannerMetadata(object):
     for table_name, table_data in tables.items():
       primary_index = indexes[table_name][index.Index.PRIMARY_INDEX]
       primary_keys = set(primary_index.columns)
-      klass = model.ModelBase(
+      klass = model.ModelMetaclass(
           cls._class_name_from_table(table_name), (model.Model,), {})
       for model_field in table_data['fields'].values():
         model_field._primary_key = model_field.name in primary_keys  # pylint: disable=protected-access

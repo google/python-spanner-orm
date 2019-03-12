@@ -14,8 +14,11 @@
 # limitations under the License.
 """Holds table-specific information to make querying spanner eaiser."""
 
+from __future__ import annotations
+
 import collections
 import copy
+from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
 
 from spanner_orm import api
 from spanner_orm import condition
@@ -28,13 +31,14 @@ from spanner_orm import registry
 from spanner_orm import relationship
 
 from google.cloud import spanner
+from google.cloud.spanner_v1 import transaction as spanner_transaction
 
 
-class ModelBase(type):
-  """Populates Model metadata based on class attributes."""
+class ModelMetaclass(type):
+  """Populates ModelMetadata based on class attributes."""
 
-  def __new__(mcs, name, bases, attrs, **kwargs):
-    parents = [base for base in bases if isinstance(base, ModelBase)]
+  def __new__(mcs, name: str, bases: Any, attrs: Dict[str, Any], **kwargs: Any):
+    parents = [base for base in bases if isinstance(base, ModelMetaclass)]
     if not parents:
       return super().__new__(mcs, name, bases, attrs, **kwargs)
 
@@ -68,44 +72,49 @@ class ModelBase(type):
     cls.meta = model_metadata
     return cls
 
-  def __getattr__(cls, name):
+  def __getattr__(
+      cls,
+      name: str) -> Union[field.Field, relationship.Relationship, index.Index]:
+    # Unclear why pylint doesn't like this
+    # pylint: disable=unsupported-membership-test
     if name in cls.schema:
       return cls.schema[name]
     elif name in cls.relations:
       return cls.relations[name]
     elif name in cls.indexes:
       return cls.indexes[name]
+    # pylint: enable=unsupported-membership-test
     raise AttributeError(name)
 
   @property
-  def column_prefix(cls):
+  def column_prefix(cls) -> str:
     return cls.table.split('.')[-1]
 
   # Table schema class methods
   @property
-  def columns(cls):
+  def columns(cls) -> List[str]:
     return cls.meta.columns
 
   @property
-  def indexes(cls):
+  def indexes(cls) -> Dict[str, index.Index]:
     return cls.meta.indexes
 
   @property
-  def interleaved(cls):
+  def interleaved(cls) -> Optional[ModelApi]:
     if cls.meta.interleaved:
       return registry.model_registry().get(cls.meta.interleaved)
     return None
 
   @property
-  def primary_keys(cls):
+  def primary_keys(cls) -> List[str]:
     return cls.meta.primary_keys
 
   @property
-  def relations(cls):
+  def relations(cls) -> Dict[str, relationship.Relationship]:
     return cls.meta.relations
 
   @property
-  def schema(cls):
+  def schema(cls) -> Dict[str, field.Field]:
     return cls.meta.fields
 
   @property
@@ -119,23 +128,30 @@ class ModelBase(type):
       raise error_type(*ex.args)
 
 
-class ModelMeta(ModelBase):
-  """Implements Spanner queries on top of ModelBase."""
+class ModelApi(metaclass=ModelMetaclass):
+  """Implements class-level Spanner queries on top of ModelMetaclass."""
 
   # Table read methods
-  def all(cls, transaction=None):
+  @classmethod
+  def all(cls, transaction: Optional[spanner_transaction.Transaction] = None
+         ) -> List[ModelObject]:
     args = [cls.table, cls.columns, spanner.KeySet(all_=True)]
     results = cls._execute_read(api.SpannerApi.find, transaction, args)
     return cls._results_to_models(results)
 
-  def count(cls, transaction, *conditions):
+  @classmethod
+  def count(cls, transaction: Optional[spanner_transaction.Transaction],
+            *conditions: condition.Condition) -> int:
     """Implementation of the SELECT COUNT query."""
     builder = query.CountQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
     results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
     return builder.process_results(results)
 
-  def count_equal(cls, transaction=None, **constraints):
+  @classmethod
+  def count_equal(cls,
+                  transaction: Optional[spanner_transaction.Transaction] = None,
+                  **constraints: Any) -> int:
     """Creates and executes a SELECT COUNT query from constraints."""
     conditions = []
     for column, value in constraints.items():
@@ -145,12 +161,18 @@ class ModelMeta(ModelBase):
         conditions.append(condition.equal_to(column, value))
     return cls.count(transaction, *conditions)
 
-  def find(cls, transaction=None, **keys):
-    """Grabs the row with the given primary key."""
+  @classmethod
+  def find(cls,
+           transaction: Optional[spanner_transaction.Transaction] = None,
+           **keys: Any) -> Optional[ModelObject]:
+    """Executes a FIND for a single item, based on the provided key."""
     resources = cls.find_multi(transaction, [keys])
     return resources[0] if resources else None
 
-  def find_multi(cls, transaction, keys):
+  @classmethod
+  def find_multi(cls, transaction: Optional[spanner_transaction.Transaction],
+                 keys: Iterable[Dict[str, Any]]) -> List[ModelObject]:
+    """Executes a FIND for multiple items, based on the provided keys."""
     key_values = []
     for key in keys:
       key_values.append([key[column] for column in cls.primary_keys])
@@ -158,17 +180,21 @@ class ModelMeta(ModelBase):
 
     args = [cls.table, cls.columns, keyset]
     results = cls._execute_read(api.SpannerApi.find, transaction, args)
-    resources = cls._results_to_models(results)
-    return resources
+    return cls._results_to_models(results)
 
-  def where(cls, transaction, *conditions):
+  @classmethod
+  def where(cls, transaction: Optional[spanner_transaction.Transaction],
+            *conditions: condition.Condition) -> List[ModelObject]:
     """Implementation of the SELECT query."""
     builder = query.SelectQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
     results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
     return builder.process_results(results)
 
-  def where_equal(cls, transaction=None, **constraints):
+  @classmethod
+  def where_equal(cls,
+                  transaction: Optional[spanner_transaction.Transaction] = None,
+                  **constraints: Any) -> List[ModelObject]:
     """Creates and executes a SELECT query from constraints."""
     conditions = []
     for column, value in constraints.items():
@@ -178,24 +204,39 @@ class ModelMeta(ModelBase):
         conditions.append(condition.equal_to(column, value))
     return cls.where(transaction, *conditions)
 
-  def _results_to_models(cls, results):
+  @classmethod
+  def _results_to_models(cls,
+                         results: Iterable[Iterable[Any]]) -> List[ModelObject]:
     items = [dict(zip(cls.columns, result)) for result in results]
     return [cls(item, persisted=True) for item in items]
 
-  def _execute_read(cls, db_api, transaction, args):
+  @classmethod
+  def _execute_read(cls, db_api: Callable[..., Any],
+                    transaction: Optional[spanner_transaction.Transaction],
+                    args: List[Any]) -> Any:
     if transaction is not None:
       return db_api(transaction, *args)
     else:
       return api.SpannerApi.run_read_only(db_api, *args)
 
   # Table write methods
-  def create(cls, transaction=None, **kwargs):
+  @classmethod
+  def create(cls,
+             transaction: Optional[spanner_transaction.Transaction] = None,
+             **kwargs: Any) -> None:
     cls._execute_write(api.SpannerApi.insert, transaction, [kwargs])
 
-  def create_or_update(cls, transaction=None, **kwargs):
+  @classmethod
+  def create_or_update(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **kwargs: Any):
     cls._execute_write(api.SpannerApi.upsert, transaction, [kwargs])
 
-  def delete_batch(cls, transaction, models):
+  @classmethod
+  def delete_batch(cls, transaction: Optional[spanner_transaction.Transaction],
+                   models: List[ModelObject]) -> None:
+    """Delete from Spanner all rows corresponding to provided models."""
     key_list = []
     for model in models:
       key_list.append([getattr(model, column) for column in cls.primary_keys])
@@ -208,11 +249,21 @@ class ModelMeta(ModelBase):
     else:
       return api.SpannerApi.run_write(db_api, *args)
 
-  def save_batch(cls, transaction, models, force_write=False):
+  @classmethod
+  def save_batch(cls,
+                 transaction: Optional[spanner_transaction.Transaction],
+                 models: List[ModelObject],
+                 force_write: bool = False) -> None:
     """Persist all model changes in list of models to Spanner.
 
-    Note that if the transaction provided is None, multiple transactions may
-    be created when calling this method.
+    Args:
+      transaction: existing transaction to use. If None, a new transaction is
+        used automatically. In this case, multiple transactions may be created
+      models: list of models to persist to Spanner
+      force_write: If true, we use the Spanner upsert API so no exceptions are
+        thrown. If false, we use insert/update according to the _persisted flag
+        so that an exception is thrown if that flag does not match the actual
+        state of the object.
     """
     work = collections.defaultdict(list)
     for model in models:
@@ -228,10 +279,16 @@ class ModelMeta(ModelBase):
     for api_method, values in work.items():
       cls._execute_write(api_method, transaction, values)
 
-  def update(cls, transaction=None, **kwargs):
+  @classmethod
+  def update(cls,
+             transaction: Optional[spanner_transaction.Transaction] = None,
+             **kwargs: Any) -> None:
     cls._execute_write(api.SpannerApi.update, transaction, [kwargs])
 
-  def _execute_write(cls, db_api, transaction, dictionaries):
+  @classmethod
+  def _execute_write(cls, db_api: Callable[..., Any],
+                     transaction: Optional[spanner_transaction.Transaction],
+                     dictionaries: Iterable[Dict[str, Any]]) -> None:
     """Validates all write value types and commits write to Spanner."""
     columns, values = None, []
     for dictionary in dictionaries:
@@ -257,7 +314,7 @@ class ModelMeta(ModelBase):
       return api.SpannerApi.run_write(db_api, *args)
 
 
-class Model(object, metaclass=ModelMeta):
+class Model(ModelApi):
   """Maps to a table in spanner and has basic functions for querying tables."""
 
   def __init__(self, values, persisted=False):
@@ -365,3 +422,6 @@ class Model(object, metaclass=ModelMeta):
       self._metaclass.create(transaction, **self.values)
       self._persisted = True
     return self
+
+
+ModelObject = TypeVar('ModelObject', bound=Model)
