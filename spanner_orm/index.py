@@ -14,6 +14,8 @@
 # limitations under the License.
 """Represents an index on a Model."""
 
+from __future__ import annotations
+
 from typing import List, Optional
 
 

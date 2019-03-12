@@ -52,12 +52,13 @@ class Relationship(object):
       single: True if the destination should be treated as a single object
         instead of a list of objects
     """
+    self.origin = None
+    self.name = None
     self._destination_handle = destination_handle
     self._destination = None
     self._constraints = constraints
     self._is_parent = is_parent
     self._single = single
-    self.origin = None
 
   @property
   def constraints(self) -> List[RelationshipConstraint]:
