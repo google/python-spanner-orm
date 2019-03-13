@@ -16,12 +16,20 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Type, Union
+from typing import Any, Dict, List, Type, Union
 
-from spanner_orm import condition
+import dataclasses
 from spanner_orm import error
 from spanner_orm import model
 from spanner_orm import registry
+
+
+@dataclasses.dataclass
+class RelationshipConstraint:
+  destination_class: Type[Any]
+  destination_column: str
+  origin_class: Type[Any]
+  origin_column: str
 
 
 class Relationship(object):
@@ -53,8 +61,8 @@ class Relationship(object):
     self.origin = None
 
   @property
-  def conditions(self) -> List[condition.Condition]:
-    assert self.origin, 'Origin must be set before conditions is called'
+  def constraints(self) -> List[RelationshipConstraint]:
+    assert self.origin, 'Origin must be set before constraints is called'
     return self._parse_constraints()
 
   @property
@@ -68,9 +76,9 @@ class Relationship(object):
   def single(self) -> bool:
     return self._single
 
-  def _parse_constraints(self) -> List[condition.Condition]:
+  def _parse_constraints(self) -> List[RelationshipConstraint]:
     """Validates the dictionary of constraints and turns it into Conditions."""
-    conditions = []
+    constraints = []
     for origin_column, destination_column in self._constraints.items():
       if origin_column not in self.origin.schema:
         raise error.SpannerError(
@@ -79,9 +87,10 @@ class Relationship(object):
       if destination_column not in self.destination.schema:
         raise error.SpannerError(
             'Destination column must be present in destination model')
-      # This is backward from what you might imagine because the condition will
-      # be processed from the context of the destination model
-      conditions.append(
-          condition.ColumnsEqualCondition(destination_column, self.origin,
-                                          origin_column))
-    return conditions
+
+      # TODO(dbrandao): remove when pytype #234 is fixed
+      constraints.append(
+          RelationshipConstraint(self.destination, destination_column,
+                                 self.origin, origin_column))  # type: ignore
+
+    return constraints

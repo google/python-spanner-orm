@@ -178,10 +178,19 @@ class IncludesCondition(Condition):
 
   @property
   def conditions(self):
+    """Generate the child conditions based on the relationship constraints."""
     if not self.relation:
       raise error.SpannerError(
           'Condition must be bound before conditions is called')
-    return self.relation.conditions + self._conditions
+    relation_conditions = []
+    for constraint in self.relation.constraints:
+      # This is backward from what you might imagine because the condition will
+      # be processed from the context of the destination model
+      relation_conditions.append(
+          ColumnsEqualCondition(constraint.destination_column,
+                                constraint.origin_class,
+                                constraint.origin_column))
+    return relation_conditions + self._conditions
 
   @property
   def destination(self):
