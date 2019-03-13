@@ -124,6 +124,9 @@ class ModelTest(parameterized.TestCase):
     with self.assertRaises(AttributeError):
       _ = test_model.parent
 
+  def test_interleaved(self):
+    self.assertEqual(models.ChildTestModel.interleaved, models.SmallTestModel)
+
   @mock.patch('spanner_orm.model.ModelMeta.find')
   def test_reload(self, find):
     values = {'key': 'key', 'value_1': 'value_1'}

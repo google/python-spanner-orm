@@ -21,6 +21,7 @@ from typing import Dict, List, Type, Union
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import model
+from spanner_orm import registry
 
 
 class Relationship(object):
@@ -59,7 +60,8 @@ class Relationship(object):
   @property
   def destination(self) -> Type[model.Model]:
     if not self._destination:
-      self._destination = model.load_model(self._destination_handle)
+      self._destination = registry.model_registry().get(
+          self._destination_handle)
     return self._destination
 
   @property
@@ -82,5 +84,4 @@ class Relationship(object):
       conditions.append(
           condition.ColumnsEqualCondition(destination_column, self.origin,
                                           origin_column))
-
     return conditions
