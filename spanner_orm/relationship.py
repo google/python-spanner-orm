@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Type, Union
 import dataclasses
 from spanner_orm import error
 from spanner_orm import model
+from spanner_orm import registry
 
 
 @dataclasses.dataclass
@@ -67,7 +68,8 @@ class Relationship(object):
   @property
   def destination(self) -> Type[model.Model]:
     if not self._destination:
-      self._destination = model.load_model(self._destination_handle)
+      self._destination = registry.model_registry().get(
+          self._destination_handle)
     return self._destination
 
   @property

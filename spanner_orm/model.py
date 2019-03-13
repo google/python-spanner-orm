@@ -16,7 +16,6 @@
 
 import collections
 import copy
-import importlib
 
 from spanner_orm import api
 from spanner_orm import condition
@@ -24,6 +23,7 @@ from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import index
 from spanner_orm import query
+from spanner_orm import registry
 from spanner_orm import relationship
 
 from google.cloud import spanner
@@ -69,6 +69,7 @@ class Metadata(object):
 
     for _, relation in self.relations.items():
       relation.origin = self.model_class
+    registry.model_registry().register(self.model_class)
     self._finalized = True
 
   def add_metadata(self, metadata):
@@ -153,9 +154,9 @@ class ModelBase(type):
 
   @property
   def interleaved(cls):
-    if cls.meta.interleaved and not isinstance(cls.meta.interleaved, ModelBase):
-      cls.meta.interleaved = load_model(cls.meta.interleaved)
-    return cls.meta.interleaved
+    if cls.meta.interleaved:
+      return registry.model_registry().get(cls.meta.interleaved)
+    return None
 
   @property
   def primary_keys(cls):
@@ -426,16 +427,3 @@ class Model(object, metaclass=ModelMeta):
       self._metaclass.create(transaction, **self.values)
       self._persisted = True
     return self
-
-
-def load_model(model_handle):
-  if isinstance(model_handle, Model):
-    return model_handle
-  parts = model_handle.split('.')
-  path = '.'.join(parts[:-1])
-  module = importlib.import_module(path)
-  klass = getattr(module, parts[-1])
-  if not issubclass(klass, Model):
-    raise error.SpannerError(
-        '{model} is not a Model'.format(model=model_handle))
-  return klass

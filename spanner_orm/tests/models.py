@@ -33,7 +33,7 @@ class ChildTestModel(model.Model):
   """Model class for testing interleaved tables."""
 
   __table__ = 'ChildTestModel'
-  __interleaved__ = SmallTestModel
+  __interleaved__ = 'SmallTestModel'
 
   key = field.Field(field.String, primary_key=True)
   child_key = field.Field(field.String, primary_key=True)
