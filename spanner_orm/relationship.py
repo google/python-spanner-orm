@@ -94,4 +94,3 @@ class Relationship(object):
                                  self.origin, origin_column))  # type: ignore
 
     return constraints
-  
