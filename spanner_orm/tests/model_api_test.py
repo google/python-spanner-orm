@@ -39,10 +39,12 @@ class ModelApiTest(unittest.TestCase):
     mock_transaction = mock.Mock()
     find.return_value = [['key', 'value_1', None]]
     result = models.SmallTestModel.find(mock_transaction, key='key')
-
-    self.assertEqual(result.key, 'key')
-    self.assertEqual(result.value_1, 'value_1')
-    self.assertIsNone(result.value_2)
+    if result:
+      self.assertEqual(result.key, 'key')
+      self.assertEqual(result.value_1, 'value_1')
+      self.assertIsNone(result.value_2)
+    else:
+      self.fail('Failed to find result')
 
   @mock.patch('spanner_orm.api.SpannerApi.find')
   def test_find_multi_calls_api(self, find):

@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Type, Union
 
 import dataclasses
 from spanner_orm import error
-from spanner_orm import model
 from spanner_orm import registry
 
 
@@ -36,7 +35,7 @@ class Relationship(object):
   """Helps define a foreign key relationship between two models."""
 
   def __init__(self,
-               destination_handle: Union[Type[model.Model], str],
+               destination_handle: Union[Type[Any], str],
                constraints: Dict[str, str],
                is_parent: bool = False,
                single: bool = False):
@@ -66,7 +65,7 @@ class Relationship(object):
     return self._parse_constraints()
 
   @property
-  def destination(self) -> Type[model.Model]:
+  def destination(self) -> Type[Any]:
     if not self._destination:
       self._destination = registry.model_registry().get(
           self._destination_handle)

@@ -48,13 +48,15 @@ class ModelMetadata(object):
                indexes: Optional[Dict[str, index.Index]] = None,
                interleaved: Optional[str] = None,
                model_class: Optional[Type[Any]] = None):
-    self.table = table or ''
-    self.fields = fields or {}
-    self.relations = relations or {}
-    self.indexes = indexes or {}
+    self.columns = []
+    self.fields = dict(fields or {})
+    self._finalized = False
+    self.indexes = dict(indexes or {})
     self.interleaved = interleaved
     self.model_class = model_class
-    self._finalized = False
+    self.primary_keys = []
+    self.relations = dict(relations or {})
+    self.table = table or ''
 
   def finalize(self) -> None:
     """Finish generating metadata state.
