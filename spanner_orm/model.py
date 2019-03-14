@@ -22,74 +22,12 @@ from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import index
+from spanner_orm import metadata
 from spanner_orm import query
 from spanner_orm import registry
 from spanner_orm import relationship
 
 from google.cloud import spanner
-
-
-class Metadata(object):
-  """Holds Spanner table metadata corresponding to a Model."""
-
-  def __init__(self,
-               table=None,
-               fields=None,
-               relations=None,
-               indexes=None,
-               interleaved=None,
-               model_class=None):
-    self.table = table or ''
-    self.fields = fields or {}
-    self.relations = relations or {}
-    self.indexes = indexes or {}
-    self.interleaved = interleaved
-    self.model_class = model_class
-    self._finalized = False
-
-  def finalize(self):
-    """Finish generating metadata state.
-
-    Some metadata depends on having all configuration data set before it can
-    be calculated--the primary index, for example, needs all fields to be added
-    before it can be calculated. This method is called to indicate that all
-    relevant state has been added and the calculation of the final data should
-    now happen"""
-    assert not self._finalized
-    sorted_fields = list(sorted(self.fields.values(), key=lambda f: f.position))
-
-    if index.Index.PRIMARY_INDEX not in self.indexes:
-      primary_keys = [f.name for f in sorted_fields if f.primary_key()]
-      primary_index = index.Index(primary_keys)
-      primary_index.name = index.Index.PRIMARY_INDEX
-      self.indexes[index.Index.PRIMARY_INDEX] = primary_index
-    self.primary_keys = self.indexes[index.Index.PRIMARY_INDEX].columns
-
-    self.columns = [f.name for f in sorted_fields]
-
-    for _, relation in self.relations.items():
-      relation.origin = self.model_class
-    registry.model_registry().register(self.model_class)
-    self._finalized = True
-
-  def add_metadata(self, metadata):
-    self.table = metadata.table or self.table
-    self.fields.update(metadata.fields)
-    self.relations.update(metadata.relations)
-    self.interleaved = metadata.interleaved or self.interleaved
-
-  def add_field(self, name, new_field):
-    new_field.name = name
-    new_field.position = len(self.fields)
-    self.fields[name] = new_field
-
-  def add_relation(self, name, new_relation):
-    new_relation.name = name
-    self.relations[name] = new_relation
-
-  def add_index(self, name, new_index):
-    new_index.name = name
-    self.indexes[name] = new_index
 
 
 class ModelBase(type):
@@ -100,23 +38,23 @@ class ModelBase(type):
     if not parents:
       return super().__new__(mcs, name, bases, attrs, **kwargs)
 
-    metadata = Metadata()
+    model_metadata = metadata.ModelMetadata()
     for parent in parents:
       if 'meta' in vars(parent):
-        metadata.add_metadata(parent.meta)
+        model_metadata.add_metadata(parent.meta)
 
     non_model_attrs = {}
     for key, value in attrs.items():
       if key == '__table__':
-        metadata.table = value
+        model_metadata.table = value
       elif key == '__interleaved__':
-        metadata.interleaved = value
+        model_metadata.interleaved = value
       if isinstance(value, field.Field):
-        metadata.add_field(key, value)
+        model_metadata.add_field(key, value)
       elif isinstance(value, index.Index):
-        metadata.add_index(key, value)
+        model_metadata.add_index(key, value)
       elif isinstance(value, relationship.Relationship):
-        metadata.add_relation(key, value)
+        model_metadata.add_relation(key, value)
       else:
         non_model_attrs[key] = value
 
@@ -124,10 +62,10 @@ class ModelBase(type):
 
     # If a table is set, this class represents a complete model, so finalize
     # the metadata
-    if metadata.table:
-      metadata.model_class = cls
-      metadata.finalize()
-    cls.meta = metadata
+    if model_metadata.table:
+      model_metadata.model_class = cls
+      model_metadata.finalize()
+    cls.meta = model_metadata
     return cls
 
   def __getattr__(cls, name):

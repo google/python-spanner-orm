@@ -19,6 +19,7 @@ import collections
 from spanner_orm import condition
 from spanner_orm import field
 from spanner_orm import index
+from spanner_orm import metadata
 from spanner_orm import model
 from spanner_orm.admin import column
 from spanner_orm.admin import index as index_schema
@@ -48,7 +49,7 @@ class SpannerMetadata(object):
       for model_field in table_data['fields'].values():
         model_field._primary_key = model_field.name in primary_keys  # pylint: disable=protected-access
 
-      klass.meta = model.Metadata(
+      klass.meta = metadata.ModelMetadata(
           table=table_name,
           fields=table_data['fields'],
           interleaved=cls._class_name_from_table(table_data['parent_table']),
