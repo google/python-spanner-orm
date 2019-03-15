@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Transaction decorators."""
+
+from __future__ import annotations
+
 from typing import Callable, TypeVar
 
 from spanner_orm import api

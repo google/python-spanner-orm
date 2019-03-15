@@ -30,10 +30,10 @@ class Field(object):
                field_type: Type[FieldType],
                nullable: bool = False,
                primary_key: bool = False):
+    self.name = None
     self._type = field_type
     self._nullable = nullable
     self._primary_key = primary_key
-    self.name = None
 
   def ddl(self) -> str:
     if self._nullable:
