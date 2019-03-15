@@ -100,7 +100,7 @@ class ModelMetaclass(type):
     return cls.meta.indexes
 
   @property
-  def interleaved(cls) -> Optional[ModelApi]:
+  def interleaved(cls) -> Optional[Type[Model]]:
     if cls.meta.interleaved:
       return registry.model_registry().get(cls.meta.interleaved)
     return None
@@ -126,6 +126,9 @@ class ModelMetaclass(type):
       cls.schema[field_name].validate(value)
     except AssertionError as ex:
       raise error_type(*ex.args)
+
+
+CallableReturn = TypeVar('CallableReturn')
 
 
 class ModelApi(metaclass=ModelMetaclass):
@@ -211,9 +214,9 @@ class ModelApi(metaclass=ModelMetaclass):
     return [cls(item, persisted=True) for item in items]
 
   @classmethod
-  def _execute_read(cls, db_api: Callable[..., Any],
+  def _execute_read(cls, db_api: Callable[..., CallableReturn],
                     transaction: Optional[spanner_transaction.Transaction],
-                    args: List[Any]) -> Any:
+                    args: List[Any]) -> CallableReturn:
     if transaction is not None:
       return db_api(transaction, *args)
     else:

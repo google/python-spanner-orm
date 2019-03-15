@@ -14,7 +14,10 @@
 # limitations under the License.
 """Retrieves table metadata from Spanner."""
 
+from __future__ import annotations
+
 import collections
+from typing import Any, Dict, Optional, Type
 
 from spanner_orm import condition
 from spanner_orm import field
@@ -31,11 +34,11 @@ class SpannerMetadata(object):
   """Gathers information about a table from Spanner."""
 
   @classmethod
-  def _class_name_from_table(cls, table_name):
+  def _class_name_from_table(cls, table_name: str) -> str:
     return 'table_{}_model'.format(table_name)
 
   @classmethod
-  def models(cls):
+  def models(cls) -> Dict[str, Type[model.Model]]:
     """Constructs model classes from Spanner table schema."""
     tables = cls.tables()
     indexes = cls.indexes()
@@ -61,11 +64,11 @@ class SpannerMetadata(object):
     return models
 
   @classmethod
-  def model(cls, table_name):
+  def model(cls, table_name) -> Optional[Type[model.Model]]:
     return cls.models().get(table_name)
 
   @classmethod
-  def tables(cls):
+  def tables(cls) -> Dict[str, Dict[str, Any]]:
     """Compiles table information from column schema."""
     column_data = collections.defaultdict(dict)
     columns = column.ColumnSchema.where(None,
@@ -89,7 +92,7 @@ class SpannerMetadata(object):
     return table_data
 
   @classmethod
-  def indexes(cls):
+  def indexes(cls) -> Dict[str, Dict[str, Any]]:
     """Compiles index information from index and index columns schemas."""
     # ordinal_position is the position of the column in the indicated index.
     # Results are ordered by that so the index columns are added in the

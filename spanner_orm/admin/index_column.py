@@ -14,11 +14,13 @@
 # limitations under the License.
 """Model for interacting with Spanner index column schema table."""
 
+from __future__ import annotations
+
 from spanner_orm import field
 from spanner_orm.admin import schema
 
 
-class IndexColumnSchema(schema.Schema):
+class IndexColumnSchema(schema.InformationSchema):
   """Model for interacting with Spanner index column schema table."""
 
   __table__ = 'information_schema.index_columns'

@@ -14,21 +14,34 @@
 # limitations under the License.
 """Base model for schemas."""
 
+from __future__ import annotations
+
+from typing import Any, Callable, NoReturn, Optional, TypeVar
+
 from spanner_orm import error
 from spanner_orm import model
 from spanner_orm.admin import api
 
+from google.cloud.spanner_v1 import transaction as spanner_transaction
 
-class Schema(model.Model):
-  """Base model for schemas. Disallows writes and uses AdminApi for reads."""
+CallableReturn = TypeVar('CallableReturn')
 
-  @staticmethod
-  def _execute_read(db_api, transaction, args):
+
+class InformationSchema(model.Model):
+  """Base model for Spanner INFORMATION_SCHEMA tables.
+
+  Note: Writes are disallowed and AdminApi is used for reads.
+  """
+
+  @classmethod
+  def _execute_read(cls, db_api: Callable[..., CallableReturn],
+                    transaction: Optional[spanner_transaction.Transaction],
+                    args: Any) -> CallableReturn:
     if transaction is not None:
       return db_api(transaction, *args)
     else:
       return api.SpannerAdminApi.run_read_only(db_api, *args)
 
-  @staticmethod
-  def _execute_write():
+  @classmethod
+  def _execute_write(cls, *args) -> NoReturn:
     raise error.SpannerError('Writes not allowed for schema tables')
