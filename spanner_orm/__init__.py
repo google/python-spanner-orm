@@ -20,9 +20,11 @@ from spanner_orm import condition
 from spanner_orm import decorator
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import index
 from spanner_orm import model
 from spanner_orm import relationship
 from spanner_orm.admin import api as admin_api
+from spanner_orm.admin import migration_executor
 from spanner_orm.admin import update
 
 # add NullHandler to root-module logger so that individual modules
@@ -50,6 +52,7 @@ Model = model.Model
 Boolean = field.Boolean
 Field = field.Field
 Integer = field.Integer
+Index = index.Index
 Relationship = relationship.Relationship
 String = field.String
 StringArray = field.StringArray
@@ -84,3 +87,5 @@ CreateIndex = update.CreateIndex
 DropIndex = update.DropIndex
 NoUpdate = update.NoUpdate
 model_creation_ddl = update.model_creation_ddl
+
+MigrationExecutor = migration_executor.MigrationExecutor

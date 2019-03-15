@@ -110,7 +110,9 @@ class MigrationExecutor:
     self._hangup()
 
   def _connect(self) -> None:
-    admin_api.from_connection(self._connection)
+    api_connection = admin_api.from_connection(self._connection)
+    if not self._connection.database.exists():
+      api_connection.create_database()
 
   def _hangup(self) -> None:
     admin_api.hangup()
