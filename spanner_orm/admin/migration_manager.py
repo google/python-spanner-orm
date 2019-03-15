@@ -16,16 +16,16 @@
 
 from __future__ import annotations
 
-
 import datetime
 import importlib
 import os
 import re
 import string
-from typing import Any, Iterable, List, Optional
+from typing import Iterable, List, Optional
 import uuid
 
 from spanner_orm import error
+from spanner_orm.admin import migration
 
 
 class MigrationManager:
@@ -63,25 +63,30 @@ class MigrationManager:
     return filepath
 
   @property
-  def migrations(self) -> Any:
+  def migrations(self) -> List[migration.Migration]:
     """Loads and orders all migrations in the base dir."""
     if self._migrations is None:
       unordered_migrations = self._all_migrations()
       self._migrations = self._order_migrations(unordered_migrations)
     return self._migrations
 
-  def _migration_from_file(self, filename: str) -> Any:
+  def _migration_from_file(self, filename: str) -> migration.Migration:
     """Loads a single migration from the given filename in the base dir."""
     module_name = re.sub(r'\W', '_', filename)
     path = os.path.join(self.basedir, filename)
     spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    if not hasattr(module, 'migration_id'):
+    try:
+      result = migration.Migration(module.migration_id,
+                                   module.prev_migration_id,
+                                   getattr(module, 'upgrade', None),
+                                   getattr(module, 'downgrade', None))
+    except AttributeError:
       raise error.SpannerError('{} has no migration id'.format(path))
-    return module
+    return result
 
-  def _all_migrations(self) -> List[Any]:
+  def _all_migrations(self) -> List[migration.Migration]:
     """Loads all migrations from the base dir."""
     migrations = []
     for filename in os.listdir(self.basedir):
@@ -90,16 +95,17 @@ class MigrationManager:
         migrations.append(self._migration_from_file(filename))
     return migrations
 
-  def _order_migrations(self, migrations: Iterable[Any]) -> List[Any]:
+  def _order_migrations(self, migrations: Iterable[migration.Migration]
+                       ) -> List[migration.Migration]:
     """Returns list of migrations in the order they have to be applied."""
     if not migrations:
       return []
 
-    id_map = {migration.migration_id: migration for migration in migrations}
+    id_map = {migration_.migration_id: migration_ for migration_ in migrations}
     start_migration = None
-    for migration_id, migration in id_map.items():
-      if migration.prev_migration_id and migration.prev_migration_id in id_map:
-        current = id_map[migration.prev_migration_id]
+    for migration_id, migration_ in id_map.items():
+      if migration_.prev_migration_id and migration_.prev_migration_id in id_map:
+        current = id_map[migration_.prev_migration_id]
         if hasattr(current, 'next'):
           raise error.SpannerError(
               '{name} has unclear successor migration'.format(
