@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import collections
 import copy
-from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Type, TypeVar, Union
 
 from spanner_orm import api
 from spanner_orm import condition
@@ -317,7 +317,7 @@ class ModelApi(metaclass=ModelMetaclass):
 class Model(ModelApi):
   """Maps to a table in spanner and has basic functions for querying tables."""
 
-  def __init__(self, values, persisted=False):
+  def __init__(self, values: Dict[str, Any], persisted: bool = False):
     start_values = {}
     self.__dict__['start_values'] = start_values
     self.__dict__['_persisted'] = persisted
@@ -343,7 +343,7 @@ class Model(ModelApi):
       if relation in values:
         self.__dict__[relation] = values[relation]
 
-  def __setattr__(self, name, value):
+  def __setattr__(self, name: str, value: Any) -> None:
     if name in self._relations:
       raise AttributeError(name)
     elif name in self._fields:
@@ -353,34 +353,34 @@ class Model(ModelApi):
     super().__setattr__(name, value)
 
   @property
-  def _metaclass(self):
+  def _metaclass(self) -> Type[Model]:
     return type(self)
 
   @property
-  def _columns(self):
+  def _columns(self) -> List[str]:
     return self._metaclass.columns
 
   @property
-  def _fields(self):
+  def _fields(self) -> Dict[str, field.Field]:
     return self._metaclass.schema
 
   @property
-  def _primary_keys(self):
+  def _primary_keys(self) -> List[str]:
     return self._metaclass.primary_keys
 
   @property
-  def _relations(self):
+  def _relations(self) -> Dict[str, relationship.Relationship]:
     return self._metaclass.relations
 
   @property
-  def _table(self):
+  def _table(self) -> str:
     return self._metaclass.table
 
   @property
-  def values(self):
+  def values(self) -> Dict[str, Any]:
     return {key: getattr(self, key) for key in self._columns}
 
-  def changes(self):
+  def changes(self) -> Dict[str, Any]:
     values = self.values
     return {
         key: values[key]
@@ -388,21 +388,22 @@ class Model(ModelApi):
         if values[key] != self.start_values.get(key)
     }
 
-  def delete(self, transaction=None):
+  def delete(self, transaction: spanner_transaction.Transaction = None) -> None:
     key = [getattr(self, column) for column in self._primary_keys]
     keyset = spanner.KeySet([key])
 
     db_api = api.SpannerApi.delete
     args = [self._table, keyset]
     if transaction is not None:
-      return db_api(transaction, *args)
+      db_api(transaction, *args)
     else:
-      return api.SpannerApi.run_write(db_api, *args)
+      api.SpannerApi.run_write(db_api, *args)
 
-  def id(self):
+  def id(self) -> Dict[str, Any]:
     return {key: self.values[key] for key in self._primary_keys}
 
-  def reload(self, transaction=None):
+  def reload(self, transaction: spanner_transaction.Transaction = None
+            ) -> Optional[Model]:
     updated_object = self._metaclass.find(transaction, **self.id())
     if updated_object is None:
       return None
@@ -412,7 +413,7 @@ class Model(ModelApi):
     self._persisted = True
     return self
 
-  def save(self, transaction=None):
+  def save(self, transaction: spanner_transaction.Transaction = None) -> Model:
     if self._persisted:
       changed_values = self.changes()
       if changed_values:
