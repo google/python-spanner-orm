@@ -1,4 +1,132 @@
 # Google Cloud Spanner ORM
 
-Python 3 module for Google Cloud Spanner ORM.
-It is not officially released, still a work in progress. 
+This is a lightweight ORM written in Python and built on top of Cloud Spanner.
+
+## Getting started
+
+### Connecting
+To connect the Spanner ORM to an existing Spanner database:
+``` python
+import spanner_orm
+spanner_orm.connect(instance_name, database_name)
+```
+
+`project` and `credentials` are optional parameters, and the standard Spanner
+client library will attempt to infer them automatically if not specified.
+A session pool may be also specified by the `pool` parameter if necessary. An
+explanation of session pools may be found
+[here](https://googleapis.github.io/google-cloud-python/latest/spanner/advanced-session-pool-topics.html),
+but the implementation of TransactionPingingPool in the standard Spanner client
+libraries seems to not work, and the thread code associated with using the PingingPool
+also seems to not do what is intended (ping the pool every so often)
+
+### Creating a model
+In order to write to and read from a table on Spanner, you need to tell the ORM
+about the table by writing a model class, which looks something like this:
+``` python
+import spanner_orm
+
+class TestModel(spanner_orm.Model):
+  __table__ = 'TestTable'  # Name of table in Spanner
+  __interleaved__ = None  # Name of table that the current table is interleaved
+                          # into. None or omitted if the table is not interleaved
+
+  # Every column in the table has a corresponding Field, where the first parameter
+  # is the type of field. The primary key is constructed by the fields labeled
+  # with primary_key=True in the order they appear in the class.
+  # The name of the column is the same as the name of the class attribute
+  id = spanner_orm.Field(spanner_orm.String, primary_key=True)
+  value = spanner_orm.Field(spanner_orm.Integer, nullable=True)
+
+  # Secondary indexes are specified in a similar manner to fields:
+  value_index = spanner_orm.Index(['value'])
+
+  # To indicate that there is a foreign key relationship from this table to
+  # another one, use a Relationship. This has no impact on the representation
+  # of the table inside Spanner
+  fake_relationship = spanner_orm.Relationship(
+    'OtherModel',
+    {'value': 'other_model_column'})
+```
+
+If the model does not refer to an existing table on Spanner, we can create
+the corresponding table on the database through the ORM in one of two ways:
+
+``` python
+spanner_orm.connect_admin(
+  'instance_name',
+  'database_name',
+  create_ddl=spanner_orm.model_creation_ddl(TestModel))
+spanner_orm.spanner_admin_api().create()
+```
+
+or by executing a Migration where the upgrade method returns a CreateTable for
+the model you have just defined (see section on migrations)
+
+
+### Retrieve data from Spanner
+All queries through Spanner take place in a
+[transaction](https://cloud.google.com/spanner/docs/transactions). The ORM
+usually expects a transaction to be present and provided, but if None is
+specified, a new transaction will be created for that request.
+The two main ways of retrieving data through the ORM are ```where()``` and
+```find()```/```find_multi()```:
+
+``` python
+# where() is invokes on a model class to retrieve models of that tyep. it takes a
+# transaction and then a sequence of conditions.
+# Most conditions that specify a Field, Index, Relationship, or Model can take
+# either the name of the object or the object itself
+test_objects = TestModel.where(None, spanner_orm.greater_than('value', '50'))
+
+# To also retrieve related objects, the includes() condition should be used:
+test_and_other_objects = TestModel.where(None,
+                                         spanner_orm.greater_than(TestModel.value, '50'),
+                                         spanner_orm.includes(TestModel.fake_relationship))
+
+# To create a transaction, run_read_only() or run_write() are used with the
+# method to be run inside the transaction and any arguments to passs to the method.
+# The method is invoked with the transaction as the first argument and then the
+# rest of the provided arguments:
+def callback(transaction, argument):
+  return TestModel.find(transaction, {'id': argument})
+
+specific_object = spanner_orm.spanner_api().run_read_only(callback, 1)
+```
+
+### Write data to Spanner
+The simplest way to write data is to create a Model (or retrieve one and modify
+it) and then call save() on it:
+``` python
+test_model = TestModel({'key': 'key', 'value': 1})
+test_model.save()
+```
+Note that creating a model as per above will fail if there's already a row in
+the database where the primary key matches, as it uses a Spanner INSERT instead
+of an UPDATE, as the ORM thinks it's a new object, as it wasn't retrieved from
+Spanner.
+
+For modifying multiple objects at the same time, the Model ```save_batch()``` method
+can be used:
+``` python
+models = []
+for i in range(10):
+  key = 'test_{}'.format(i)
+  models.append(TestModel({'key': key, 'value': value}))
+TestModel.save_batch(None, models)
+```
+
+```spanner_orm.spanner_api().run_write()``` can be used for executing read-write
+transactions. Note that if a transaction fails due to data being modified after
+the read happened and before the transaction finished executing, the called
+method will be re-run until it succeeds or a certain number of failures happen.
+Make sure that there are no side effects that could cause issues if called
+multiple times. Exceptions thrown out of the called method will abort the
+transaction.
+
+Other write methods are exposed on ```spanner_orm.spanner_api()``` for more
+complex use cases, but you will have to do more work in order to use those
+correctly. See the documentation on those methods for more information.
+
+## Migrations
+TODO(dbrandao): work in progress
