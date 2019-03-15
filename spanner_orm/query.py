@@ -15,6 +15,7 @@
 """Helps build SQL for complex Spanner queries."""
 
 import abc
+from typing import Any, Dict, Iterable, List, Tuple, Type
 
 from spanner_orm import condition
 from spanner_orm import error
@@ -23,7 +24,8 @@ from spanner_orm import error
 class SpannerQuery(abc.ABC):
   """Helps build SQL for complex Spanner queries."""
 
-  def __init__(self, model, conditions):
+  def __init__(self, model: Type[Any],
+               conditions: Iterable[condition.Condition]):
     self.param_offset = 0
     self._model = model
     self._conditions = conditions
@@ -32,23 +34,24 @@ class SpannerQuery(abc.ABC):
     self._types = {}
     self._build()
 
-  def _next_param_index(self):
+  def _next_param_index(self) -> int:
     return self.param_offset + len(self._parameters)
 
-  def parameters(self):
+  def parameters(self) -> Dict[str, Any]:
     return self._parameters
 
-  def sql(self):
+  def sql(self) -> str:
     return self._sql
 
-  def types(self):
+  def types(self) -> Dict[str, Any]:
     return self._types
 
   @abc.abstractmethod
-  def process_results(self, results):
+  def process_results(self, results: List[List[Any]]) -> None:
     pass
 
-  def _segments(self, segment_type):
+  def _segments(
+      self, segment_type: condition.Segment) -> List[condition.Condition]:
     segments = [
         condition for condition in self._conditions
         if condition.segment() == segment_type
@@ -57,7 +60,7 @@ class SpannerQuery(abc.ABC):
       segment.bind(self._model)
     return segments
 
-  def _build(self):
+  def _build(self) -> None:
     """Builds the Spanner query from the given model and conditions."""
     segment_builders = [
         self._select, self._from, self._where, self._order, self._limit
@@ -71,11 +74,11 @@ class SpannerQuery(abc.ABC):
       self._types.update(segment_types)
 
   @abc.abstractmethod
-  def _select(self):
+  def _select(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     """Processes the SELECT segment of the SQL query."""
     pass
 
-  def _from(self):
+  def _from(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     """Processes the FROM segment of the SQL query."""
     froms = self._segments(condition.Segment.FROM)
     index_sql = ''
@@ -89,7 +92,7 @@ class SpannerQuery(abc.ABC):
 
     return (sql, {}, {})
 
-  def _where(self):
+  def _where(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     """Processes the WHERE segment of the SQL query."""
     sql, sql_parts, parameters, types = '', [], {}, {}
     wheres = self._segments(condition.Segment.WHERE)
@@ -102,7 +105,7 @@ class SpannerQuery(abc.ABC):
       sql = ' WHERE {}'.format(' AND '.join(sql_parts))
     return (sql, parameters, types)
 
-  def _order(self):
+  def _order(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     """Processes the ORDER BY segment of the SQL query."""
     sql, parameters, types = '', {}, {}
     orders = self._segments(condition.Segment.ORDER_BY)
@@ -116,7 +119,7 @@ class SpannerQuery(abc.ABC):
       types = order.types()
     return (sql, parameters, types)
 
-  def _limit(self):
+  def _limit(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     """Processes the LIMIT segment of the SQL query."""
     sql, parameters, types = '', {}, {}
     limits = self._segments(condition.Segment.LIMIT)
@@ -134,37 +137,40 @@ class SpannerQuery(abc.ABC):
 class CountQuery(SpannerQuery):
   """Handles COUNT Spanner queries."""
 
-  def __init__(self, model, conditions):
+  def __init__(self, model: Type[Any],
+               conditions: Iterable[condition.Condition]):
     super().__init__(model, conditions)
     for c in conditions:
       if c.segment() != condition.Segment.WHERE:
         raise error.SpannerError('Only conditions that affect the WHERE clause '
                                  'are allowed for count queries')
 
-  def _select(self):
+  def _select(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     return ('SELECT COUNT(*)', {}, {})
 
-  def process_results(self, results):
-    return results[0][0]
+  def process_results(self, results: List[List[Any]]) -> int:
+    return int(results[0][0])
 
 
 class SelectQuery(SpannerQuery):
   """Handles SELECT Spanner queries."""
 
-  def __init__(self, model, conditions):
+  def __init__(self, model: Type[Any],
+               conditions: Iterable[condition.Condition]):
     self._model = model
     self._conditions = conditions
     self._joins = self._segments(condition.Segment.JOIN)
     self._subqueries = [
         _SelectSubQuery(join.destination, join.conditions)
         for join in self._joins
+        if isinstance(join, condition.IncludesCondition)
     ]
     super().__init__(model, conditions)
 
-  def _select_prefix(self):
+  def _select_prefix(self) -> str:
     return 'SELECT'
 
-  def _select(self):
+  def _select(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     parameters, types = {}, {}
     columns = [
         '{alias}.{column}'.format(
@@ -180,10 +186,11 @@ class SelectQuery(SpannerQuery):
         prefix=self._select_prefix(), columns=', '.join(columns)), parameters,
             types)
 
-  def process_results(self, results):
+  def process_results(self,
+                      results: List[List[Any]]) -> List[Type[Any]]:
     return [self._process_row(result) for result in results]
 
-  def _process_row(self, row):
+  def _process_row(self, row: List[Any]) -> Type[Any]:
     """Parses a row of results from a Spanner query based on the conditions."""
     values = dict(zip(self._model.columns, row))
     join_values = row[len(self._model.columns):]
@@ -202,5 +209,5 @@ class SelectQuery(SpannerQuery):
 
 class _SelectSubQuery(SelectQuery):
 
-  def _select_prefix(self):
+  def _select_prefix(self) -> str:
     return 'SELECT AS STRUCT'
