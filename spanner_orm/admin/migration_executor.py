@@ -13,8 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Handles execution of migrations."""
+
+from __future__ import annotations
+
 import datetime
 import logging
+from typing import Any, Dict, Optional
 
 from spanner_orm import api
 from spanner_orm import error
@@ -24,18 +28,20 @@ from spanner_orm.admin import migration_manager
 from spanner_orm.admin import migration_status
 from spanner_orm.admin import update
 
+from google.auth import credentials as auth_credentials
+
 _logger = logging.getLogger(__name__)
 
 
-class MigrationExecutor(object):
+class MigrationExecutor:
   """Handles execution of migrations."""
 
   def __init__(self,
-               instance,
-               database,
-               project=None,
-               credentials=None,
-               basedir=None):
+               instance: str,
+               database: str,
+               project: Optional[str] = None,
+               credentials: Optional[auth_credentials.Credentials] = None,
+               basedir: Optional[str] = None):
     self._manager = migration_manager.MigrationManager(basedir)
     self._migration_status_map = None
     self._instance = instance
@@ -43,15 +49,16 @@ class MigrationExecutor(object):
     self._project = project
     self._credentials = credentials
 
-  def migrated(self, migration_id):
+  def migrated(self, migration_id: str) -> bool:
     if migration_id is None:
       return True
     return self._migration_status().get(migration_id, False)
 
-  def migrations(self):
+  # TODO(dbrandao): make a Migration object so this is no longer Any
+  def migrations(self) -> Any:
     return self._manager.migrations
 
-  def migrate(self, target_migration=None):
+  def migrate(self, target_migration: Optional[str] = None) -> None:
     """Executes unmigrated migrations on the curent database.
 
     Note: SpannerApi and SpannerAdminApi connections are modified as a result
@@ -79,7 +86,7 @@ class MigrationExecutor(object):
       self._update_status(migration.migration_id, True)
     self._hangup()
 
-  def rollback(self, target_migration):
+  def rollback(self, target_migration: str) -> None:
     """Rolls back migrated migrations on the curent database.
 
     Note: SpannerApi and SpannerAdminApi connections are modified as a result
@@ -110,7 +117,7 @@ class MigrationExecutor(object):
       self._update_status(migration.migration_id, False)
     self._hangup()
 
-  def _connect(self):
+  def _connect(self) -> None:
     admin_api.SpannerAdminApi.connect(
         self._instance,
         self._database,
@@ -122,11 +129,12 @@ class MigrationExecutor(object):
         project=self._project,
         credentials=self._credentials)
 
-  def _hangup(self):
+  def _hangup(self) -> None:
     admin_api.SpannerAdminApi.hangup()
     api.SpannerApi.hangup()
 
-  def _filter_migrations(self, migrations, migrated, last_migration):
+  def _filter_migrations(self, migrations: Any, migrated: bool,
+                         last_migration: Optional[str]) -> Any:
     """Filters the list of migrations according to the desired conditions.
 
     Args:
@@ -153,7 +161,7 @@ class MigrationExecutor(object):
               last_migration))
     return filtered
 
-  def _migration_status(self):
+  def _migration_status(self) -> Dict[str, bool]:
     """Gathers from Spanner which migrations have been executed."""
     if self._migration_status_map is None:
       model_from_db = metadata.SpannerMetadata.model(
@@ -167,7 +175,7 @@ class MigrationExecutor(object):
 
     return self._migration_status_map
 
-  def _update_status(self, migration_id, new_status):
+  def _update_status(self, migration_id: str, new_status: bool) -> None:
     """Updates migration status in the database for the given migration."""
     new_model = migration_status.MigrationStatus({
         'id': migration_id,
@@ -178,7 +186,7 @@ class MigrationExecutor(object):
         None, [new_model], force_write=True)
     self._migration_status()[migration_id] = new_status
 
-  def _validate_migrations(self):
+  def _validate_migrations(self) -> None:
     """Validates the migration status of all migrations makes sense."""
     migrations = self.migrations()
     if not migrations:

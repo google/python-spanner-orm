@@ -223,8 +223,7 @@ class MigrationsTest(unittest.TestCase):
     api.connect = mock.Mock()
     admin_api.connect = mock.Mock()
 
-    executor = migration_executor.MigrationExecutor(
-        1, 2, credentials=3, project=4)
+    executor = migration_executor.MigrationExecutor('1', '2', project='3')
     first = TestMigration('1', None)
     second = TestMigration('2', 1)
     third = TestMigration('3', 2)
@@ -234,8 +233,9 @@ class MigrationsTest(unittest.TestCase):
       with mock.patch.object(executor, '_migration_status_map', migrated):
         executor.migrate()
         self.assertEqual(migrated, {'1': True, '2': True, '3': True})
-    api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
-    admin_api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
+    api.connect.assert_called_once_with('1', '2', credentials=None, project='3')
+    admin_api.connect.assert_called_once_with(
+        '1', '2', credentials=None, project='3')
 
   @mock.patch('spanner_orm.admin.api.SpannerAdminApi')
   @mock.patch('spanner_orm.api.SpannerApi')
@@ -243,8 +243,7 @@ class MigrationsTest(unittest.TestCase):
     api.connect = mock.Mock()
     admin_api.connect = mock.Mock()
 
-    executor = migration_executor.MigrationExecutor(
-        1, 2, credentials=3, project=4)
+    executor = migration_executor.MigrationExecutor('1', '2', project='3')
     first = TestMigration('1', None)
     second = TestMigration('2', 1)
     third = TestMigration('3', 2)
@@ -254,8 +253,9 @@ class MigrationsTest(unittest.TestCase):
       with mock.patch.object(executor, '_migration_status_map', migrated):
         executor.rollback('1')
         self.assertEqual(migrated, {'1': False, '2': False, '3': False})
-    api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
-    admin_api.connect.assert_called_once_with(1, 2, credentials=3, project=4)
+    api.connect.assert_called_once_with('1', '2', credentials=None, project='3')
+    admin_api.connect.assert_called_once_with(
+        '1', '2', credentials=None, project='3')
 
 
 if __name__ == '__main__':

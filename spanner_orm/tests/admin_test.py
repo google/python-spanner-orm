@@ -22,6 +22,7 @@ from spanner_orm.admin import index as index_schema
 from spanner_orm.admin import index_column
 from spanner_orm.admin import metadata
 from spanner_orm.admin import table
+from spanner_orm.admin import update
 from spanner_orm.tests import models
 
 
@@ -161,6 +162,14 @@ class AdminTest(unittest.TestCase):
     self.assertEqual(meta.indexes[name].columns, index_cols)
     self.assertEqual(getattr(meta, name).columns, index_cols)
 
+  def test_model_creation_ddl(self):
+    expected_ddl = [
+        'CREATE TABLE IndexTestModel (key STRING(MAX) NOT NULL,'
+        ' value STRING(MAX) NOT NULL) PRIMARY KEY (key)',
+        'CREATE INDEX value_index ON IndexTestModel (value)'
+    ]
+    ddl = update.model_creation_ddl(models.IndexTestModel)
+    self.assertEqual(ddl, expected_ddl)
 
 if __name__ == '__main__':
   logging.basicConfig()
