@@ -35,10 +35,10 @@ class ApiTest(unittest.TestCase):
 
   def test_api_error_when_not_connected(self):
     with self.assertRaises(error.SpannerError):
-      api.SpannerApi.run_read_only(None)
+      api.SpannerApi.run_read_only(api.SpannerApi.find)
 
     with self.assertRaises(error.SpannerError):
-      api.SpannerApi.run_write(None)
+      api.SpannerApi.run_write(api.SpannerApi.find)
 
   @mock.patch('google.cloud.spanner.Client')
   def test_admin_api_connection(self, client):
