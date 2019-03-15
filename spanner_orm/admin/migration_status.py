@@ -14,6 +14,8 @@
 # limitations under the License.
 """Indicates whether a migration has been applied to the current database."""
 
+from __future__ import annotations
+
 from spanner_orm import field
 from spanner_orm import model
 

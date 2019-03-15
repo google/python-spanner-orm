@@ -14,12 +14,16 @@
 # limitations under the License.
 """Model for interacting with Spanner column schema table."""
 
+from __future__ import annotations
+
+from typing import Type
+
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.admin import schema
 
 
-class ColumnSchema(schema.Schema):
+class ColumnSchema(schema.InformationSchema):
   """Model for interacting with Spanner column schema table."""
 
   __table__ = 'information_schema.columns'
@@ -31,10 +35,10 @@ class ColumnSchema(schema.Schema):
   is_nullable = field.Field(field.String)
   spanner_type = field.Field(field.String)
 
-  def nullable(self):
+  def nullable(self) -> bool:
     return self.is_nullable == 'YES'
 
-  def field_type(self):
+  def field_type(self) -> Type[field.FieldType]:
     for field_type in field.ALL_TYPES:
       if self.spanner_type == field_type.ddl():
         return field_type
