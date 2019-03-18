@@ -35,21 +35,19 @@ CallableReturn = TypeVar('CallableReturn')
 class SpannerReadApi(abc.ABC):
   """Handles sending read requests to Spanner."""
 
-  @classmethod
+  @property
   @abc.abstractmethod
-  def _connection(cls) -> spanner_database.Database:
+  def _connection(self) -> spanner_database.Database:
     raise NotImplementedError
 
-  @classmethod
-  def run_read_only(cls, method: Callable[..., CallableReturn], *args: Any,
+  def run_read_only(self, method: Callable[..., CallableReturn], *args: Any,
                     **kwargs: Any) -> CallableReturn:
     """Wraps read-only queries in a read transaction."""
-    with cls._connection().snapshot(multi_use=True) as snapshot:
+    with self._connection.snapshot(multi_use=True) as snapshot:
       return method(snapshot, *args, **kwargs)
 
   # Read methods
-  @staticmethod
-  def find(transaction: spanner_transaction.Transaction, table_name: str,
+  def find(self, transaction: spanner_transaction.Transaction, table_name: str,
            columns: Iterable[str],
            keyset: spanner.KeySet) -> List[Iterable[Any]]:
     """Obtains rows with primary_keys from the given table."""
@@ -59,8 +57,7 @@ class SpannerReadApi(abc.ABC):
         table=table_name, columns=columns, keyset=keyset)
     return list(stream_results)
 
-  @staticmethod
-  def sql_query(transaction: spanner_transaction.Transaction, query: str,
+  def sql_query(self, transaction: spanner_transaction.Transaction, query: str,
                 parameters: Iterable[str],
                 parameter_types: Iterable[Any]) -> List[Iterable[Any]]:
     """Runs a read only SQL query."""
@@ -74,43 +71,40 @@ class SpannerReadApi(abc.ABC):
 class SpannerWriteApi(abc.ABC):
   """Handles sending write requests to Spanner."""
 
-  @classmethod
+  @property
   @abc.abstractmethod
-  def _connection(cls) -> spanner_database.SpannerDatabase:
+  def _connection(self) -> spanner_database.SpannerDatabase:
     raise NotImplementedError
 
-  @classmethod
-  def run_write(cls, method: Callable[..., CallableReturn], *args: Any,
+  def run_write(self, method: Callable[..., CallableReturn], *args: Any,
                 **kwargs: Any) -> CallableReturn:
     """Wraps write and read-write queries in a transaction."""
-    return cls._connection().run_in_transaction(method, *args, **kwargs)
+    return self._connection.run_in_transaction(method, *args, **kwargs)
 
-  @staticmethod
-  def delete(transaction: spanner_transaction.Transaction, table_name: str,
-             keyset: spanner.KeySet) -> None:
+  def delete(self, transaction: spanner_transaction.Transaction,
+             table_name: str, keyset: spanner.KeySet) -> None:
     _logger.debug('Delete table=%s keys=%s', table_name, keyset.keys)
     transaction.delete(table=table_name, keyset=keyset)
 
-  # Write methods
-  @staticmethod
-  def insert(transaction: spanner_transaction.Transaction, table_name: str,
-             columns: Iterable[str], values: Iterable[Iterable[Any]]) -> None:
+  def insert(self, transaction: spanner_transaction.Transaction,
+             table_name: str, columns: Iterable[str],
+             values: Iterable[Iterable[Any]]) -> None:
     """Add rows to a table."""
     _logger.debug('Insert table=%s columns=%s values=%s', table_name, columns,
                   values)
     transaction.insert(table=table_name, columns=columns, values=values)
 
-  @staticmethod
-  def update(transaction: spanner_transaction.Transaction, table_name: str,
-             columns: Iterable[str], values: Iterable[Iterable[Any]]) -> None:
+  def update(self, transaction: spanner_transaction.Transaction,
+             table_name: str, columns: Iterable[str],
+             values: Iterable[Iterable[Any]]) -> None:
     """Updates rows of a table."""
     _logger.debug('Update table=%s columns=%s values=%s', table_name, columns,
                   values)
     transaction.update(table=table_name, columns=columns, values=values)
 
-  @staticmethod
-  def upsert(transaction: spanner_transaction.Transaction, table_name: str,
-             columns: Iterable[str], values: Iterable[Iterable[Any]]) -> None:
+  def upsert(self, transaction: spanner_transaction.Transaction,
+             table_name: str, columns: Iterable[str],
+             values: Iterable[Iterable[Any]]) -> None:
     """Updates existing rows of a table or adds rows if they don't exist."""
     _logger.debug('Upsert table=%s columns=%s values=%s', table_name, columns,
                   values)
@@ -118,39 +112,59 @@ class SpannerWriteApi(abc.ABC):
         table=table_name, columns=columns, values=values)
 
 
+class SpannerConnection:
+  """Class that handles connecting to a Spanner database."""
+
+  def __init__(self,
+               instance: str,
+               database: str,
+               project: Optional[str] = None,
+               credentials: Optional[auth_credentials.Credentials] = None,
+               pool: Optional[spanner.Pool] = None,
+               create_ddl: Optional[Iterable[str]] = None):
+    """Connects to the specified Spanner database."""
+    client = spanner.Client(project=project, credentials=credentials)
+    instance = client.instance(instance)
+    self.database = instance.database(
+        database, pool=pool, ddl_statements=create_ddl)
+
+
 class SpannerApi(SpannerReadApi, SpannerWriteApi):
   """Class that handles reading from and writing to Spanner tables."""
 
-  _connection_info = None
-  _spanner_connection = None
+  def __init__(self, connection: SpannerConnection):
+    self._spanner_connection = connection
 
-  @classmethod
-  def _connection(cls) -> spanner_database.SpannerDatabase:
-    if not cls._spanner_connection:
-      raise error.SpannerError('Not connected to spanner')
-    return cls._spanner_connection
+  @property
+  def _connection(self):
+    return self._spanner_connection.database
 
-  # Spanner connection methods
-  @classmethod
-  def connect(cls,
-              instance: str,
-              database: str,
-              project: Optional[str] = None,
-              credentials: Optional[auth_credentials.Credentials] = None,
-              pool: Optional[spanner.Pool] = None) -> None:
-    """Connects to the specified Spanner spanner_database."""
-    connection_info = (instance, database, project, credentials)
-    if cls._spanner_connection is not None:
-      if connection_info == cls._connection_info:
-        return
-      cls.hangup()
 
-    client = spanner.Client(project=project, credentials=credentials)
-    instance = client.instance(instance)
-    cls._spanner_connection = instance.database(database, pool=pool)
-    cls._connection_info = connection_info
+_api = None  # type: Optional[SpannerApi]
 
-  @classmethod
-  def hangup(cls) -> None:
-    cls._spanner_connection = None
-    cls._connection_info = None
+
+def connect(instance: str,
+            database: str,
+            project: Optional[str] = None,
+            credentials: Optional[auth_credentials.Credentials] = None,
+            pool: Optional[spanner.Pool] = None) -> SpannerApi:
+  connection = SpannerConnection(
+      instance, database, project=project, credentials=credentials, pool=pool)
+  return from_connection(connection)
+
+
+def from_connection(connection: SpannerConnection) -> SpannerApi:
+  global _api
+  _api = SpannerApi(connection)
+  return _api
+
+
+def hangup() -> None:
+  global _api
+  _api = None
+
+
+def spanner_api() -> SpannerApi:
+  if not _api:
+    raise error.SpannerError('Must connect to Spanner before calling APIs')
+  return _api

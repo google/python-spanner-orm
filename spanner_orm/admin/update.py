@@ -37,7 +37,7 @@ class SchemaUpdate(abc.ABC):
 
   def execute(self) -> None:
     self.validate()
-    api.SpannerAdminApi.update_schema(self.ddl())
+    api.spanner_admin_api().update_schema(self.ddl())
 
   @abc.abstractmethod
   def validate(self) -> None:

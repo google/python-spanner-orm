@@ -22,11 +22,12 @@ from spanner_orm.tests import models
 
 class ModelApiTest(unittest.TestCase):
 
-  @mock.patch('spanner_orm.api.SpannerApi.find')
-  def test_find_calls_api(self, find):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_find_calls_api(self, api):
     mock_transaction = mock.Mock()
     models.UnittestModel.find(mock_transaction, string='string', int_=1)
 
+    find = api.return_value.find
     find.assert_called_once()
     (transaction, table, columns, keyset), _ = find.call_args
     self.assertEqual(transaction, mock_transaction)
@@ -34,10 +35,11 @@ class ModelApiTest(unittest.TestCase):
     self.assertEqual(columns, models.UnittestModel.columns)
     self.assertEqual(keyset.keys, [[1, 'string']])
 
-  @mock.patch('spanner_orm.api.SpannerApi.find')
-  def test_find_result(self, find):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_find_result(self, api):
     mock_transaction = mock.Mock()
-    find.return_value = [['key', 'value_1', None]]
+
+    api.return_value.find.return_value = [['key', 'value_1', None]]
     result = models.SmallTestModel.find(mock_transaction, key='key')
     if result:
       self.assertEqual(result.key, 'key')
@@ -46,14 +48,15 @@ class ModelApiTest(unittest.TestCase):
     else:
       self.fail('Failed to find result')
 
-  @mock.patch('spanner_orm.api.SpannerApi.find')
-  def test_find_multi_calls_api(self, find):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_find_multi_calls_api(self, api):
     mock_transaction = mock.Mock()
     models.UnittestModel.find_multi(mock_transaction, [{
         'string': 'string',
         'int_': 1
     }])
 
+    find = api.return_value.find
     find.assert_called_once()
     (transaction, table, columns, keyset), _ = find.call_args
     self.assertEqual(transaction, mock_transaction)
@@ -61,10 +64,10 @@ class ModelApiTest(unittest.TestCase):
     self.assertEqual(columns, models.UnittestModel.columns)
     self.assertEqual(keyset.keys, [[1, 'string']])
 
-  @mock.patch('spanner_orm.api.SpannerApi.find')
-  def test_find_multi_result(self, find):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_find_multi_result(self, api):
     mock_transaction = mock.Mock()
-    find.return_value = [['key', 'value_1', None]]
+    api.return_value.find.return_value = [['key', 'value_1', None]]
     results = models.SmallTestModel.find_multi(mock_transaction, [{
         'key': 'key'
     }])
@@ -73,11 +76,12 @@ class ModelApiTest(unittest.TestCase):
     self.assertEqual(results[0].value_1, 'value_1')
     self.assertIsNone(results[0].value_2)
 
-  @mock.patch('spanner_orm.api.SpannerApi.insert')
-  def test_create_calls_api(self, insert):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_create_calls_api(self, api):
     mock_transaction = mock.Mock()
     models.SmallTestModel.create(mock_transaction, key='key', value_1='value')
 
+    insert = api.return_value.insert
     insert.assert_called_once()
     (transaction, table, columns, values), _ = insert.call_args
     self.assertEqual(transaction, mock_transaction)
@@ -97,39 +101,40 @@ class ModelApiTest(unittest.TestCase):
     self.assertEqual(list(columns), ['key', 'value_1', 'value_2'])
     self.assertEqual(list(values), [['key', 'value', None]])
 
-  @mock.patch('spanner_orm.api.SpannerApi.insert')
-  def test_save_batch_inserts(self, insert):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_save_batch_inserts(self, api):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value'}
     not_persisted = models.SmallTestModel(values)
     models.SmallTestModel.save_batch(mock_transaction, [not_persisted])
-    self.assert_api_called(insert, mock_transaction)
+    self.assert_api_called(api.return_value.insert, mock_transaction)
 
-  @mock.patch('spanner_orm.api.SpannerApi.update')
-  def test_save_batch_updates(self, update):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_save_batch_updates(self, api):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value'}
     persisted = models.SmallTestModel(values, persisted=True)
     models.SmallTestModel.save_batch(mock_transaction, [persisted])
 
-    self.assert_api_called(update, mock_transaction)
+    self.assert_api_called(api.return_value.update, mock_transaction)
 
-  @mock.patch('spanner_orm.api.SpannerApi.upsert')
-  def test_save_batch_force_write_upserts(self, upsert):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_save_batch_force_write_upserts(self, api):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value'}
     not_persisted = models.SmallTestModel(values)
     models.SmallTestModel.save_batch(
         mock_transaction, [not_persisted], force_write=True)
-    self.assert_api_called(upsert, mock_transaction)
+    self.assert_api_called(api.return_value.upsert, mock_transaction)
 
-  @mock.patch('spanner_orm.api.SpannerApi.delete')
-  def test_delete_batch_deletes(self, delete):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_delete_batch_deletes(self, api):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value'}
     model = models.SmallTestModel(values)
     models.SmallTestModel.delete_batch(mock_transaction, [model])
 
+    delete = api.return_value.delete
     delete.assert_called_once()
     (transaction, table, keyset), _ = delete.call_args
     self.assertEqual(transaction, mock_transaction)

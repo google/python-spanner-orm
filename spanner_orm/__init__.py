@@ -30,9 +30,20 @@ from spanner_orm.admin import update
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 # pylint: disable=invalid-name
-SpannerApi = api.SpannerApi
-SpannerAdminApi = admin_api.SpannerAdminApi
+SpannerConnection = api.SpannerConnection
 SpannerError = error.SpannerError
+
+SpannerApi = api.SpannerApi
+connect = api.connect
+from_connection = api.from_connection
+hangup = api.hangup
+spanner_api = api.spanner_api
+
+SpannerAdminApi = admin_api.SpannerAdminApi
+connect_admin = admin_api.connect
+from_admin_connection = admin_api.from_connection
+hangup_admin = admin_api.hangup
+spanner_admin_api = admin_api.spanner_admin_api
 
 Model = model.Model
 

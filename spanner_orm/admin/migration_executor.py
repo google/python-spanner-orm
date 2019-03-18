@@ -29,8 +29,6 @@ from spanner_orm.admin import migration_manager
 from spanner_orm.admin import migration_status
 from spanner_orm.admin import update
 
-from google.auth import credentials as auth_credentials
-
 _logger = logging.getLogger(__name__)
 
 
@@ -38,17 +36,11 @@ class MigrationExecutor:
   """Handles execution of migrations."""
 
   def __init__(self,
-               instance: str,
-               database: str,
-               project: Optional[str] = None,
-               credentials: Optional[auth_credentials.Credentials] = None,
+               connection: api.SpannerConnection,
                basedir: Optional[str] = None):
     self._manager = migration_manager.MigrationManager(basedir)
     self._migration_status_map = None
-    self._instance = instance
-    self._database = database
-    self._project = project
-    self._credentials = credentials
+    self._connection = connection
 
   def migrated(self, migration_id: str) -> bool:
     if migration_id is None:
@@ -97,10 +89,10 @@ class MigrationExecutor:
       target_migration: Stop rolling back migrations after this migration is
         rolled back. Must be present in list of migrated migrations.
     """
-    self._connect()
     if not target_migration:
       raise error.SpannerError('Must specify a migration to roll back')
 
+    self._connect()
     self._validate_migrations()
     # Filter to migrated migrations from most recently applied
     migrations = self._filter_migrations(
@@ -118,20 +110,10 @@ class MigrationExecutor:
     self._hangup()
 
   def _connect(self) -> None:
-    admin_api.SpannerAdminApi.connect(
-        self._instance,
-        self._database,
-        project=self._project,
-        credentials=self._credentials)
-    api.SpannerApi.connect(
-        self._instance,
-        self._database,
-        project=self._project,
-        credentials=self._credentials)
+    admin_api.from_connection(self._connection)
 
   def _hangup(self) -> None:
-    admin_api.SpannerAdminApi.hangup()
-    api.SpannerApi.hangup()
+    admin_api.hangup()
 
   def _filter_migrations(
       self, migrations: Iterable[migration.Migration], migrated: bool,

@@ -33,21 +33,26 @@ def now():
 
 class QueryTest(parameterized.TestCase):
 
-  @mock.patch('spanner_orm.api.SpannerApi')
+  @mock.patch('spanner_orm.api.spanner_api')
   def test_where(self, spanner_api):
+    spanner_api.return_value.sql_query.return_value = []
+
     models.UnittestModel.where_equal(True, int_=3)
-    (_, sql, parameters, types), _ = spanner_api.sql_query.call_args
+    (_, sql, parameters,
+     types), _ = spanner_api.return_value.sql_query.call_args
 
     expected_sql = 'SELECT .* FROM table WHERE table.int_ = @int_0'
     self.assertRegex(sql, expected_sql)
     self.assertEqual(parameters, {'int_0': 3})
     self.assertEqual(types, {'int_0': field.Integer.grpc_type()})
 
-  @mock.patch('spanner_orm.api.SpannerApi')
+  @mock.patch('spanner_orm.api.spanner_api')
   def test_count(self, spanner_api):
+    spanner_api.return_value.count.return_value = [[0]]
     column, value = 'int_', 3
     models.UnittestModel.count_equal(True, int_=3)
-    (_, sql, parameters, types), _ = spanner_api.sql_query.call_args
+    (_, sql, parameters,
+     types), _ = spanner_api.return_value.sql_query.call_args
 
     column_key = '{}0'.format(column)
     expected_sql = r'SELECT COUNT\(\*\) FROM table WHERE table.{} = @{}'.format(

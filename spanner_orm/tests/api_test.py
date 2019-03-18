@@ -26,35 +26,32 @@ class ApiTest(unittest.TestCase):
   @mock.patch('google.cloud.spanner.Client')
   def test_api_connection(self, client):
     connection = self.mock_connection(client)
-    api.SpannerApi.connect('', '', '')
-    self.assertEqual(api.SpannerApi._connection(), connection)
+    api.connect('', '', '')
+    self.assertEqual(api.spanner_api()._connection, connection)
 
-    api.SpannerApi.hangup()
+    api.hangup()
     with self.assertRaises(error.SpannerError):
-      api.SpannerApi._connection()
+      api.spanner_api()
 
   def test_api_error_when_not_connected(self):
     with self.assertRaises(error.SpannerError):
-      api.SpannerApi.run_read_only(api.SpannerApi.find)
-
-    with self.assertRaises(error.SpannerError):
-      api.SpannerApi.run_write(api.SpannerApi.find)
+      api.spanner_api()
 
   @mock.patch('google.cloud.spanner.Client')
   def test_admin_api_connection(self, client):
     connection = self.mock_connection(client)
-    admin_api.SpannerAdminApi.connect('', '', '')
-    self.assertEqual(admin_api.SpannerAdminApi._connection(), connection)
+    admin_api.connect('', '', '')
+    self.assertEqual(admin_api.spanner_admin_api()._connection, connection)
 
-    admin_api.SpannerAdminApi.hangup()
+    admin_api.hangup()
     with self.assertRaises(error.SpannerError):
-      api.SpannerApi._connection()
+      admin_api.spanner_admin_api()
 
   @mock.patch('google.cloud.spanner.Client')
   def test_admin_api_create_ddl_connection(self, client):
     connection = self.mock_connection(client)
-    admin_api.SpannerAdminApi.connect('', '', '', create_ddl=['create ddl'])
-    self.assertEqual(admin_api.SpannerAdminApi._connection(), connection)
+    admin_api.connect('', '', '', create_ddl=['create ddl'])
+    self.assertEqual(admin_api.spanner_admin_api()._connection, connection)
 
   def mock_connection(self, client):
     connection = mock.Mock()

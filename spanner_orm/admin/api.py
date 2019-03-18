@@ -25,56 +25,60 @@ from google.cloud import spanner
 from google.cloud.spanner_v1 import database as spanner_database
 
 
-class SpannerAdminApi(api.SpannerReadApi):
+class SpannerAdminApi(api.SpannerReadApi, api.SpannerWriteApi):
   """Manages table schema information on Spanner."""
 
-  _connection_info = None
-  _spanner_connection = None
+  def __init__(self, connection: api.SpannerConnection):
+    self._spanner_connection = connection
 
-  @classmethod
-  def connect(cls,
-              instance: str,
-              database: str,
-              project: Optional[str] = None,
-              credentials: Optional[auth_credentials.Credentials] = None,
-              create_ddl: Optional[Iterable[str]] = None):
-    """Connects to the specified database, optionally creating tables."""
-    connection_info = (instance, database, project, credentials)
-    if cls._spanner_connection is not None:
-      if connection_info == cls._connection_info:
-        return
-      cls.hangup()
+  @property
+  def _connection(self) -> spanner_database.SpannerDatabase:
+    return self._spanner_connection.database
 
-    client = spanner.Client(project=project, credentials=credentials)
-    instance = client.instance(instance)
-
-    if create_ddl is not None:
-      cls._spanner_connection = instance.database(
-          database, ddl_statements=create_ddl)
-      operation = cls._spanner_connection.create()
-      operation.result()
-    else:
-      cls._spanner_connection = instance.database(database)
-
-    cls._connection_info = connection_info
-
-  @classmethod
-  def _connection(cls) -> spanner_database.SpannerDatabase:
-    if not cls._spanner_connection:
-      raise error.SpannerError('Not connected to Spanner')
-    return cls._spanner_connection
-
-  @classmethod
-  def drop_database(cls) -> None:
-    cls._connection().drop()
-    cls.hangup()
-
-  @classmethod
-  def hangup(cls) -> None:
-    cls._spanner_connection = None
-    cls._connection_info = None
-
-  @classmethod
-  def update_schema(cls, change: str) -> None:
-    operation = cls._connection().update_ddl([change])
+  def create_database(self) -> None:
+    operation = self._connection.create()
     operation.result()
+
+  def drop_database(self) -> None:
+    self._connection.drop()
+
+  def update_schema(self, change: str) -> None:
+    operation = self._connection.update_ddl([change])
+    operation.result()
+
+
+_admin_api = None
+
+
+def connect(instance: str,
+            database: str,
+            project: Optional[str] = None,
+            credentials: Optional[auth_credentials.Credentials] = None,
+            pool: Optional[spanner.Pool] = None,
+            create_ddl: Optional[Iterable[str]] = None) -> SpannerAdminApi:
+  """Connects the global Spanner admin API to a Spanner database."""
+  connection = api.SpannerConnection(
+      instance,
+      database,
+      project=project,
+      credentials=credentials,
+      pool=pool,
+      create_ddl=create_ddl)
+  return from_connection(connection)
+
+
+def from_connection(connection: api.SpannerConnection) -> SpannerAdminApi:
+  global _admin_api
+  _admin_api = SpannerAdminApi(connection)
+  return _admin_api
+
+
+def hangup() -> None:
+  global _admin_api
+  _admin_api = None
+
+
+def spanner_admin_api() -> SpannerAdminApi:
+  if not _admin_api:
+    raise error.SpannerError('Must connect to Spanner before calling APIs')
+  return _admin_api
