@@ -23,6 +23,7 @@ from spanner_orm import field
 from spanner_orm import model
 from spanner_orm import relationship
 from spanner_orm.admin import api as admin_api
+from spanner_orm.admin import update
 
 # add NullHandler to root-module logger so that individual modules
 # won't have to.
@@ -62,3 +63,13 @@ ORDER_DESC = condition.OrderType.DESC
 
 transactional_read = decorator.transactional_read
 transactional_write = decorator.transactional_write
+
+CreateTable = update.CreateTable
+DropTable = update.DropTable
+AddColumn = update.AddColumn
+DropColumn = update.DropColumn
+AlterColumn = update.AlterColumn
+CreateIndex = update.CreateIndex
+DropIndex = update.DropIndex
+NoUpdate = update.NoUpdate
+model_creation_ddl = update.model_creation_ddl

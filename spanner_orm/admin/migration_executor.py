@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Any, Dict, Optional
+from typing import Iterable, List, Dict, Optional
 
 from spanner_orm import api
 from spanner_orm import error
 from spanner_orm.admin import api as admin_api
 from spanner_orm.admin import metadata
+from spanner_orm.admin import migration
 from spanner_orm.admin import migration_manager
 from spanner_orm.admin import migration_status
 from spanner_orm.admin import update
@@ -54,8 +55,7 @@ class MigrationExecutor:
       return True
     return self._migration_status().get(migration_id, False)
 
-  # TODO(dbrandao): make a Migration object so this is no longer Any
-  def migrations(self) -> Any:
+  def migrations(self) -> List[migration.Migration]:
     return self._manager.migrations
 
   def migrate(self, target_migration: Optional[str] = None) -> None:
@@ -74,16 +74,16 @@ class MigrationExecutor:
     # Filter to unmigrated migrations
     migrations = self._filter_migrations(self.migrations(), False,
                                          target_migration)
-    for migration in migrations:
-      _logger.info('Processing migration %s', migration.migration_id)
-      schema_update = migration.upgrade()
+    for migration_ in migrations:
+      _logger.info('Processing migration %s', migration_.migration_id)
+      schema_update = migration_.upgrade()
       if not isinstance(schema_update, update.SchemaUpdate):
         raise error.SpannerError(
             'Migration {} did not return a SchemaUpdate'.format(
-                migration.migration_id))
+                migration_.migration_id))
       schema_update.execute()
 
-      self._update_status(migration.migration_id, True)
+      self._update_status(migration_.migration_id, True)
     self._hangup()
 
   def rollback(self, target_migration: str) -> None:
@@ -105,16 +105,16 @@ class MigrationExecutor:
     # Filter to migrated migrations from most recently applied
     migrations = self._filter_migrations(
         reversed(self.migrations()), True, target_migration)
-    for migration in migrations:
-      _logger.info('Processing migration %s', migration.migration_id)
-      schema_update = migration.downgrade()
+    for migration_ in migrations:
+      _logger.info('Processing migration %s', migration_.migration_id)
+      schema_update = migration_.downgrade()
       if not isinstance(schema_update, update.SchemaUpdate):
         raise error.SpannerError(
             'Migration {} did not return a SchemaUpdate'.format(
-                migration.migration_id))
+                migration_.migration_id))
       schema_update.execute()
 
-      self._update_status(migration.migration_id, False)
+      self._update_status(migration_.migration_id, False)
     self._hangup()
 
   def _connect(self) -> None:
@@ -133,8 +133,9 @@ class MigrationExecutor:
     admin_api.SpannerAdminApi.hangup()
     api.SpannerApi.hangup()
 
-  def _filter_migrations(self, migrations: Any, migrated: bool,
-                         last_migration: Optional[str]) -> Any:
+  def _filter_migrations(
+      self, migrations: Iterable[migration.Migration], migrated: bool,
+      last_migration: Optional[str]) -> List[migration.Migration]:
     """Filters the list of migrations according to the desired conditions.
 
     Args:
@@ -147,11 +148,11 @@ class MigrationExecutor:
     """
     filtered = []
     last_migration_found = False
-    for migration in migrations:
-      if self.migrated(migration.migration_id) == migrated:
-        filtered.append(migration)
+    for migration_ in migrations:
+      if self.migrated(migration_.migration_id) == migrated:
+        filtered.append(migration_)
 
-        if last_migration and migration.migration_id == last_migration:
+        if last_migration and migration_.migration_id == last_migration:
           last_migration_found = True
           break
 
@@ -169,8 +170,8 @@ class MigrationExecutor:
       if not model_from_db:
         update.CreateTable(migration_status.MigrationStatus).execute()
       self._migration_status_map = {
-          migration.id: migration.migrated
-          for migration in migration_status.MigrationStatus.all()
+          migration_.id: migration_.migrated
+          for migration_ in migration_status.MigrationStatus.all()
       }
 
     return self._migration_status_map
@@ -198,9 +199,9 @@ class MigrationExecutor:
           'First migration {} depends on unmigrated migration {}'.format(
               first.migration_id, first.prev_migration_id))
 
-    for migration in migrations:
-      if (self.migrated(migration.migration_id) and
-          not self.migrated(migration.prev_migration_id)):
+    for migration_ in migrations:
+      if (self.migrated(migration_.migration_id) and
+          not self.migrated(migration_.prev_migration_id)):
         raise error.SpannerError(
             'Migrated migration {} depends on an unmigrated migration'.format(
-                migration.migration_id))
+                migration_.migration_id))

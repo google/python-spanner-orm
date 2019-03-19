@@ -18,15 +18,17 @@ Migration ID: 5c078bbb4d43
 Created: 2019-02-27 18:52
 """
 
+import spanner_orm
+
 migration_id = '5c078bbb4d43'
 prev_migration_id = '4a7a7dee0718'
 
 
 # Returns a SchemaUpdate object that tells what should be changed
-def upgrade():
-  pass
+def upgrade() -> spanner_orm.NoUpdate:
+  return spanner_orm.NoUpdate()
 
 
 # Returns a SchemaUpdate object that tells how to roll back the changes
-def downgrade():
-  pass
+def downgrade() -> spanner_orm.NoUpdate:
+  return spanner_orm.NoUpdate()
