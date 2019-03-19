@@ -134,12 +134,16 @@ CallableReturn = TypeVar('CallableReturn')
 class ModelApi(metaclass=ModelMetaclass):
   """Implements class-level Spanner queries on top of ModelMetaclass."""
 
+  @classmethod
+  def spanner_api(cls) -> api.SpannerApi:
+    return api.spanner_api()
+
   # Table read methods
   @classmethod
   def all(cls, transaction: Optional[spanner_transaction.Transaction] = None
          ) -> List[ModelObject]:
     args = [cls.table, cls.columns, spanner.KeySet(all_=True)]
-    results = cls._execute_read(api.SpannerApi.find, transaction, args)
+    results = cls._execute_read(cls.spanner_api().find, transaction, args)
     return cls._results_to_models(results)
 
   @classmethod
@@ -148,7 +152,7 @@ class ModelApi(metaclass=ModelMetaclass):
     """Implementation of the SELECT COUNT query."""
     builder = query.CountQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
+    results = cls._execute_read(cls.spanner_api().sql_query, transaction, args)
     return builder.process_results(results)
 
   @classmethod
@@ -182,7 +186,7 @@ class ModelApi(metaclass=ModelMetaclass):
     keyset = spanner.KeySet(keys=key_values)
 
     args = [cls.table, cls.columns, keyset]
-    results = cls._execute_read(api.SpannerApi.find, transaction, args)
+    results = cls._execute_read(cls.spanner_api().find, transaction, args)
     return cls._results_to_models(results)
 
   @classmethod
@@ -191,7 +195,7 @@ class ModelApi(metaclass=ModelMetaclass):
     """Implementation of the SELECT query."""
     builder = query.SelectQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(api.SpannerApi.sql_query, transaction, args)
+    results = cls._execute_read(cls.spanner_api().sql_query, transaction, args)
     return builder.process_results(results)
 
   @classmethod
@@ -220,21 +224,21 @@ class ModelApi(metaclass=ModelMetaclass):
     if transaction is not None:
       return db_api(transaction, *args)
     else:
-      return api.SpannerApi.run_read_only(db_api, *args)
+      return cls.spanner_api().run_read_only(db_api, *args)
 
   # Table write methods
   @classmethod
   def create(cls,
              transaction: Optional[spanner_transaction.Transaction] = None,
              **kwargs: Any) -> None:
-    cls._execute_write(api.SpannerApi.insert, transaction, [kwargs])
+    cls._execute_write(cls.spanner_api().insert, transaction, [kwargs])
 
   @classmethod
   def create_or_update(
       cls,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **kwargs: Any):
-    cls._execute_write(api.SpannerApi.upsert, transaction, [kwargs])
+    cls._execute_write(cls.spanner_api().upsert, transaction, [kwargs])
 
   @classmethod
   def delete_batch(cls, transaction: Optional[spanner_transaction.Transaction],
@@ -245,12 +249,12 @@ class ModelApi(metaclass=ModelMetaclass):
       key_list.append([getattr(model, column) for column in cls.primary_keys])
     keyset = spanner.KeySet(keys=key_list)
 
-    db_api = api.SpannerApi.delete
+    db_api = cls.spanner_api().delete
     args = [cls.table, keyset]
     if transaction is not None:
       return db_api(transaction, *args)
     else:
-      return api.SpannerApi.run_write(db_api, *args)
+      return cls.spanner_api().run_write(db_api, *args)
 
   @classmethod
   def save_batch(cls,
@@ -272,11 +276,11 @@ class ModelApi(metaclass=ModelMetaclass):
     for model in models:
       value = {column: getattr(model, column) for column in cls.columns}
       if force_write:
-        api_method = api.SpannerApi.upsert
+        api_method = cls.spanner_api().upsert
       elif model._persisted:  # pylint: disable=protected-access
-        api_method = api.SpannerApi.update
+        api_method = cls.spanner_api().update
       else:
-        api_method = api.SpannerApi.insert
+        api_method = cls.spanner_api().insert
       work[api_method].append(value)
       model._persisted = True  # pylint: disable=protected-access
     for api_method, values in work.items():
@@ -286,7 +290,7 @@ class ModelApi(metaclass=ModelMetaclass):
   def update(cls,
              transaction: Optional[spanner_transaction.Transaction] = None,
              **kwargs: Any) -> None:
-    cls._execute_write(api.SpannerApi.update, transaction, [kwargs])
+    cls._execute_write(cls.spanner_api().update, transaction, [kwargs])
 
   @classmethod
   def _execute_write(cls, db_api: Callable[..., Any],
@@ -314,7 +318,7 @@ class ModelApi(metaclass=ModelMetaclass):
     if transaction is not None:
       return db_api(transaction, *args)
     else:
-      return api.SpannerApi.run_write(db_api, *args)
+      return cls.spanner_api().run_write(db_api, *args)
 
 
 class Model(ModelApi):
@@ -395,12 +399,12 @@ class Model(ModelApi):
     key = [getattr(self, column) for column in self._primary_keys]
     keyset = spanner.KeySet([key])
 
-    db_api = api.SpannerApi.delete
+    db_api = self.spanner_api().delete
     args = [self._table, keyset]
     if transaction is not None:
       db_api(transaction, *args)
     else:
-      api.SpannerApi.run_write(db_api, *args)
+      self.spanner_api().run_write(db_api, *args)
 
   def id(self) -> Dict[str, Any]:
     return {key: self.values[key] for key in self._primary_keys}

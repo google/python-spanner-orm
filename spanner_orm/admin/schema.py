@@ -16,15 +16,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, NoReturn, Optional, TypeVar
+from typing import NoReturn
 
 from spanner_orm import error
 from spanner_orm import model
 from spanner_orm.admin import api
-
-from google.cloud.spanner_v1 import transaction as spanner_transaction
-
-CallableReturn = TypeVar('CallableReturn')
 
 
 class InformationSchema(model.Model):
@@ -34,13 +30,8 @@ class InformationSchema(model.Model):
   """
 
   @classmethod
-  def _execute_read(cls, db_api: Callable[..., CallableReturn],
-                    transaction: Optional[spanner_transaction.Transaction],
-                    args: Any) -> CallableReturn:
-    if transaction is not None:
-      return db_api(transaction, *args)
-    else:
-      return api.SpannerAdminApi.run_read_only(db_api, *args)
+  def spanner_api(cls) -> api.SpannerAdminApi:
+    return api.spanner_admin_api()
 
   @classmethod
   def _execute_write(cls, *args) -> NoReturn:
