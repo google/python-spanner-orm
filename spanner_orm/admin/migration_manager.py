@@ -13,28 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Handles reading and writing of migration files."""
+
+from __future__ import annotations
+
+
 import datetime
 import importlib
 import os
 import re
 import string
+from typing import Any, Iterable, List, Optional
 import uuid
 
 from spanner_orm import error
 
 
-class MigrationManager(object):
+class MigrationManager:
   """Handles reading and writing of migration files."""
   DEFAULT_DIRECTORY = 'migrations'
 
-  def __init__(self, basedir=None):
+  def __init__(self, basedir: Optional[str] = None):
     self.basedir = basedir or self.DEFAULT_DIRECTORY
     self._migrations = None
 
     if not os.path.exists(self.basedir):
       os.makedirs(self.basedir)
 
-  def generate(self, migration_name):
+  def generate(self, migration_name: str) -> str:
     """Creates a new migration that is the last migration to be executed."""
     migration_id = uuid.uuid4().hex[-12:]
     prev_id = self.migrations[-1].migration_id if self.migrations else None
@@ -58,14 +63,14 @@ class MigrationManager(object):
     return filepath
 
   @property
-  def migrations(self):
+  def migrations(self) -> Any:
     """Loads and orders all migrations in the base dir."""
     if self._migrations is None:
       unordered_migrations = self._all_migrations()
       self._migrations = self._order_migrations(unordered_migrations)
     return self._migrations
 
-  def _migration_from_file(self, filename):
+  def _migration_from_file(self, filename: str) -> Any:
     """Loads a single migration from the given filename in the base dir."""
     module_name = re.sub(r'\W', '_', filename)
     path = os.path.join(self.basedir, filename)
@@ -76,7 +81,7 @@ class MigrationManager(object):
       raise error.SpannerError('{} has no migration id'.format(path))
     return module
 
-  def _all_migrations(self):
+  def _all_migrations(self) -> List[Any]:
     """Loads all migrations from the base dir."""
     migrations = []
     for filename in os.listdir(self.basedir):
@@ -85,7 +90,7 @@ class MigrationManager(object):
         migrations.append(self._migration_from_file(filename))
     return migrations
 
-  def _order_migrations(self, migrations):
+  def _order_migrations(self, migrations: Iterable[Any]) -> List[Any]:
     """Returns list of migrations in the order they have to be applied."""
     if not migrations:
       return []

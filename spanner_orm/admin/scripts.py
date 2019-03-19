@@ -13,16 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Entry point for spanner_orm scripts."""
+
+from __future__ import annotations
+
 import argparse
+from typing import Any
+
 from spanner_orm.admin import migration_manager
 
 
-def generate(args):
+def generate(args: Any) -> None:
   manager = migration_manager.MigrationManager(args.directory)
   manager.generate(args.name)
 
 
-def main(as_module=False):
+def main(as_module: bool = False) -> None:
   prog = 'spanner-orm' if as_module else None
   parser = argparse.ArgumentParser(prog=prog)
   subparsers = parser.add_subparsers(

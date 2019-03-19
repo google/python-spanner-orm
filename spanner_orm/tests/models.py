@@ -39,6 +39,15 @@ class ChildTestModel(model.Model):
   child_key = field.Field(field.String, primary_key=True)
 
 
+class IndexTestModel(model.Model):
+  __table__ = 'IndexTestModel'
+
+  key = field.Field(field.String, primary_key=True)
+  value = field.Field(field.String)
+
+  value_index = index.Index(['value'])
+
+
 class RelationshipTestModel(model.Model):
   """Model class for testing relationships."""
 
