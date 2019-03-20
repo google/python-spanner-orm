@@ -88,10 +88,17 @@ test_and_other_objects = TestModel.where(None,
 # method to be run inside the transaction and any arguments to passs to the method.
 # The method is invoked with the transaction as the first argument and then the
 # rest of the provided arguments:
-def callback(transaction, argument):
+def callback_1(transaction, argument):
   return TestModel.find(transaction, {'id': argument})
 
 specific_object = spanner_orm.spanner_api().run_read_only(callback, 1)
+
+# Alternatively, the transactional_read decorator can be used to clean up the
+# call a bit:
+@transactional_read
+def finder(argument, transaction=None):
+  return TestModel.find(transaction, {'id': argument})
+specific_object = finder(1)
 ```
 
 ### Write data to Spanner
@@ -117,12 +124,13 @@ TestModel.save_batch(None, models)
 ```
 
 ```spanner_orm.spanner_api().run_write()``` can be used for executing read-write
-transactions. Note that if a transaction fails due to data being modified after
-the read happened and before the transaction finished executing, the called
-method will be re-run until it succeeds or a certain number of failures happen.
-Make sure that there are no side effects that could cause issues if called
-multiple times. Exceptions thrown out of the called method will abort the
-transaction.
+transactions, or the ```transactional_write``` decorator can be used similarly
+to the read decorator mentioned above. Note that if a transaction fails due to
+data being modified after the read happened and before the transaction finished
+executing, the called method will be re-run until it succeeds or a certain
+number of failures happen.  Make sure that there are no side effects that could
+cause issues if called multiple times. Exceptions thrown out of the called
+method will abort the transaction.
 
 Other write methods are exposed on ```spanner_orm.spanner_api()``` for more
 complex use cases, but you will have to do more work in order to use those
