@@ -26,11 +26,12 @@ class DecoratorTest(parameterized.TestCase):
       (decorator.transactional_read, 'run_read_only'),
       (decorator.transactional_write, 'run_write'),
   )
-  @mock.patch('spanner_orm.api.SpannerApi', autospec=True)
+  @mock.patch('spanner_orm.api.spanner_api')
   def test_transactional_injects_new_transaction(
       self, decorator_in_test, method_name_to_mock, mock_spanner_api):
     mock_tx = mock.Mock()
-    mock_api_method = getattr(mock_spanner_api, method_name_to_mock)
+    mock_api_method = getattr(mock_spanner_api.return_value,
+                              method_name_to_mock)
     mock_api_method.side_effect = mock_spanner_method(mock_tx)
 
     @decorator_in_test
@@ -47,7 +48,8 @@ class DecoratorTest(parameterized.TestCase):
 
   @parameterized.parameters(decorator.transactional_read,
                             decorator.transactional_write)
-  def test_transactional_uses_given_transaction(self, decorator_in_test):
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_transactional_uses_given_transaction(self, decorator_in_test, _):
     mock_tx = mock.Mock()
 
     @decorator_in_test

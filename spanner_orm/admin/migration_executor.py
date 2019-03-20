@@ -53,9 +53,9 @@ class MigrationExecutor:
   def migrate(self, target_migration: Optional[str] = None) -> None:
     """Executes unmigrated migrations on the curent database.
 
-    Note: SpannerApi and SpannerAdminApi connections are modified as a result
-    of calling this method. Don't attempt to do other things with spanner_orm
-    in the same process while this method is executing.
+    Note: SpannerAdminApi connection is modified as a result of calling
+    this method. Other connections to SpannerAdminApi in the same process
+    may be affected.
 
     Args:
       target_migration: If present, stop migrations after the target is
@@ -81,9 +81,9 @@ class MigrationExecutor:
   def rollback(self, target_migration: str) -> None:
     """Rolls back migrated migrations on the curent database.
 
-    Note: SpannerApi and SpannerAdminApi connections are modified as a result
-    of calling this method. Don't attempt to do other things with spanner_orm
-    in the same process while this method is executing.
+    Note: SpannerAdminApi connection is modified as a result of calling
+    this method. Other connections to SpannerAdminApi in the same process
+    may be affected.
 
     Args:
       target_migration: Stop rolling back migrations after this migration is

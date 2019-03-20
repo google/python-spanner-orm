@@ -52,7 +52,7 @@ def transactional_read(func: Callable[..., T]) -> Callable[..., T]:
   Returns:
     decorated function
   """
-  return _transactional(api.SpannerApi.run_read_only, func)
+  return _transactional(api.spanner_api().run_read_only, func)
 
 
 def transactional_write(func: Callable[..., T]) -> Callable[..., T]:
@@ -84,7 +84,7 @@ def transactional_write(func: Callable[..., T]) -> Callable[..., T]:
   Returns:
     decorated function
   """
-  return _transactional(api.SpannerApi.run_write, func)
+  return _transactional(api.spanner_api().run_write, func)
 
 
 def _transactional(spanner_api_method: Callable[..., T],
