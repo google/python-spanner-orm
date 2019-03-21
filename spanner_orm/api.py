@@ -126,7 +126,7 @@ class SpannerConnection:
     client = spanner.Client(project=project, credentials=credentials)
     instance = client.instance(instance)
     self.database = instance.database(
-        database, pool=pool, ddl_statements=create_ddl)
+        database, pool=pool, ddl_statements=create_ddl or ())
 
 
 class SpannerApi(SpannerReadApi, SpannerWriteApi):

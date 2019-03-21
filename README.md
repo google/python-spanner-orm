@@ -50,18 +50,21 @@ class TestModel(spanner_orm.Model):
 ```
 
 If the model does not refer to an existing table on Spanner, we can create
-the corresponding table on the database through the ORM in one of two ways:
+the corresponding table on the database through the ORM in one of two ways. If
+the database has not yet been created, we can create it and the table at the
+same time by:
 
 ``` python
-spanner_orm.connect_admin(
+admin_api = spanner_orm.connect_admin(
   'instance_name',
   'database_name',
   create_ddl=spanner_orm.model_creation_ddl(TestModel))
-spanner_orm.spanner_admin_api().create()
+admin_api.create()
 ```
 
-or by executing a Migration where the upgrade method returns a CreateTable for
-the model you have just defined (see section on migrations)
+If the database already exists, we can execute a Migration where the upgrade
+method returns a CreateTable for the model you have just defined (see section
+on migrations)
 
 
 ### Retrieve data from Spanner
@@ -137,4 +140,32 @@ complex use cases, but you will have to do more work in order to use those
 correctly. See the documentation on those methods for more information.
 
 ## Migrations
-TODO(dbrandao): work in progress
+### Creating migrations
+Running ```spanner-orm generate <migration name>``` will generate a new
+migration file to be filled out in the directory specified (or 'migrations' by
+default). The ```upgrade``` function is executed when migrating, and the
+```downgrade``` function is executed when rolling back the migration. Each of
+these should return a single SchemaUpdate object (e.g., CreateTable, AddColumn,
+etc.), as Spanner cannot execute multiple schema updates atomically.
+
+### Executing migrations
+Running ```spanner-orm migrate <Spanner instance> <Spanner database>``` will
+execute all the unmigrated migrations for that database in the correct order,
+using the application default credentials. If that won't work for your use case,
+```MigrationExecutor``` can be used instead:
+
+``` python
+connection = spanner_orm.SpannerConnection(
+  instance_name,
+  database_name,
+  credentials)
+executor = spanner_orm.MigrationExecutor(connection)
+executor.migrate()
+```
+
+Note that there is no protection against trying execute migrations concurrently
+multiple times, so try not to do that.
+
+If a migration needs to be rolled back,
+```spanner_orm rollback <migration_name> <Spanner instance> <Spanner database>```
+or the corresponding ```MigrationExecutor``` method should be used.

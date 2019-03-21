@@ -34,8 +34,10 @@ class SpannerMetadata(object):
   """Gathers information about a table from Spanner."""
 
   @classmethod
-  def _class_name_from_table(cls, table_name: str) -> str:
-    return 'table_{}_model'.format(table_name)
+  def _class_name_from_table(cls, table_name: Optional[str]) -> Optional[str]:
+    if table_name:
+      return 'table_{}_model'.format(table_name)
+    return None
 
   @classmethod
   def models(cls) -> Dict[str, Type[model.Model]]:
