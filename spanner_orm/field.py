@@ -20,6 +20,8 @@ import abc
 import datetime
 from typing import Any, Type
 
+from spanner_orm import error
+
 from google.cloud.spanner_v1.proto import type_pb2
 
 
@@ -54,7 +56,8 @@ class Field(object):
 
   def validate(self, value) -> None:
     if value is None:
-      assert self._nullable, 'None set for non-nullable field'
+      if not self._nullable:
+        raise error.ValidationError('None set for non-nullable field')
     else:
       self._type.validate_type(value)
 
@@ -91,7 +94,8 @@ class Boolean(FieldType):
 
   @staticmethod
   def validate_type(value: Any) -> None:
-    assert isinstance(value, bool), '{} is not of type bool'.format(value)
+    if not isinstance(value, bool):
+      raise error.ValidationError('{} is not of type bool'.format(value))
 
 
 class Integer(FieldType):
@@ -107,7 +111,8 @@ class Integer(FieldType):
 
   @staticmethod
   def validate_type(value: Any) -> None:
-    assert isinstance(value, int), '{} is not of type int'.format(value)
+    if not isinstance(value, int):
+      raise error.ValidationError('{} is not of type int'.format(value))
 
 
 class String(FieldType):
@@ -123,7 +128,8 @@ class String(FieldType):
 
   @staticmethod
   def validate_type(value) -> None:
-    assert isinstance(value, str), '{} is not of type str'.format(value)
+    if not isinstance(value, str):
+      raise error.ValidationError('{} is not of type str'.format(value))
 
 
 class StringArray(FieldType):
@@ -139,9 +145,11 @@ class StringArray(FieldType):
 
   @staticmethod
   def validate_type(value: Any) -> None:
-    assert isinstance(value, list), '{} is not of type list'.format(value)
+    if not isinstance(value, list):
+      raise error.ValidationError('{} is not of type list'.format(value))
     for item in value:
-      assert isinstance(item, str), '{} is not of type str'.format(item)
+      if not isinstance(item, str):
+        raise error.ValidationError('{} is not of type str'.format(item))
 
 
 class Timestamp(FieldType):
@@ -157,7 +165,8 @@ class Timestamp(FieldType):
 
   @staticmethod
   def validate_type(value: Any) -> None:
-    assert isinstance(value, datetime.datetime)
+    if not isinstance(value, datetime.datetime):
+      raise error.ValidationError('{} is not of type datetime'.format(value))
 
 
 ALL_TYPES = [Boolean, Integer, String, StringArray, Timestamp]

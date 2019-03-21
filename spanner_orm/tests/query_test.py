@@ -284,13 +284,13 @@ class QueryTest(parameterized.TestCase):
       _ = select_query.process_results(rows)
 
   def test_includes_error_on_invalid_relation(self):
-    with self.assertRaises(AssertionError):
+    with self.assertRaises(error.ValidationError):
       self.includes('bad_relation')
 
   @parameterized.parameters(('bad_column', 0), ('child_key', 'good value'),
                             ('key', ['bad value']))
   def test_includes_error_on_invalid_subconditions(self, column, value):
-    with self.assertRaises(AssertionError):
+    with self.assertRaises(error.ValidationError):
       self.includes('parent', condition.equal_to(column, value))
 
   def test_or(self):

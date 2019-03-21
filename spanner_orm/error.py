@@ -17,3 +17,7 @@
 
 class SpannerError(Exception):
   pass
+
+
+class ValidationError(Exception):
+  pass
