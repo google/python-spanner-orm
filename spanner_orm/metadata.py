@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Type, Optional
 
+from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import index
 from spanner_orm import registry
@@ -67,7 +68,8 @@ class ModelMetadata(object):
     relevant state has been added and the calculation of the final data should
     now happen.
     """
-    assert not self._finalized
+    if self._finalized:
+      raise error.SpannerError('Metadata was already finalized')
     sorted_fields = list(sorted(self.fields.values(), key=lambda f: f.position))
 
     if index.Index.PRIMARY_INDEX not in self.indexes:

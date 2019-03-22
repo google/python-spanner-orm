@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from spanner_orm import error
+
 
 class Index(object):
   """Represents an index on a Model."""
@@ -29,7 +31,8 @@ class Index(object):
                null_filtered: bool = False,
                unique: bool = False,
                storing_columns: Optional[List[str]] = None):
-    assert columns, 'An index must have at least one column'
+    if not columns:
+      raise error.ValidationError('An index must have at least one column')
     self.columns = columns
     self.name = None
     self.parent = parent
