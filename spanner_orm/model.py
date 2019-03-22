@@ -77,8 +77,8 @@ class ModelMetaclass(type):
       name: str) -> Union[field.Field, relationship.Relationship, index.Index]:
     # Unclear why pylint doesn't like this
     # pylint: disable=unsupported-membership-test
-    if name in cls.schema:
-      return cls.schema[name]
+    if name in cls.fields:
+      return cls.fields[name]
     elif name in cls.relations:
       return cls.relations[name]
     elif name in cls.indexes:
@@ -90,7 +90,7 @@ class ModelMetaclass(type):
   def column_prefix(cls) -> str:
     return cls.table.split('.')[-1]
 
-  # Table schema class methods
+  # Table fields class methods
   @property
   def columns(cls) -> List[str]:
     return cls.meta.columns
@@ -114,7 +114,7 @@ class ModelMetaclass(type):
     return cls.meta.relations
 
   @property
-  def schema(cls) -> Dict[str, field.Field]:
+  def fields(cls) -> Dict[str, field.Field]:
     return cls.meta.fields
 
   @property
@@ -123,7 +123,7 @@ class ModelMetaclass(type):
 
   def validate_value(cls, field_name, value, error_type=error.SpannerError):
     try:
-      cls.schema[field_name].validate(value)
+      cls.fields[field_name].validate(value)
     except AssertionError as ex:
       raise error_type(*ex.args)
 
@@ -369,7 +369,7 @@ class Model(ModelApi):
 
   @property
   def _fields(self) -> Dict[str, field.Field]:
-    return self._metaclass.schema
+    return self._metaclass.fields
 
   @property
   def _primary_keys(self) -> List[str]:

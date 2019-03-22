@@ -40,7 +40,7 @@ class AdminTest(unittest.TestCase):
 
   def make_test_columns(self, model):
     columns, iteration = [], 1
-    for row in model.schema.values():
+    for row in model.fields.values():
       columns.append({
           'table_catalog': '',
           'table_schema': '',
@@ -109,10 +109,10 @@ class AdminTest(unittest.TestCase):
     self.assertEqual(meta.table, model.table)
     self.assertEqual(meta.columns, model.columns)
     for row in model.columns:
-      self.assertEqual(meta.schema[row].field_type(),
-                       model.schema[row].field_type())
-      self.assertEqual(meta.schema[row].nullable(),
-                       model.schema[row].nullable())
+      self.assertEqual(meta.fields[row].field_type(),
+                       model.fields[row].field_type())
+      self.assertEqual(meta.fields[row].nullable(),
+                       model.fields[row].nullable())
     self.assertEqual(meta.primary_keys, model.primary_keys)
     self.assertEqual(
         getattr(meta, index.Index.PRIMARY_INDEX).columns, model.primary_keys)

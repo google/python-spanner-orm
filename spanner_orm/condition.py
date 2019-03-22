@@ -117,10 +117,10 @@ class ColumnsEqualCondition(Condition):
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.column in model_class.schema
-    origin = model_class.schema[self.column]
-    assert self.destination_column in self.destination_model_class.schema
-    dest = self.destination_model_class.schema[self.destination_column]
+    assert self.column in model_class.fields
+    origin = model_class.fields[self.column]
+    assert self.destination_column in self.destination_model_class.fields
+    dest = self.destination_model_class.fields[self.destination_column]
 
     assert (origin.field_type() == dest.field_type() and
             origin.nullable() == dest.nullable())
@@ -377,7 +377,7 @@ class OrderByCondition(Condition):
     for (column, _) in self.orderings:
       if isinstance(column, field.Field):
         column = column.name
-      assert column in model_class.schema
+      assert column in model_class.fields
 
 
 class ComparisonCondition(Condition):
@@ -414,14 +414,14 @@ class ComparisonCondition(Condition):
         column_key=self._column_key)
 
   def _types(self) -> type_pb2.Type:
-    return {self._column_key: self.model_class.schema[self.column].grpc_type()}
+    return {self._column_key: self.model_class.fields[self.column].grpc_type()}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.column in model_class.schema
+    assert self.column in model_class.fields
     if self.field:
-      assert self.field == model_class.schema[self.column]
+      assert self.field == model_class.fields[self.column]
     assert self.value is not None
-    model_class.schema[self.column].validate(self.value)
+    model_class.fields[self.column].validate(self.value)
 
 
 class ListComparisonCondition(ComparisonCondition):
@@ -435,17 +435,17 @@ class ListComparisonCondition(ComparisonCondition):
         column_key=self._column_key)
 
   def _types(self) -> type_pb2.Type:
-    grpc_type = self.model_class.schema[self.column].grpc_type()
+    grpc_type = self.model_class.fields[self.column].grpc_type()
     list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
     return {self._column_key: list_type}
 
   def _validate(self, model_class: Type[Any]) -> None:
     assert isinstance(self.value, list)
-    assert self.column in model_class.schema
+    assert self.column in model_class.fields
     if self.field:
-      assert self.field == model_class.schema[self.column]
+      assert self.field == model_class.fields[self.column]
     for value in self.value:
-      model_class.schema[self.column].validate(value)
+      model_class.fields[self.column].validate(value)
 
 
 class NullableComparisonCondition(ComparisonCondition):
@@ -478,10 +478,10 @@ class NullableComparisonCondition(ComparisonCondition):
     return super()._types()
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.column in model_class.schema
+    assert self.column in model_class.fields
     if self.field:
-      assert self.field == model_class.schema[self.column]
-    model_class.schema[self.column].validate(self.value)
+      assert self.field == model_class.fields[self.column]
+    model_class.fields[self.column].validate(self.value)
 
 
 class EqualityCondition(NullableComparisonCondition):
