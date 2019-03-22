@@ -124,7 +124,7 @@ class ModelMetaclass(type):
   def validate_value(cls, field_name, value, error_type=error.SpannerError):
     try:
       cls.fields[field_name].validate(value)
-    except AssertionError as ex:
+    except error.ValidationError as ex:
       raise error_type(*ex.args)
 
 

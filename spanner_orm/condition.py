@@ -92,8 +92,7 @@ class Condition(abc.ABC):
 class ColumnsEqualCondition(Condition):
   """Used to join records by matching column values."""
 
-  def __init__(self, origin_column: str,
-               destination_model_class: Type[Any],
+  def __init__(self, origin_column: str, destination_model_class: Type[Any],
                destination_column: str):
     super().__init__()
     self.column = origin_column
@@ -117,13 +116,19 @@ class ColumnsEqualCondition(Condition):
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.column in model_class.fields
+    if self.column not in model_class.fields:
+      raise error.ValidationError('{} is not a column on {}'.format(
+          self.column, model_class.table))
     origin = model_class.fields[self.column]
-    assert self.destination_column in self.destination_model_class.fields
+    if self.destination_column not in self.destination_model_class.fields:
+      raise error.ValidationError('{} is not a column on {}'.format(
+          self.destination_column, self.destination_model_class.table))
     dest = self.destination_model_class.fields[self.destination_column]
 
-    assert (origin.field_type() == dest.field_type() and
-            origin.nullable() == dest.nullable())
+    if (origin.field_type() != dest.field_type() or
+        origin.nullable() != dest.nullable()):
+      raise error.ValidationError('Types of {} and {} do not match'.format(
+          origin.name, dest.name))
 
 
 class ForceIndexCondition(Condition):
@@ -155,11 +160,15 @@ class ForceIndexCondition(Condition):
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.name in model_class.indexes
-    if self.index:
-      assert self.index == model_class.indexes[self.name]
+    if self.name not in model_class.indexes:
+      raise error.ValidationError('{} is not an index on {}'.format(
+          self.name, model_class.table))
+    if self.index and self.index != model_class.indexes[self.name]:
+      raise error.ValidationError('{} does not belong to {}'.format(
+          self.index.name, model_class.table))
 
-    assert not model_class.indexes[self.name].primary
+    if model_class.indexes[self.name].primary:
+      raise error.ValidationError('Cannot force query using primary index')
 
 
 class IncludesCondition(Condition):
@@ -228,9 +237,12 @@ class IncludesCondition(Condition):
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.name in model_class.relations
-    if self.relation:
-      assert self.relation == model_class.relations[self.name]
+    if self.name not in model_class.relations:
+      raise error.ValidationError('{} is not a relation on {}'.format(
+          self.name, model_class.table))
+    if self.relation and self.relation != model_class.relations[self.name]:
+      raise error.ValidationError('{} does not belong to {}'.format(
+          self.relation.name, model_class.table))
 
     other_model_class = model_class.relations[self.name].destination
     for condition in self._conditions:
@@ -377,7 +389,9 @@ class OrderByCondition(Condition):
     for (column, _) in self.orderings:
       if isinstance(column, field.Field):
         column = column.name
-      assert column in model_class.fields
+      if column not in model_class.fields:
+        raise error.ValidationError('{} is not a column on {}'.format(
+            column, model_class.table))
 
 
 class ComparisonCondition(Condition):
@@ -417,10 +431,15 @@ class ComparisonCondition(Condition):
     return {self._column_key: self.model_class.fields[self.column].grpc_type()}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.column in model_class.fields
-    if self.field:
-      assert self.field == model_class.fields[self.column]
-    assert self.value is not None
+    if self.column not in model_class.fields:
+      raise error.ValidationError('{} is not a column on {}'.format(
+          self.column, model_class.table))
+    if self.field and self.field != model_class.fields[self.column]:
+      raise error.ValidationError('{} does not belong to {}'.format(
+          self.column, model_class.table))
+    if self.value is None:
+      raise error.ValidationError('{} does not support NULL'.format(
+          self.__name__))
     model_class.fields[self.column].validate(self.value)
 
 
@@ -440,10 +459,14 @@ class ListComparisonCondition(ComparisonCondition):
     return {self._column_key: list_type}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert isinstance(self.value, list)
-    assert self.column in model_class.fields
-    if self.field:
-      assert self.field == model_class.fields[self.column]
+    if not isinstance(self.value, list):
+      raise error.ValidationError('{} is not a list'.format(self.value))
+    if self.column not in model_class.fields:
+      raise error.ValidationError('{} is not a column on {}'.format(
+          self.column, model_class.table))
+    if self.field and self.field != model_class.fields[self.column]:
+      raise error.ValidationError('{} does not belong to {}'.format(
+          self.column, model_class.table))
     for value in self.value:
       model_class.fields[self.column].validate(value)
 
@@ -478,9 +501,12 @@ class NullableComparisonCondition(ComparisonCondition):
     return super()._types()
 
   def _validate(self, model_class: Type[Any]) -> None:
-    assert self.column in model_class.fields
-    if self.field:
-      assert self.field == model_class.fields[self.column]
+    if self.column not in model_class.fields:
+      raise error.ValidationError('{} is not a column on {}'.format(
+          self.column, model_class.table))
+    if self.field and self.field != model_class.fields[self.column]:
+      raise error.ValidationError('{} does not belong to {}'.format(
+          self.column, model_class.table))
     model_class.fields[self.column].validate(self.value)
 
 

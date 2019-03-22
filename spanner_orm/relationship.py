@@ -62,7 +62,9 @@ class Relationship(object):
 
   @property
   def constraints(self) -> List[RelationshipConstraint]:
-    assert self.origin, 'Origin must be set before constraints is called'
+    if not self.origin:
+      raise error.ValidationError(
+          'Origin must be set before constraints is called')
     return self._parse_constraints()
 
   @property
@@ -81,11 +83,11 @@ class Relationship(object):
     constraints = []
     for origin_column, destination_column in self._constraints.items():
       if origin_column not in self.origin.fields:
-        raise error.SpannerError(
+        raise error.ValidationError(
             'Origin column must be present in origin model')
 
       if destination_column not in self.destination.fields:
-        raise error.SpannerError(
+        raise error.ValidationError(
             'Destination column must be present in destination model')
 
       # TODO(dbrandao): remove when pytype #234 is fixed
