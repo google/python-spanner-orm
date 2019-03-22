@@ -116,14 +116,14 @@ class ColumnsEqualCondition(Condition):
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    if self.column not in model_class.schema:
+    if self.column not in model_class.fields:
       raise error.ValidationError('{} is not a column on {}'.format(
           self.column, model_class.table))
-    origin = model_class.schema[self.column]
-    if self.destination_column not in self.destination_model_class.schema:
+    origin = model_class.fields[self.column]
+    if self.destination_column not in self.destination_model_class.fields:
       raise error.ValidationError('{} is not a column on {}'.format(
           self.destination_column, self.destination_model_class.table))
-    dest = self.destination_model_class.schema[self.destination_column]
+    dest = self.destination_model_class.fields[self.destination_column]
 
     if (origin.field_type() != dest.field_type() or
         origin.nullable() != dest.nullable()):
@@ -389,7 +389,7 @@ class OrderByCondition(Condition):
     for (column, _) in self.orderings:
       if isinstance(column, field.Field):
         column = column.name
-      if column not in model_class.schema:
+      if column not in model_class.fields:
         raise error.ValidationError('{} is not a column on {}'.format(
             column, model_class.table))
 
@@ -428,19 +428,19 @@ class ComparisonCondition(Condition):
         column_key=self._column_key)
 
   def _types(self) -> type_pb2.Type:
-    return {self._column_key: self.model_class.schema[self.column].grpc_type()}
+    return {self._column_key: self.model_class.fields[self.column].grpc_type()}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    if self.column not in model_class.schema:
+    if self.column not in model_class.fields:
       raise error.ValidationError('{} is not a column on {}'.format(
           self.column, model_class.table))
-    if self.field and self.field != model_class.schema[self.column]:
+    if self.field and self.field != model_class.fields[self.column]:
       raise error.ValidationError('{} does not belong to {}'.format(
           self.column, model_class.table))
     if self.value is None:
       raise error.ValidationError('{} does not support NULL'.format(
           self.__name__))
-    model_class.schema[self.column].validate(self.value)
+    model_class.fields[self.column].validate(self.value)
 
 
 class ListComparisonCondition(ComparisonCondition):
@@ -454,21 +454,21 @@ class ListComparisonCondition(ComparisonCondition):
         column_key=self._column_key)
 
   def _types(self) -> type_pb2.Type:
-    grpc_type = self.model_class.schema[self.column].grpc_type()
+    grpc_type = self.model_class.fields[self.column].grpc_type()
     list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
     return {self._column_key: list_type}
 
   def _validate(self, model_class: Type[Any]) -> None:
     if not isinstance(self.value, list):
       raise error.ValidationError('{} is not a list'.format(self.value))
-    if self.column not in model_class.schema:
+    if self.column not in model_class.fields:
       raise error.ValidationError('{} is not a column on {}'.format(
           self.column, model_class.table))
-    if self.field and self.field != model_class.schema[self.column]:
+    if self.field and self.field != model_class.fields[self.column]:
       raise error.ValidationError('{} does not belong to {}'.format(
           self.column, model_class.table))
     for value in self.value:
-      model_class.schema[self.column].validate(value)
+      model_class.fields[self.column].validate(value)
 
 
 class NullableComparisonCondition(ComparisonCondition):
@@ -501,13 +501,13 @@ class NullableComparisonCondition(ComparisonCondition):
     return super()._types()
 
   def _validate(self, model_class: Type[Any]) -> None:
-    if self.column not in model_class.schema:
+    if self.column not in model_class.fields:
       raise error.ValidationError('{} is not a column on {}'.format(
           self.column, model_class.table))
-    if self.field and self.field != model_class.schema[self.column]:
+    if self.field and self.field != model_class.fields[self.column]:
       raise error.ValidationError('{} does not belong to {}'.format(
           self.column, model_class.table))
-    model_class.schema[self.column].validate(self.value)
+    model_class.fields[self.column].validate(self.value)
 
 
 class EqualityCondition(NullableComparisonCondition):

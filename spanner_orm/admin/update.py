@@ -53,7 +53,7 @@ class CreateTable(SchemaUpdate):
   def ddl(self) -> str:
     fields = [
         '{} {}'.format(name, field.ddl())
-        for name, field in self._model.schema.items()
+        for name, field in self._model.fields.items()
     ]
     index_ddl = 'PRIMARY KEY ({})'.format(', '.join(self._model.primary_keys))
     statement = 'CREATE TABLE {} ({}) {}'.format(self._model.table,
@@ -98,7 +98,7 @@ class CreateTable(SchemaUpdate):
           self._model.table))
 
     for key in self._model.primary_keys:
-      if key not in self._model.schema:
+      if key not in self._model.fields:
         raise error.SpannerError(
             'Table {} column {} in primary key but not in schema'.format(
                 self._model.table, key))
@@ -178,7 +178,7 @@ class DropColumn(SchemaUpdate):
     if not model_:
       raise error.SpannerError('Table {} does not exist'.format(self._table))
 
-    if self._column not in model_.schema:
+    if self._column not in model_.fields:
       raise error.SpannerError('Column {} does not exist on {}'.format(
           self._column, self._table))
 
@@ -210,7 +210,7 @@ class AlterColumn(SchemaUpdate):
     if not model_:
       raise error.SpannerError('Table {} does not exist'.format(self._table))
 
-    if self._column not in model_.schema:
+    if self._column not in model_.fields:
       raise error.SpannerError('Column {} does not exist on {}'.format(
           self._column, self._table))
 
@@ -218,7 +218,7 @@ class AlterColumn(SchemaUpdate):
       raise error.SpannerError('Column {} is a primary key on {}'.format(
           self._column, self._table))
 
-    old_field = model_.schema[self._column]
+    old_field = model_.fields[self._column]
     # Validate that the only alteration is to change column nullability
     if self._field.field_type() != old_field.field_type():
       raise error.SpannerError('Column {} is changing type'.format(
