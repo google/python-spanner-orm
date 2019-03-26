@@ -49,12 +49,12 @@ class SpannerReadApi(abc.ABC):
     the Spanner client library)passed to it as the first argument.
 
     Args:
-        method: The method that will be run in the transaction
-        *args: Positional arguments that will be passed to `method`
-        **kwargs: Keyword arguments that will be passed to `method`
+      method: The method that will be run in the transaction
+      *args: Positional arguments that will be passed to `method`
+      **kwargs: Keyword arguments that will be passed to `method`
 
     Returns:
-        The return value from `method` will be returned from this method
+      The return value from `method` will be returned from this method
     """
     with self._connection.snapshot(multi_use=True) as snapshot:
       return method(snapshot, *args, **kwargs)
@@ -66,17 +66,17 @@ class SpannerReadApi(abc.ABC):
     """Retrieves rows from the given table based on the provided KeySet.
 
     Args:
-        transaction: The Spanner transaction to execute the request on
-        table_name: The Spanner table being queried
-        columns: Which columns to retrieve from the Spanner table
-        keyset: Contains a list of primary keys that indicates which rows to
-          retrieve from the Spanner table
+      transaction: The Spanner transaction to execute the request on
+      table_name: The Spanner table being queried
+      columns: Which columns to retrieve from the Spanner table
+      keyset: Contains a list of primary keys that indicates which rows to
+        retrieve from the Spanner table
 
     Returns:
-        A list of lists. Each sublist is the set of `columns` requested from
-        a row in the Spanner table whose primary key matches one of the
-        primary keys in the `keyset`. The order of the values in the sublist
-        matches the order of the columns from the `columns` parameter.
+      A list of lists. Each sublist is the set of `columns` requested from
+      a row in the Spanner table whose primary key matches one of the
+      primary keys in the `keyset`. The order of the values in the sublist
+      matches the order of the columns from the `columns` parameter.
     """
     _logger.debug('Find table=%s columns=%s keys=%s', table_name, columns,
                   keyset.keys)
@@ -94,18 +94,18 @@ class SpannerReadApi(abc.ABC):
     only features of the ORM
 
     Args:
-        transaction: The Spanner transaction to execute the request on
-        query: The SQL query to run
-        parameters: A mapping from the names of the parameters used in the SQL
-            query to the value to be substituted in for that parameter
-        parameter_types: A mapping from the names of the parameters used in the
-            SQL query to the type of the value being substituted in for that
-            parameter
+      transaction: The Spanner transaction to execute the request on
+      query: The SQL query to run
+      parameters: A mapping from the names of the parameters used in the SQL
+        query to the value to be substituted in for that parameter
+      parameter_types: A mapping from the names of the parameters used in the
+        SQL query to the type of the value being substituted in for that
+        parameter
 
     Returns:
-        A list of lists. Each sublist is a result row from the SQL query.
-        For SELECT queries, the order of values in the sublist matches the
-        order of the columns requested from the SELECT clause of the query.
+      A list of lists. Each sublist is a result row from the SQL query. For
+      SELECT queries, the order of values in the sublist matches the order
+      of the columns requested from the SELECT clause of the query.
     """
     _logger.debug('Executing SQL:\n%s\n%s\n%s', query, parameters,
                   parameter_types)
@@ -133,12 +133,12 @@ class SpannerWriteApi(abc.ABC):
     30 seconds has passed.
 
     Args:
-        method: The method that will be run in the transaction
-        *args: Positional arguments that will be passed to `method`
-        **kwargs: Keyword arguments that will be passed to `method`
+      method: The method that will be run in the transaction
+      *args: Positional arguments that will be passed to `method`
+      **kwargs: Keyword arguments that will be passed to `method`
 
     Returns:
-        The return value from `method` will be returned from this method
+      The return value from `method` will be returned from this method
     """
     return self._connection.run_in_transaction(method, *args, **kwargs)
 
@@ -147,10 +147,10 @@ class SpannerWriteApi(abc.ABC):
     """Deletes rows from the given table based on the provided KeySet.
 
     Args:
-        transaction: The Spanner transaction to execute the request on
-        table_name: The Spanner table being modified
-        keyset: Contains a list of primary keys that indicates which rows to
-          delete from the Spanner table
+      transaction: The Spanner transaction to execute the request on
+      table_name: The Spanner table being modified
+      keyset: Contains a list of primary keys that indicates which rows to
+        delete from the Spanner table
     """
 
     _logger.debug('Delete table=%s keys=%s', table_name, keyset.keys)
@@ -166,12 +166,12 @@ class SpannerWriteApi(abc.ABC):
     be thrown and the insert will be aborted.
 
     Args:
-        transaction: The Spanner transaction to execute the request on
-        table_name: The Spanner table being modified
-        columns: Which columns to write on the Spanner table
-        values: A list of rows to write to the table. The order of the values in
-          each sublist must match the order of the columns specified in the
-          `columns` parameter.
+      transaction: The Spanner transaction to execute the request on
+      table_name: The Spanner table being modified
+      columns: Which columns to write on the Spanner table
+      values: A list of rows to write to the table. The order of the values in
+        each sublist must match the order of the columns specified in the
+       `columns` parameter.
     """
     _logger.debug('Insert table=%s columns=%s values=%s', table_name, columns,
                   values)
@@ -187,12 +187,12 @@ class SpannerWriteApi(abc.ABC):
     will be aborted.
 
     Args:
-        transaction: The Spanner transaction to execute the request on
-        table_name: The Spanner table being modified
-        columns: Which columns to write on the Spanner table
-        values: A list of rows to write to the table. The order of the values in
-          each sublist must match the order of the columns specified in the
-          `columns` parameter.
+      transaction: The Spanner transaction to execute the request on
+      table_name: The Spanner table being modified
+      columns: Which columns to write on the Spanner table
+      values: A list of rows to write to the table. The order of the values in
+        each sublist must match the order of the columns specified in the
+        `columns` parameter.
     """
     _logger.debug('Update table=%s columns=%s values=%s', table_name, columns,
                   values)
@@ -208,12 +208,12 @@ class SpannerWriteApi(abc.ABC):
     to be thrown, unlike insert or update.
 
     Args:
-        transaction: The Spanner transaction to execute the request on
-        table_name: The Spanner table being modified
-        columns: Which columns to write on the Spanner table
-        values: A list of rows to write to the table. The order of the values in
-          each sublist must match the order of the columns specified in the
-          `columns` parameter.
+      transaction: The Spanner transaction to execute the request on
+      table_name: The Spanner table being modified
+      columns: Which columns to write on the Spanner table
+      values: A list of rows to write to the table. The order of the values in
+        each sublist must match the order of the columns specified in the
+        `columns` parameter.
     """
     _logger.debug('Upsert table=%s columns=%s values=%s', table_name, columns,
                   values)
