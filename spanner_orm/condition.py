@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import abc
 import enum
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 
 from spanner_orm import error
 from spanner_orm import field
@@ -45,15 +45,34 @@ class Condition(abc.ABC):
     self.suffix = None  # type: Optional[str]
 
   def bind(self, model_class: Type[Any]) -> None:
+    """Specifies which model instance the condition is being run on."""
     self._validate(model_class)
     self.model_class = model_class
 
   def key(self, name: str) -> str:
+    """Returns the unique parameter name for the given name.
+
+    When a name is used multiple times by different conditions (for instance,
+    we name parameters for the column they are being compared against, so
+    multiple conditions on the same column causes this), we need to generate
+    a unique name to disambiguate between these parameters. We do that by
+    appending a suffix that is based on the number of parameters that have
+    already been added to the query
+
+    Args:
+      name: Name of parameter to make unique
+    """
     if self.suffix:
       return '{name}{suffix}'.format(name=name, suffix=self.suffix)
     return name
 
   def params(self) -> Dict[str, Any]:
+    """Returns parameters to be used in the SQL query.
+
+    Returns:
+      Dictionary mapping from parameter name to value that should be
+      substituted for that parameter in the SQL query
+    """
     if not self.model_class:
       raise error.SpannerError('Condition must be bound before usage')
     return self._params()
@@ -64,9 +83,12 @@ class Condition(abc.ABC):
 
   @abc.abstractmethod
   def segment(self) -> Segment:
+    """Returns which segment of the SQL query this condition belongs to."""
     raise NotImplementedError
 
   def sql(self) -> str:
+    """Generates and returns the SQL to be used in the Spanner query."""
+
     if not self.model_class:
       raise error.SpannerError('Condition must be bound before usage')
     return self._sql()
@@ -76,6 +98,12 @@ class Condition(abc.ABC):
     pass
 
   def types(self) -> Dict[str, type_pb2.Type]:
+    """Returns parameter types to be used in the SQL query.
+
+    Returns:
+      Dictionary mapping from parameter name to the type of the value that
+      should be substituted for that parameter in the SQL query
+    """
     if not self.model_class:
       raise error.SpannerError('Condition must be bound before usage')
     return self._types()
@@ -529,75 +557,248 @@ class InequalityCondition(NullableComparisonCondition):
 
 def columns_equal(origin_column: str, dest_model_class: Type[Any],
                   dest_column: str) -> ColumnsEqualCondition:
+  """Condition where the specified columns are equal.
+
+  Used in 'includes' to fetch related models where the foreign key matches the
+  local value.
+
+  Args:
+    origin_column: Name of the column on the origin model to compare from
+    dest_model_class: Type of model that is being compared to
+    dest_column: Name of column on the destination model being compared to
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return ColumnsEqualCondition(origin_column, dest_model_class, dest_column)
 
 
 def equal_to(column: Union[field.Field, str], value: Any) -> EqualityCondition:
+  """Condition where the specified column is equal to the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return EqualityCondition(column, value)
 
 
 def force_index(forced_index: Union[index.Index, str]) -> ForceIndexCondition:
+  """Condition to force the query to use the given index.
+
+  Args:
+    forced_index: Name of the index on the origin model or the Index on the
+      origin model class to use
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return ForceIndexCondition(forced_index)
 
 
 def greater_than(column: Union[field.Field, str],
                  value: Any) -> ComparisonCondition:
+  """Condition where the specified column is greater than the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
+
   return ComparisonCondition('>', column, value)
 
 
 def greater_than_or_equal_to(column: Union[field.Field, str],
                              value: Any) -> ComparisonCondition:
+  """Condition where the specified column is not less than the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return ComparisonCondition('>=', column, value)
 
 
 def includes(relation: Union[relationship.Relationship, str],
              conditions: List[Condition] = None) -> IncludesCondition:
+  """Condition where the objects associated with a relationship are retrieved.
+
+  Note that the query formed by this call is not a JOIN, but instead a
+  subquery on the table on the other side of the relationship. To narrow
+  down the objects retrieved in the subquery, conditions that apply to that
+  subquery may be included, but not all conditions may apply
+
+  Args:
+    relation: Name of the relationship on the origin model or the
+      Relationship on the origin model class used to retrievec associated
+      objects
+    conditions: Conditions to apply on the subquery
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return IncludesCondition(relation, conditions)
 
 
 def in_list(column: Union[field.Field, str],
-            value: Any) -> ListComparisonCondition:
-  return ListComparisonCondition('IN', column, value)
+            values: Iterable[Any]) -> ListComparisonCondition:
+  """Condition where the specified column matches a value from the given list.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    values: A list of values. Any row for which the specified column matches
+      a value in this list will be included in the result set.
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
+  return ListComparisonCondition('IN', column, values)
 
 
 def less_than(column: Union[field.Field, str],
               value: Any) -> ComparisonCondition:
+  """Condition where the specified column is less than the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return ComparisonCondition('<', column, value)
 
 
 def less_than_or_equal_to(column: Union[field.Field, str],
                           value: Any) -> ComparisonCondition:
+  """Condition where the specified column is not greater than the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return ComparisonCondition('<=', column, value)
 
 
 def limit(value: int, offset: int = 0) -> LimitCondition:
+  """Condition that specifies LIMIT and OFFSET of the query.
+
+  Args:
+    value: Ceiling on number of results in the result set
+    offset: The index of the first item in the results to include in the
+     result set
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return LimitCondition(value, offset=offset)
 
 
 def not_equal_to(column: Union[field.Field, str],
                  value: Any) -> InequalityCondition:
+  """Condition where the specified column is not equal to the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return InequalityCondition(column, value)
 
 
 def not_greater_than(column: Union[field.Field, str],
                      value: Any) -> ComparisonCondition:
+  """Condition where the specified column is not greater than the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return less_than_or_equal_to(column, value)
 
 
 def not_in_list(column: Union[field.Field, str],
-                value: Any) -> ListComparisonCondition:
-  return ListComparisonCondition('NOT IN', column, value)
+                values: List[Any]) -> ListComparisonCondition:
+  """Condition where the specified column does not matche a value from the list.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    values: A list of values. Any row for which the specified column does
+      not match any values in this list will be included in the result set.
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
+  return ListComparisonCondition('NOT IN', column, values)
 
 
 def not_less_than(column: Union[field.Field, str],
                   value: Any) -> ComparisonCondition:
+  """Condition where the specified column is not less than the given value.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return greater_than_or_equal_to(column, value)
 
 
 def or_(*condition_lists: List[Condition]) -> OrCondition:
+  """Condition allows more complicated OR queries.
+
+  Args:
+    *condition_lists: Each value is a list of conditions that are
+      combined using AND (which is also the default when using Model.where)
+      All the values will then be combined using OR.
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return OrCondition(*condition_lists)
 
 
 def order_by(
     *orderings: Tuple[Union[field.Field, str], OrderType]) -> OrderByCondition:
+  """Condition that specifies the ordering of the result set.
+
+  Args:
+    *orderings: A list of tuples. The first item in each tuple is the name of
+      the column on the model or the Field on the model class which is being
+      ordered. The second item is the OrderType to use (which is either
+      ascending or descending). The index in the list indicates the position
+      of that ordering in the resulting ORDER BY statement
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
   return OrderByCondition(*orderings)
