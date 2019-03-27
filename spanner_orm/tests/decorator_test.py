@@ -48,8 +48,7 @@ class DecoratorTest(parameterized.TestCase):
 
   @parameterized.parameters(decorator.transactional_read,
                             decorator.transactional_write)
-  @mock.patch('spanner_orm.api.spanner_api')
-  def test_transactional_uses_given_transaction(self, decorator_in_test, _):
+  def test_transactional_uses_given_transaction(self, decorator_in_test):
     mock_tx = mock.Mock()
 
     @decorator_in_test

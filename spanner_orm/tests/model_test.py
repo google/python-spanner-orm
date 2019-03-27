@@ -181,14 +181,13 @@ class ModelTest(parameterized.TestCase):
     model.save()
     update.assert_not_called()
 
-  @mock.patch('spanner_orm.api.spanner_api')
-  def test_delete_deletes(self, api):
+  @mock.patch('spanner_orm.table_apis.delete')
+  def test_delete_deletes(self, delete):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values)
     model.delete(mock_transaction)
 
-    delete = api.return_value.delete
     delete.assert_called_once()
     (transaction, table, keyset), _ = delete.call_args
     self.assertEqual(transaction, mock_transaction)
