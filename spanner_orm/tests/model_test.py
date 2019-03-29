@@ -148,6 +148,7 @@ class ModelTest(parameterized.TestCase):
     find.return_value = models.SmallTestModel(updated_values)
     model.reload()
     self.assertEqual(model.value_1, updated_values['value_1'])
+    self.assertEqual(model.changes(), {})
 
   @mock.patch('spanner_orm.model.ModelApi.create')
   def test_save_creates(self, create):

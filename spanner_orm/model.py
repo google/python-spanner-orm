@@ -569,9 +569,15 @@ class Model(ModelApi):
     updated_object = self._metaclass.find(transaction, **self.id())
     if updated_object is None:
       return None
+    start_values = {}
+
     for column in self._columns:
+      value = getattr(updated_object, column)
+      start_values[column] = copy.copy(value)
       if column not in self._primary_keys:
-        setattr(self, column, getattr(updated_object, column))
+        setattr(self, column, value)
+
+    self.start_values = start_values
     self._persisted = True
     return self
 
