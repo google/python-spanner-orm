@@ -135,8 +135,8 @@ number of failures happen.  Make sure that there are no side effects that could
 cause issues if called multiple times. Exceptions thrown out of the called
 method will abort the transaction.
 
-Other write methods are exposed on ```spanner_orm.spanner_api()``` for more
-complex use cases, but you will have to do more work in order to use those
+Other helper methods exist for more complex use cases (```create```, ```update```,
+```upsert```, and others), but you will have to do more work in order to use those
 correctly. See the documentation on those methods for more information.
 
 ## Migrations

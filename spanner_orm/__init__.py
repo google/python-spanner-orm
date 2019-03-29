@@ -23,9 +23,10 @@ from spanner_orm import field
 from spanner_orm import index
 from spanner_orm import model
 from spanner_orm import relationship
+from spanner_orm import table_apis
 from spanner_orm.admin import api as admin_api
 from spanner_orm.admin import migration_executor
-from spanner_orm.admin import update
+from spanner_orm.admin import update as update_module
 
 # add NullHandler to root-module logger so that individual modules
 # won't have to.
@@ -46,6 +47,13 @@ connect_admin = admin_api.connect
 from_admin_connection = admin_api.from_connection
 hangup_admin = admin_api.hangup
 spanner_admin_api = admin_api.spanner_admin_api
+
+find = table_apis.find
+sql_query = table_apis.sql_query
+delete = table_apis.delete
+insert = table_apis.insert
+update = table_apis.update
+upsert = table_apis.upsert
 
 Model = model.Model
 
@@ -78,14 +86,14 @@ ORDER_DESC = condition.OrderType.DESC
 transactional_read = decorator.transactional_read
 transactional_write = decorator.transactional_write
 
-CreateTable = update.CreateTable
-DropTable = update.DropTable
-AddColumn = update.AddColumn
-DropColumn = update.DropColumn
-AlterColumn = update.AlterColumn
-CreateIndex = update.CreateIndex
-DropIndex = update.DropIndex
-NoUpdate = update.NoUpdate
-model_creation_ddl = update.model_creation_ddl
+CreateTable = update_module.CreateTable
+DropTable = update_module.DropTable
+AddColumn = update_module.AddColumn
+DropColumn = update_module.DropColumn
+AlterColumn = update_module.AlterColumn
+CreateIndex = update_module.CreateIndex
+DropIndex = update_module.DropIndex
+NoUpdate = update_module.NoUpdate
+model_creation_ddl = update_module.model_creation_ddl
 
 MigrationExecutor = migration_executor.MigrationExecutor

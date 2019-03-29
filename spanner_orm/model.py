@@ -29,6 +29,7 @@ from spanner_orm import metadata
 from spanner_orm import query
 from spanner_orm import registry
 from spanner_orm import relationship
+from spanner_orm import table_apis
 
 from google.cloud import spanner
 from google.cloud.spanner_v1 import transaction as spanner_transaction
@@ -163,7 +164,7 @@ class ModelApi(metaclass=ModelMetaclass):
       A list of models, one per row in the associated Spanner table
     """
     args = [cls.table, cls.columns, spanner.KeySet(all_=True)]
-    results = cls._execute_read(cls.spanner_api().find, transaction, args)
+    results = cls._execute_read(table_apis.find, transaction, args)
     return cls._results_to_models(results)
 
   @classmethod
@@ -183,7 +184,7 @@ class ModelApi(metaclass=ModelMetaclass):
     """
     builder = query.CountQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(cls.spanner_api().sql_query, transaction, args)
+    results = cls._execute_read(table_apis.sql_query, transaction, args)
     return builder.process_results(results)
 
   @classmethod
@@ -254,7 +255,7 @@ class ModelApi(metaclass=ModelMetaclass):
     keyset = spanner.KeySet(keys=key_values)
 
     args = [cls.table, cls.columns, keyset]
-    results = cls._execute_read(cls.spanner_api().find, transaction, args)
+    results = cls._execute_read(table_apis.find, transaction, args)
     return cls._results_to_models(results)
 
   @classmethod
@@ -274,7 +275,7 @@ class ModelApi(metaclass=ModelMetaclass):
     """
     builder = query.SelectQuery(cls, conditions)
     args = [builder.sql(), builder.parameters(), builder.types()]
-    results = cls._execute_read(cls.spanner_api().sql_query, transaction, args)
+    results = cls._execute_read(table_apis.sql_query, transaction, args)
     return builder.process_results(results)
 
   @classmethod
@@ -333,14 +334,14 @@ class ModelApi(metaclass=ModelMetaclass):
         each column in the table should be set to. None and keys not present
         indicate the corresponding column value should be NULL.
     """
-    cls._execute_write(cls.spanner_api().insert, transaction, [kwargs])
+    cls._execute_write(table_apis.insert, transaction, [kwargs])
 
   @classmethod
   def create_or_update(
       cls,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **kwargs: Any) -> None:
-    cls._execute_write(cls.spanner_api().upsert, transaction, [kwargs])
+    cls._execute_write(table_apis.upsert, transaction, [kwargs])
 
   @classmethod
   def delete_batch(cls, transaction: Optional[spanner_transaction.Transaction],
@@ -357,7 +358,7 @@ class ModelApi(metaclass=ModelMetaclass):
       key_list.append([getattr(model, column) for column in cls.primary_keys])
     keyset = spanner.KeySet(keys=key_list)
 
-    db_api = cls.spanner_api().delete
+    db_api = table_apis.delete
     args = [cls.table, keyset]
     if transaction is not None:
       db_api(transaction, *args)
@@ -387,11 +388,11 @@ class ModelApi(metaclass=ModelMetaclass):
     for model in models:
       value = {column: getattr(model, column) for column in cls.columns}
       if force_write:
-        api_method = cls.spanner_api().upsert
+        api_method = table_apis.upsert
       elif model._persisted:  # pylint: disable=protected-access
-        api_method = cls.spanner_api().update
+        api_method = table_apis.update
       else:
-        api_method = cls.spanner_api().insert
+        api_method = table_apis.insert
       work[api_method].append(value)
       model._persisted = True  # pylint: disable=protected-access
     for api_method, values in work.items():
@@ -411,7 +412,7 @@ class ModelApi(metaclass=ModelMetaclass):
         corresponding column value should be NULL and not present keys indicate
         the corresponding column value should not be changed.
     """
-    cls._execute_write(cls.spanner_api().update, transaction, [kwargs])
+    cls._execute_write(table_apis.update, transaction, [kwargs])
 
   @classmethod
   def _execute_write(cls, db_api: Callable[..., Any],
@@ -536,7 +537,7 @@ class Model(ModelApi):
     key = [getattr(self, column) for column in self._primary_keys]
     keyset = spanner.KeySet([key])
 
-    db_api = self.spanner_api().delete
+    db_api = table_apis.delete
     args = [self._table, keyset]
     if transaction is not None:
       db_api(transaction, *args)

@@ -52,7 +52,8 @@ def transactional_read(func: Callable[..., T]) -> Callable[..., T]:
   Returns:
     decorated function
   """
-  return _transactional(api.spanner_api().run_read_only, func)
+  api_method_lambda = lambda: api.spanner_api().run_read_only
+  return _transactional(api_method_lambda, func)
 
 
 def transactional_write(func: Callable[..., T]) -> Callable[..., T]:
@@ -84,10 +85,11 @@ def transactional_write(func: Callable[..., T]) -> Callable[..., T]:
   Returns:
     decorated function
   """
-  return _transactional(api.spanner_api().run_write, func)
+  api_method_lambda = lambda: api.spanner_api().run_write
+  return _transactional(api_method_lambda, func)
 
 
-def _transactional(spanner_api_method: Callable[..., T],
+def _transactional(spanner_api_method_lambda: Callable[[], Callable[..., T]],
                    func: Callable[..., T]) -> Callable[..., T]:
   """Returns decorated function."""
 
@@ -102,6 +104,7 @@ def _transactional(spanner_api_method: Callable[..., T],
     if 'transaction' in kwargs:
       return func(*args, **kwargs)
 
+    spanner_api_method = spanner_api_method_lambda()
     return spanner_api_method(spanner_wrapper, *args, **kwargs)
 
   return wrapper
