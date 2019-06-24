@@ -4,6 +4,12 @@ This is a lightweight ORM written in Python and built on top of Cloud Spanner.
 
 ## Getting started
 
+### How to install
+
+Make sure that Python 3.7 is the default version of python for your environment,
+then run:
+```pip install git+https://github.com/google/python-spanner-orm#egg=spanner_orm```
+
 ### Connecting
 To connect the Spanner ORM to an existing Spanner database:
 ``` python
@@ -92,7 +98,7 @@ test_and_other_objects = TestModel.where(None,
 # The method is invoked with the transaction as the first argument and then the
 # rest of the provided arguments:
 def callback_1(transaction, argument):
-  return TestModel.find(transaction, {'id': argument})
+  return TestModel.find(transaction, id=argument)
 
 specific_object = spanner_orm.spanner_api().run_read_only(callback, 1)
 
@@ -100,7 +106,7 @@ specific_object = spanner_orm.spanner_api().run_read_only(callback, 1)
 # call a bit:
 @transactional_read
 def finder(argument, transaction=None):
-  return TestModel.find(transaction, {'id': argument})
+  return TestModel.find(transaction, id=argument)
 specific_object = finder(1)
 ```
 
@@ -167,5 +173,5 @@ Note that there is no protection against trying execute migrations concurrently
 multiple times, so try not to do that.
 
 If a migration needs to be rolled back,
-```spanner_orm rollback <migration_name> <Spanner instance> <Spanner database>```
+```spanner-orm rollback <migration_name> <Spanner instance> <Spanner database>```
 or the corresponding ```MigrationExecutor``` method should be used.

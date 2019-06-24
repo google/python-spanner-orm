@@ -60,7 +60,7 @@ class CreateTable(SchemaUpdate):
                                                  ', '.join(fields), index_ddl)
 
     if self._model.interleaved:
-      statement += ', INTERLEAVE IN PARENT {parent} ON CASCADE DELETE'.format(
+      statement += ', INTERLEAVE IN PARENT {parent} ON DELETE CASCADE'.format(
           parent=self._model.interleaved.table)
     return statement
 

@@ -82,7 +82,7 @@ class UpdateTest(unittest.TestCase):
                       'key STRING(MAX) NOT NULL, '
                       'child_key STRING(MAX) NOT NULL) '
                       'PRIMARY KEY (key, child_key), '
-                      'INTERLEAVE IN PARENT SmallTestModel ON CASCADE DELETE')
+                      'INTERLEAVE IN PARENT SmallTestModel ON DELETE CASCADE')
     self.assertEqual(test_update.ddl(), test_model_ddl)
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
