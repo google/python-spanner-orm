@@ -204,7 +204,7 @@ class SelectQuery(SpannerQuery):
         values[join.relation_name] = models[0] if models else None
       else:
         values[join.relation_name] = models
-    return self._model(values, persisted=True)
+    return self._model.result_to_model(values)
 
 
 class _SelectSubQuery(SelectQuery):
