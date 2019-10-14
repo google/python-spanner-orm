@@ -97,8 +97,8 @@ class UpdateTest(unittest.TestCase):
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.tables')
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_drop_table(self, get_model, tables, indexes):
-    table_name = models.SmallTestModel.table
-    get_model.return_value = models.SmallTestModel
+    table_name = models.RelationshipTestModel.table
+    get_model.return_value = models.RelationshipTestModel
     tables.return_value = {}
     indexes.return_value = {}
 
@@ -113,9 +113,8 @@ class UpdateTest(unittest.TestCase):
 
     test_update = update.CreateIndex(table_name, 'foo', ['value_1'])
     test_update.validate()
-    self.assertEqual(
-        test_update.ddl(),
-        'CREATE INDEX foo ON {} (value_1)'.format(table_name))
+    self.assertEqual(test_update.ddl(),
+                     'CREATE INDEX foo ON {} (value_1)'.format(table_name))
 
 
 if __name__ == '__main__':

@@ -90,6 +90,7 @@ class ModelMetadata(object):
     self.table = metadata.table or self.table
     self.fields.update(metadata.fields)
     self.relations.update(metadata.relations)
+    self.indexes.update(metadata.indexes)
     self.interleaved = metadata.interleaved or self.interleaved
 
   def add_field(self, name: str, new_field: field.Field) -> None:

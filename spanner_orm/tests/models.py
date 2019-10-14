@@ -27,6 +27,7 @@ class SmallTestModel(model.Model):
   key = field.Field(field.String, primary_key=True)
   value_1 = field.Field(field.String)
   value_2 = field.Field(field.String, nullable=True)
+  index_1 = index.Index(['value_1'])
 
 
 class ChildTestModel(model.Model):

@@ -27,8 +27,9 @@ class DecoratorTest(parameterized.TestCase):
       (decorator.transactional_write, 'run_write'),
   )
   @mock.patch('spanner_orm.api.spanner_api')
-  def test_transactional_injects_new_transaction(
-      self, decorator_in_test, method_name_to_mock, mock_spanner_api):
+  def test_transactional_injects_new_transaction(self, decorator_in_test,
+                                                 method_name_to_mock,
+                                                 mock_spanner_api):
     mock_tx = mock.Mock()
     mock_api_method = getattr(mock_spanner_api.return_value,
                               method_name_to_mock)

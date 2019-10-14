@@ -148,8 +148,10 @@ class ModelApi(metaclass=ModelMetaclass):
 
   # Table read methods
   @classmethod
-  def all(cls, transaction: Optional[spanner_transaction.Transaction] = None
-         ) -> List[ModelObject]:
+  def all(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None
+  ) -> List[ModelObject]:
     """Returns all objects of this type stored in Spanner.
 
     Note: this method should only be called on subclasses of Model that have
@@ -224,8 +226,8 @@ class ModelApi(metaclass=ModelMetaclass):
       transaction: The existing transaction to use, or None to start a new
         transaction
       **keys: The keys provided are the complete set of primary keys for this
-        table and the corresponding values make up the unique identifier of
-        the object being retrieved
+        table and the corresponding values make up the unique identifier of the
+        object being retrieved
 
     Returns:
       The requested object or None if no such object exists
@@ -241,8 +243,8 @@ class ModelApi(metaclass=ModelMetaclass):
     Args:
       transaction: The existing transaction to use, or None to start a new
         transaction
-      keys: An iterable of dictionaries, each dictionary representing the set
-        of primary key values necessary to uniquely identify an object in this
+      keys: An iterable of dictionaries, each dictionary representing the set of
+        primary key values necessary to uniquely identify an object in this
         table.
 
     Returns:
@@ -337,10 +339,10 @@ class ModelApi(metaclass=ModelMetaclass):
     cls._execute_write(table_apis.insert, transaction, [kwargs])
 
   @classmethod
-  def create_or_update(
-      cls,
-      transaction: Optional[spanner_transaction.Transaction] = None,
-      **kwargs: Any) -> None:
+  def create_or_update(cls,
+                       transaction: Optional[
+                           spanner_transaction.Transaction] = None,
+                       **kwargs: Any) -> None:
     cls._execute_write(table_apis.upsert, transaction, [kwargs])
 
   @classmethod
@@ -378,8 +380,8 @@ class ModelApi(metaclass=ModelMetaclass):
       models: A list of models to be written to Spanner. If the _persisted flag
         is set, by default we try to issue an UPDATE with values set for all
         columns in the table. Otherwise, we try to issue an INSERT for all
-        columns in the table. If we try to INSERTa row that already exists
-        (or update one that is missing), an exception will be thrown.
+        columns in the table. If we try to INSERTa row that already exists (or
+        update one that is missing), an exception will be thrown.
       force_write: If true, we use UPSERT instead of UPDATE/INSERT, so no
         exceptions are thrown based on the presence or absence of data in
         Spanner
@@ -554,8 +556,9 @@ class Model(ModelApi):
     """
     return {key: self.values[key] for key in self._primary_keys}
 
-  def reload(self, transaction: spanner_transaction.Transaction = None
-            ) -> Optional[Model]:
+  def reload(
+      self,
+      transaction: spanner_transaction.Transaction = None) -> Optional[Model]:
     """Refreshes this object with information from Spanner.
 
     Args:

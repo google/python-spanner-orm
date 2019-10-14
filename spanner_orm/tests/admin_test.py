@@ -171,6 +171,7 @@ class AdminTest(unittest.TestCase):
     ddl = update.model_creation_ddl(models.IndexTestModel)
     self.assertEqual(ddl, expected_ddl)
 
+
 if __name__ == '__main__':
   logging.basicConfig()
   unittest.main()

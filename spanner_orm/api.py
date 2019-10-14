@@ -25,7 +25,6 @@ from google.auth import credentials as auth_credentials
 from google.cloud import spanner
 from google.cloud.spanner_v1 import database as spanner_database
 
-
 CallableReturn = TypeVar('CallableReturn')
 
 

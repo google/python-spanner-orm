@@ -641,9 +641,8 @@ def includes(relation: Union[relationship.Relationship, str],
   subquery may be included, but not all conditions may apply
 
   Args:
-    relation: Name of the relationship on the origin model or the
-      Relationship on the origin model class used to retrievec associated
-      objects
+    relation: Name of the relationship on the origin model or the Relationship
+      on the origin model class used to retrievec associated objects
     conditions: Conditions to apply on the subquery
 
   Returns:
@@ -659,8 +658,8 @@ def in_list(column: Union[field.Field, str],
   Args:
     column: Name of the column on the origin model or the Field on the origin
       model class to compare from
-    values: A list of values. Any row for which the specified column matches
-      a value in this list will be included in the result set.
+    values: A list of values. Any row for which the specified column matches a
+      value in this list will be included in the result set.
 
   Returns:
     A Condition subclass that will be used in the query
@@ -703,8 +702,8 @@ def limit(value: int, offset: int = 0) -> LimitCondition:
 
   Args:
     value: Ceiling on number of results in the result set
-    offset: The index of the first item in the results to include in the
-     result set
+    offset: The index of the first item in the results to include in the result
+      set
 
   Returns:
     A Condition subclass that will be used in the query
@@ -749,8 +748,8 @@ def not_in_list(column: Union[field.Field, str],
   Args:
     column: Name of the column on the origin model or the Field on the origin
       model class to compare from
-    values: A list of values. Any row for which the specified column does
-      not match any values in this list will be included in the result set.
+    values: A list of values. Any row for which the specified column does not
+      match any values in this list will be included in the result set.
 
   Returns:
     A Condition subclass that will be used in the query
@@ -777,9 +776,9 @@ def or_(*condition_lists: List[Condition]) -> OrCondition:
   """Condition allows more complicated OR queries.
 
   Args:
-    *condition_lists: Each value is a list of conditions that are
-      combined using AND (which is also the default when using Model.where)
-      All the values will then be combined using OR.
+    *condition_lists: Each value is a list of conditions that are combined using
+      AND (which is also the default when using Model.where) All the values will
+      then be combined using OR.
 
   Returns:
     A Condition subclass that will be used in the query
@@ -795,8 +794,8 @@ def order_by(
     *orderings: A list of tuples. The first item in each tuple is the name of
       the column on the model or the Field on the model class which is being
       ordered. The second item is the OrderType to use (which is either
-      ascending or descending). The index in the list indicates the position
-      of that ordering in the resulting ORDER BY statement
+      ascending or descending). The index in the list indicates the position of
+      that ordering in the resulting ORDER BY statement
 
   Returns:
     A Condition subclass that will be used in the query

@@ -78,8 +78,8 @@ class QueryTest(parameterized.TestCase):
     offset_key, offset = 'offset0', 5
     select_query = self.select(condition.limit(limit, offset=offset))
 
-    self.assertEndsWith(select_query.sql(), ' LIMIT @{} OFFSET @{}'.format(
-        limit_key, offset_key))
+    self.assertEndsWith(select_query.sql(),
+                        ' LIMIT @{} OFFSET @{}'.format(limit_key, offset_key))
     self.assertEqual(select_query.parameters(), {
         limit_key: limit,
         offset_key: offset
