@@ -95,8 +95,9 @@ class MigrationManager:
         migrations.append(self._migration_from_file(filename))
     return migrations
 
-  def _order_migrations(self, migrations: Iterable[migration.Migration]
-                       ) -> List[migration.Migration]:
+  def _order_migrations(
+      self,
+      migrations: Iterable[migration.Migration]) -> List[migration.Migration]:
     """Returns list of migrations in the order they have to be applied."""
     if not migrations:
       return []

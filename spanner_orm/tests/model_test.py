@@ -29,12 +29,11 @@ class ModelTest(parameterized.TestCase):
     test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
     test_model.value_1 = 'value_1'
     test_model.value_2 = 'value_2'
-    self.assertEqual(
-        test_model.values, {
-            'key': 'key',
-            'value_1': 'value_1',
-            'value_2': 'value_2',
-        })
+    self.assertEqual(test_model.values, {
+        'key': 'key',
+        'value_1': 'value_1',
+        'value_2': 'value_2',
+    })
 
   def test_set_error_on_primary_key(self):
     test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})

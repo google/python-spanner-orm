@@ -113,9 +113,8 @@ class UpdateTest(unittest.TestCase):
 
     test_update = update.CreateIndex(table_name, 'foo', ['value_1'])
     test_update.validate()
-    self.assertEqual(
-        test_update.ddl(),
-        'CREATE INDEX foo ON {} (value_1)'.format(table_name))
+    self.assertEqual(test_update.ddl(),
+                     'CREATE INDEX foo ON {} (value_1)'.format(table_name))
 
 
 if __name__ == '__main__':

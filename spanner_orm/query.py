@@ -50,8 +50,8 @@ class SpannerQuery(abc.ABC):
   def process_results(self, results: List[List[Any]]) -> None:
     pass
 
-  def _segments(
-      self, segment_type: condition.Segment) -> List[condition.Condition]:
+  def _segments(self,
+                segment_type: condition.Segment) -> List[condition.Condition]:
     segments = [
         condition for condition in self._conditions
         if condition.segment() == segment_type
@@ -183,11 +183,10 @@ class SelectQuery(SpannerQuery):
       parameters.update(subquery.parameters())
       types.update(subquery.types())
     return ('{prefix} {columns}'.format(
-        prefix=self._select_prefix(), columns=', '.join(columns)), parameters,
-            types)
+        prefix=self._select_prefix(),
+        columns=', '.join(columns)), parameters, types)
 
-  def process_results(self,
-                      results: List[List[Any]]) -> List[Type[Any]]:
+  def process_results(self, results: List[List[Any]]) -> List[Type[Any]]:
     return [self._process_row(result) for result in results]
 
   def _process_row(self, row: List[Any]) -> Type[Any]:

@@ -30,21 +30,18 @@ class MetadataTest(unittest.TestCase):
     self.assertEqual(table, models.SmallTestModel.meta.table)
 
   def test_metadata_inheritance(self):
-    self.assertEqual(
-      models.SmallTestModel.meta.indexes,
-      models.InheritanceTestModel.meta.indexes)
+    self.assertEqual(models.SmallTestModel.meta.indexes,
+                     models.InheritanceTestModel.meta.indexes)
 
-    self.assertEqual(
-      models.SmallTestModel.meta.table,
-      models.InheritanceTestModel.meta.table)
+    self.assertEqual(models.SmallTestModel.meta.table,
+                     models.InheritanceTestModel.meta.table)
 
-    self.assertEqual(
-      models.SmallTestModel.meta.relations,
-      models.InheritanceTestModel.meta.relations)
+    self.assertEqual(models.SmallTestModel.meta.relations,
+                     models.InheritanceTestModel.meta.relations)
 
-    self.assertEqual(
-      models.SmallTestModel.meta.interleaved,
-      models.InheritanceTestModel.meta.interleaved)
+    self.assertEqual(models.SmallTestModel.meta.interleaved,
+                     models.InheritanceTestModel.meta.interleaved)
+
 
 if __name__ == '__main__':
   logging.basicConfig()
