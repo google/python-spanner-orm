@@ -59,6 +59,13 @@ class QueryTest(parameterized.TestCase):
     self.assertEqual({column_key: value}, parameters)
     self.assertEqual(types, {column_key: field.Integer.grpc_type()})
 
+  @mock.patch('spanner_orm.table_apis.sql_query')
+  def test_count_allows_force_index(self, sql_query):
+    sql_query.return_value = [[0]]
+    equal_to = condition.equal_to('int_', 3)
+    force_index = condition.force_index('test_index')
+    models.UnittestModel.count(True, equal_to, force_index)
+
   def select(self, *conditions):
     return query.SelectQuery(models.UnittestModel, list(conditions))
 
