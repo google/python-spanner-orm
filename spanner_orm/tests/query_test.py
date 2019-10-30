@@ -59,6 +59,19 @@ class QueryTest(parameterized.TestCase):
     self.assertEqual({column_key: value}, parameters)
     self.assertEqual(types, {column_key: field.Integer.grpc_type()})
 
+  def test_count_allows_force_index(self):
+    force_index = condition.force_index('test_index')
+    count_query = query.CountQuery(models.UnittestModel, [force_index])
+    sql = count_query.sql()
+    expected_sql = 'SELECT COUNT(*) FROM table@{FORCE_INDEX=test_index}'
+    self.assertEqual(expected_sql, sql)
+
+  @parameterized.parameters(
+      condition.limit(1), condition.order_by(('int_', condition.OrderType.DESC)))
+  def test_count_only_allows_where_and_from_segment_conditions(self, condition):
+    with self.assertRaises(error.SpannerError):
+      query.CountQuery(models.UnittestModel, [condition])
+
   def select(self, *conditions):
     return query.SelectQuery(models.UnittestModel, list(conditions))
 
