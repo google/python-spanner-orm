@@ -62,9 +62,19 @@ class QueryTest(parameterized.TestCase):
   @mock.patch('spanner_orm.table_apis.sql_query')
   def test_count_allows_force_index(self, sql_query):
     sql_query.return_value = [[0]]
-    equal_to = condition.equal_to('int_', 3)
+    column, value = 'int_', 3
+    equal_to = condition.equal_to(column, value)
     force_index = condition.force_index('test_index')
     models.UnittestModel.count(True, equal_to, force_index)
+    (_, sql, parameters, types), _ = sql_query.call_args
+
+    column_key = '{}0'.format(column)
+    expected_sql = (
+        r'SELECT COUNT\(\*\) FROM table@{{FORCE_INDEX=test_index}} '
+        r'WHERE table.{} = @{}').format(column, column_key)
+    self.assertRegex(sql, expected_sql)
+    self.assertEqual({column_key: value}, parameters)
+    self.assertEqual(types, {column_key: field.Integer.grpc_type()})
 
   def select(self, *conditions):
     return query.SelectQuery(models.UnittestModel, list(conditions))
