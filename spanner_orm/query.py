@@ -142,8 +142,8 @@ class CountQuery(SpannerQuery):
     super().__init__(model, conditions)
     for c in conditions:
       if c.segment() not in [condition.Segment.WHERE, condition.Segment.FROM]:
-        raise error.SpannerError('Only conditions that affect the WHERE or FROM'
-                                 'clauses are allowed for count queries')
+        raise error.SpannerError('Only conditions that affect the WHERE or '
+                                 'FROM clauses are allowed for count queries')
 
   def _select(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     return ('SELECT COUNT(*)', {}, {})

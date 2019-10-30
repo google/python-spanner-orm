@@ -59,22 +59,14 @@ class QueryTest(parameterized.TestCase):
     self.assertEqual({column_key: value}, parameters)
     self.assertEqual(types, {column_key: field.Integer.grpc_type()})
 
-  @mock.patch('spanner_orm.table_apis.sql_query')
-  def test_count_allows_force_index(self, sql_query):
-    sql_query.return_value = [[0]]
-    column, value = 'int_', 3
-    equal_to = condition.equal_to(column, value)
+  def test_count_allows_force_index(self):
     force_index = condition.force_index('test_index')
-    models.UnittestModel.count(True, equal_to, force_index)
-    (_, sql, parameters, types), _ = sql_query.call_args
+    query.CountQuery(models.UnittestModel, [force_index])
 
-    column_key = '{}0'.format(column)
-    expected_sql = (
-        r'SELECT COUNT\(\*\) FROM table@{{FORCE_INDEX=test_index}} '
-        r'WHERE table.{} = @{}').format(column, column_key)
-    self.assertRegex(sql, expected_sql)
-    self.assertEqual({column_key: value}, parameters)
-    self.assertEqual(types, {column_key: field.Integer.grpc_type()})
+  @parameterized.parameters(condition.limit(1), condition.order_by(('int_', condition.OrderType.DESC)))
+  def test_count_only_allows_where_and_from_segment_conditions(self, condition):
+    with self.assertRaises(error.SpannerError):
+      query.CountQuery(models.UnittestModel, [condition])
 
   def select(self, *conditions):
     return query.SelectQuery(models.UnittestModel, list(conditions))
