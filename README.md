@@ -65,7 +65,7 @@ admin_api = spanner_orm.connect_admin(
   'instance_name',
   'database_name',
   create_ddl=spanner_orm.model_creation_ddl(TestModel))
-admin_api.create()
+admin_api.create_database()
 ```
 
 If the database already exists, we can execute a Migration where the upgrade

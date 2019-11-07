@@ -14,8 +14,6 @@
 # limitations under the License.
 """Handles reading and writing of migration files."""
 
-from __future__ import annotations
-
 import datetime
 import importlib
 import os
@@ -91,7 +89,7 @@ class MigrationManager:
     migrations = []
     for filename in os.listdir(self.basedir):
       _, ext = os.path.splitext(filename)
-      if ext == '.py':
+      if ext == '.py' and filename != '__init__.py':
         migrations.append(self._migration_from_file(filename))
     return migrations
 

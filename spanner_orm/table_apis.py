@@ -14,8 +14,6 @@
 # limitations under the License.
 """Table-level API lambdas for Spanner transactions."""
 
-from __future__ import annotations
-
 import logging
 from typing import Any, Dict, Iterable, List
 

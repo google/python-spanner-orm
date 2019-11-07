@@ -14,8 +14,6 @@
 # limitations under the License.
 """Handles execution of migrations."""
 
-from __future__ import annotations
-
 import datetime
 import logging
 from typing import Iterable, List, Dict, Optional

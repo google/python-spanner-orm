@@ -28,8 +28,6 @@
 # limitations under the License.
 """Hold information about a Model extracted from the class attributes."""
 
-from __future__ import annotations
-
 from typing import Any, Dict, Type, Optional
 
 from spanner_orm import error
@@ -86,7 +84,7 @@ class ModelMetadata(object):
     registry.model_registry().register(self.model_class)
     self._finalized = True
 
-  def add_metadata(self, metadata: ModelMetadata) -> None:
+  def add_metadata(self, metadata: 'ModelMetadata') -> None:
     self.table = metadata.table or self.table
     self.fields.update(metadata.fields)
     self.relations.update(metadata.relations)

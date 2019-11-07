@@ -12,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pytype: skip-file
 """Class that handles API calls to Spanner."""
-
-from __future__ import annotations
 
 import abc
 from typing import Any, Callable, Iterable, Optional, TypeVar
@@ -24,6 +23,7 @@ from spanner_orm import error
 from google.auth import credentials as auth_credentials
 from google.cloud import spanner
 from google.cloud.spanner_v1 import database as spanner_database
+from google.cloud.spanner_v1.pool import AbstractSessionPool
 
 CallableReturn = TypeVar('CallableReturn')
 
@@ -60,7 +60,7 @@ class SpannerWriteApi(abc.ABC):
 
   @property
   @abc.abstractmethod
-  def _connection(self) -> spanner_database.SpannerDatabase:
+  def _connection(self) -> spanner_database.Database:
     raise NotImplementedError
 
   def run_write(self, method: Callable[..., CallableReturn], *args: Any,
@@ -92,7 +92,7 @@ class SpannerConnection:
                database: str,
                project: Optional[str] = None,
                credentials: Optional[auth_credentials.Credentials] = None,
-               pool: Optional[spanner.Pool] = None,
+               pool: Optional[AbstractSessionPool] = None,
                create_ddl: Optional[Iterable[str]] = None):
     """Connects to the specified Spanner database."""
     client = spanner.Client(project=project, credentials=credentials)
@@ -119,7 +119,7 @@ def connect(instance: str,
             database: str,
             project: Optional[str] = None,
             credentials: Optional[auth_credentials.Credentials] = None,
-            pool: Optional[spanner.Pool] = None) -> SpannerApi:
+            pool: Optional[AbstractSessionPool] = None) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api."""
   connection = SpannerConnection(
       instance, database, project=project, credentials=credentials, pool=pool)

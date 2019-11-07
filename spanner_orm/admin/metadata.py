@@ -14,8 +14,6 @@
 # limitations under the License.
 """Retrieves table metadata from Spanner."""
 
-from __future__ import annotations
-
 import collections
 from typing import Any, Dict, Optional, Type
 

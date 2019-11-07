@@ -14,8 +14,6 @@
 # limitations under the License.
 """Model for interacting with Spanner index column schema table."""
 
-from __future__ import annotations
-
 from spanner_orm import field
 from spanner_orm.admin import schema
 

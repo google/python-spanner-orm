@@ -14,8 +14,6 @@
 # limitations under the License.
 """Entry point for spanner_orm scripts."""
 
-from __future__ import annotations
-
 import argparse
 from typing import Any
 

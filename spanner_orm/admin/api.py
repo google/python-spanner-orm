@@ -14,8 +14,6 @@
 # limitations under the License.
 """Class that handles API calls to Spanner that deal with table metadata."""
 
-from __future__ import annotations
-
 from typing import Iterable, Optional
 from spanner_orm import api
 from spanner_orm import error
@@ -23,6 +21,7 @@ from spanner_orm import error
 from google.auth import credentials as auth_credentials
 from google.cloud import spanner
 from google.cloud.spanner_v1 import database as spanner_database
+from google.cloud.spanner_v1.pool import AbstractSessionPool
 
 
 class SpannerAdminApi(api.SpannerReadApi, api.SpannerWriteApi):
@@ -32,7 +31,7 @@ class SpannerAdminApi(api.SpannerReadApi, api.SpannerWriteApi):
     self._spanner_connection = connection
 
   @property
-  def _connection(self) -> spanner_database.SpannerDatabase:
+  def _connection(self) -> spanner_database.Database:
     return self._spanner_connection.database
 
   def create_database(self) -> None:
@@ -54,7 +53,7 @@ def connect(instance: str,
             database: str,
             project: Optional[str] = None,
             credentials: Optional[auth_credentials.Credentials] = None,
-            pool: Optional[spanner.Pool] = None,
+            pool: Optional[AbstractSessionPool] = None,
             create_ddl: Optional[Iterable[str]] = None) -> SpannerAdminApi:
   """Connects the global Spanner admin API to a Spanner database."""
   connection = api.SpannerConnection(
