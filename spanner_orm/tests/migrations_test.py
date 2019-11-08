@@ -14,10 +14,10 @@
 # limitations under the License.
 import logging
 import os
-import unittest
-import stat
 import shutil
+import stat
 import tempfile
+import unittest
 from unittest import mock
 
 from spanner_orm import error
@@ -48,11 +48,12 @@ class MigrationsTest(unittest.TestCase):
     shutil.rmtree(self.TEST_MIGRATIONS_DIR)
     shutil.copytree(testdata_filename, self.TEST_MIGRATIONS_DIR)
     os.chmod(self.TEST_MIGRATIONS_DIR,
-             stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH
-             | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+             stat.S_IRWXO | stat.S_IRWXU)
     for f in os.listdir(self.TEST_MIGRATIONS_DIR):
-      os.chmod(os.path.join(self.TEST_MIGRATIONS_DIR, f),
-               stat.S_IROTH | stat.S_IWOTH | stat.S_IRUSR | stat.S_IWUSR)
+      file_path = os.path.join(self.TEST_MIGRATIONS_DIR, f)
+      if not os.path.isdir(file_path):
+        os.chmod(file_path,
+                 stat.S_IROTH | stat.S_IWOTH | stat.S_IRUSR | stat.S_IWUSR)
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
     path = manager.generate('test migration')
     try:
@@ -125,7 +126,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_filter_migrations(self):
     connection = mock.Mock()
-    executor = migration_executor.MigrationExecutor(connection, self.TEST_MIGRATIONS_DIR)
+    executor = migration_executor.MigrationExecutor(
+        connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('1', None)
     second = migration.Migration('2', '1')
@@ -145,7 +147,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_filter_migrations_error_on_bad_last_migration(self):
     connection = mock.Mock()
-    executor = migration_executor.MigrationExecutor(connection, self.TEST_MIGRATIONS_DIR)
+    executor = migration_executor.MigrationExecutor(
+        connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('1', None)
     second = migration.Migration('2', '1')
@@ -162,7 +165,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_validate_migrations(self):
     connection = mock.Mock()
-    executor = migration_executor.MigrationExecutor(connection, self.TEST_MIGRATIONS_DIR)
+    executor = migration_executor.MigrationExecutor(
+        connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('1', None)
     second = migration.Migration('2', '1')
@@ -180,7 +184,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_validate_migrations_error_on_unmigrated_after_migrated(self):
     connection = mock.Mock()
-    executor = migration_executor.MigrationExecutor(connection, self.TEST_MIGRATIONS_DIR)
+    executor = migration_executor.MigrationExecutor(
+        connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('1', None)
     second = migration.Migration('2', '1')
@@ -200,7 +205,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_validate_migrations_error_on_unmigrated_first(self):
     connection = mock.Mock()
-    executor = migration_executor.MigrationExecutor(connection, self.TEST_MIGRATIONS_DIR)
+    executor = migration_executor.MigrationExecutor(
+        connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('2', '1')
     with mock.patch.object(executor, 'migrations') as migrations:
@@ -218,7 +224,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_migrate(self):
     connection = mock.Mock()
-    executor = migration_executor.MigrationExecutor(connection, self.TEST_MIGRATIONS_DIR)
+    executor = migration_executor.MigrationExecutor(
+        connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('1', None)
     second = migration.Migration('2', '1')
@@ -232,7 +239,8 @@ class MigrationsTest(unittest.TestCase):
 
   def test_rollback(self):
     connection = mock.Mock()
-    executor = migration_executor.MigrationExecutor(connection, self.TEST_MIGRATIONS_DIR)
+    executor = migration_executor.MigrationExecutor(
+        connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('1', None)
     second = migration.Migration('2', '1')
@@ -244,6 +252,10 @@ class MigrationsTest(unittest.TestCase):
         executor.rollback('1')
         self.assertEqual(migrated, {'1': False, '2': False, '3': False})
 
+  @classmethod
+  def tearDownClass(cls):
+    super().tearDownClass()
+    shutil.rmtree(MigrationsTest.TEST_DIR)
 
 if __name__ == '__main__':
   logging.basicConfig()
