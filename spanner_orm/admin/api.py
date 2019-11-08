@@ -19,9 +19,8 @@ from spanner_orm import api
 from spanner_orm import error
 
 from google.auth import credentials as auth_credentials
-from google.cloud import spanner
 from google.cloud.spanner_v1 import database as spanner_database
-from google.cloud.spanner_v1.pool import AbstractSessionPool
+from google.cloud.spanner_v1 import pool as spanner_pool
 
 
 class SpannerAdminApi(api.SpannerReadApi, api.SpannerWriteApi):
@@ -53,7 +52,7 @@ def connect(instance: str,
             database: str,
             project: Optional[str] = None,
             credentials: Optional[auth_credentials.Credentials] = None,
-            pool: Optional[AbstractSessionPool] = None,
+            pool: Optional[spanner_pool.AbstractSessionPool] = None,
             create_ddl: Optional[Iterable[str]] = None) -> SpannerAdminApi:
   """Connects the global Spanner admin API to a Spanner database."""
   connection = api.SpannerConnection(
