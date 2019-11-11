@@ -118,7 +118,8 @@ def connect(instance: str,
             database: str,
             project: Optional[str] = None,
             credentials: Optional[auth_credentials.Credentials] = None,
-            pool: Optional[AbstractSessionPool] = None) -> SpannerApi:
+            pool: Optional[spanner_pool.AbstractSessionPool] = None
+           ) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api."""
   connection = SpannerConnection(
       instance, database, project=project, credentials=credentials, pool=pool)
