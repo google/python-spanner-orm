@@ -14,8 +14,6 @@
 # limitations under the License.
 """Holds information about a specific migration."""
 
-from __future__ import annotations
-
 from typing import Callable, Optional
 
 from spanner_orm.admin import update

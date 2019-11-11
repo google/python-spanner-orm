@@ -14,8 +14,6 @@
 # limitations under the License.
 """Used with SpannerAdminApi to manage Spanner schema updates."""
 
-from __future__ import annotations
-
 import abc
 from typing import Iterable, List, Optional, Type
 

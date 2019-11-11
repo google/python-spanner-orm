@@ -14,8 +14,6 @@
 # limitations under the License.
 """Registers Model classes so they can be referenced elsewhere."""
 
-from __future__ import annotations
-
 from typing import Any, Dict, List, Type, Union
 
 import dataclasses

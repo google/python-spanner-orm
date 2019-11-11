@@ -14,8 +14,6 @@
 # limitations under the License.
 """Helper to deal with field types in Spanner interactions."""
 
-from __future__ import annotations
-
 import abc
 import datetime
 from typing import Any, Type
@@ -23,6 +21,25 @@ from typing import Any, Type
 from spanner_orm import error
 
 from google.cloud.spanner_v1.proto import type_pb2
+
+
+class FieldType(abc.ABC):
+  """Base class for column types for Spanner interactions."""
+
+  @staticmethod
+  @abc.abstractmethod
+  def ddl() -> str:
+    raise NotImplementedError
+
+  @staticmethod
+  @abc.abstractmethod
+  def grpc_type() -> type_pb2.Type:
+    raise NotImplementedError
+
+  @staticmethod
+  @abc.abstractmethod
+  def validate_type(value: Any) -> None:
+    raise NotImplementedError
 
 
 class Field(object):
@@ -60,25 +77,6 @@ class Field(object):
         raise error.ValidationError('None set for non-nullable field')
     else:
       self._type.validate_type(value)
-
-
-class FieldType(abc.ABC):
-  """Base class for column types for Spanner interactions."""
-
-  @staticmethod
-  @abc.abstractmethod
-  def ddl() -> str:
-    raise NotImplementedError
-
-  @staticmethod
-  @abc.abstractmethod
-  def grpc_type() -> type_pb2.Type:
-    raise NotImplementedError
-
-  @staticmethod
-  @abc.abstractmethod
-  def validate_type(value: Any) -> None:
-    raise NotImplementedError
 
 
 class Boolean(FieldType):

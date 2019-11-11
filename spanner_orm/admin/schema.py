@@ -14,8 +14,6 @@
 # limitations under the License.
 """Base model for schemas."""
 
-from __future__ import annotations
-
 from typing import NoReturn
 
 from spanner_orm import error

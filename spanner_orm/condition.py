@@ -14,8 +14,6 @@
 # limitations under the License.
 """Used with Model#where and Model#count to help create Spanner queries."""
 
-from __future__ import annotations
-
 import abc
 import enum
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union

@@ -14,8 +14,6 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
-from __future__ import annotations
-
 from typing import Any, Dict, List, Type, Union
 
 import dataclasses

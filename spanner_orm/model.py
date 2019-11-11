@@ -14,8 +14,6 @@
 # limitations under the License.
 """Holds table-specific information to make querying spanner eaiser."""
 
-from __future__ import annotations
-
 import collections
 import copy
 from typing import Any, Callable, Dict, Iterable, List, Optional, Type, TypeVar, Union
@@ -101,7 +99,7 @@ class ModelMetaclass(type):
     return cls.meta.indexes
 
   @property
-  def interleaved(cls) -> Optional[Type[Model]]:
+  def interleaved(cls) -> Optional[Type['Model']]:
     if cls.meta.interleaved:
       return registry.model_registry().get(cls.meta.interleaved)
     return None
@@ -151,7 +149,7 @@ class ModelApi(metaclass=ModelMetaclass):
   def all(
       cls,
       transaction: Optional[spanner_transaction.Transaction] = None
-  ) -> List[ModelObject]:
+  ) -> List['ModelObject']:
     """Returns all objects of this type stored in Spanner.
 
     Note: this method should only be called on subclasses of Model that have
@@ -219,7 +217,7 @@ class ModelApi(metaclass=ModelMetaclass):
   @classmethod
   def find(cls,
            transaction: Optional[spanner_transaction.Transaction] = None,
-           **keys: Any) -> Optional[ModelObject]:
+           **keys: Any) -> Optional['ModelObject']:
     """Retrieves an object from Spanner based on the provided key.
 
     Args:
@@ -237,7 +235,7 @@ class ModelApi(metaclass=ModelMetaclass):
 
   @classmethod
   def find_multi(cls, transaction: Optional[spanner_transaction.Transaction],
-                 keys: Iterable[Dict[str, Any]]) -> List[ModelObject]:
+                 keys: Iterable[Dict[str, Any]]) -> List['ModelObject']:
     """Retrieves objects from Spanner based on the provided keys.
 
     Args:
@@ -262,7 +260,7 @@ class ModelApi(metaclass=ModelMetaclass):
 
   @classmethod
   def where(cls, transaction: Optional[spanner_transaction.Transaction],
-            *conditions: condition.Condition) -> List[ModelObject]:
+            *conditions: condition.Condition) -> List['ModelObject']:
     """Retrieves objects from Spanner based on the provided conditions.
 
     Args:
@@ -283,7 +281,7 @@ class ModelApi(metaclass=ModelMetaclass):
   @classmethod
   def where_equal(cls,
                   transaction: Optional[spanner_transaction.Transaction] = None,
-                  **constraints: Any) -> List[ModelObject]:
+                  **constraints: Any) -> List['ModelObject']:
     """Retrieves objects from Spanner based on the provided constraints.
 
     Args:
@@ -307,7 +305,7 @@ class ModelApi(metaclass=ModelMetaclass):
 
   @classmethod
   def _results_to_models(cls,
-                         results: Iterable[Iterable[Any]]) -> List[ModelObject]:
+                         results: Iterable[Iterable[Any]]) -> List['ModelObject']:
     items = [dict(zip(cls.columns, result)) for result in results]
     return [cls(item, persisted=True) for item in items]
 
@@ -347,7 +345,7 @@ class ModelApi(metaclass=ModelMetaclass):
 
   @classmethod
   def delete_batch(cls, transaction: Optional[spanner_transaction.Transaction],
-                   models: List[ModelObject]) -> None:
+                   models: List['ModelObject']) -> None:
     """Deletes rows from Spanner based on the provided models' primary keys.
 
     Args:
@@ -370,7 +368,7 @@ class ModelApi(metaclass=ModelMetaclass):
   @classmethod
   def save_batch(cls,
                  transaction: Optional[spanner_transaction.Transaction],
-                 models: List[ModelObject],
+                 models: List['ModelObject'],
                  force_write: bool = False) -> None:
     """Writes rows to Spanner based on the provided model data.
 
@@ -484,7 +482,7 @@ class Model(ModelApi):
     super().__setattr__(name, value)
 
   @property
-  def _metaclass(self) -> Type[Model]:
+  def _metaclass(self) -> Type['Model']:
     return type(self)
 
   @property
@@ -558,7 +556,7 @@ class Model(ModelApi):
 
   def reload(
       self,
-      transaction: spanner_transaction.Transaction = None) -> Optional[Model]:
+      transaction: spanner_transaction.Transaction = None) -> Optional['Model']:
     """Refreshes this object with information from Spanner.
 
     Args:
@@ -585,7 +583,8 @@ class Model(ModelApi):
     self._persisted = True
     return self
 
-  def save(self, transaction: spanner_transaction.Transaction = None) -> Model:
+  def save(self,
+           transaction: spanner_transaction.Transaction = None) -> 'Model':
     """Persists this object to Spanner.
 
     Note: if the _persisted flag doesn't match whether this object is actually
