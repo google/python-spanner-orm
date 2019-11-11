@@ -42,11 +42,12 @@ def rollback(args: Any) -> None:
 def main(as_module: bool = False) -> None:
   prog = 'spanner-orm' if as_module else None
   parser = argparse.ArgumentParser(prog=prog)
+  # Subcommand is required, but please don't set required=true for
+  # compatibility with argparse < 3.7.
   subparsers = parser.add_subparsers(
       dest='subcommand',
       title='subcommands',
-      description='valid subcommands',
-      required=True)
+      description='valid subcommands')
 
   generate_parser = subparsers.add_parser(
       'generate', help='Generate a new migration')
