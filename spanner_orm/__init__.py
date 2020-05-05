@@ -61,6 +61,7 @@ Model = model.Model
 Boolean = field.Boolean
 Field = field.Field
 Integer = field.Integer
+Float = field.Float
 Index = index.Index
 Relationship = relationship.Relationship
 String = field.String

@@ -25,14 +25,14 @@ class ModelApiTest(unittest.TestCase):
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_calls_api(self, find):
     mock_transaction = mock.Mock()
-    models.UnittestModel.find(mock_transaction, string='string', int_=1)
+    models.UnittestModel.find(mock_transaction, string='string', int_=1, float_=2.3)
 
     find.assert_called_once()
     (transaction, table, columns, keyset), _ = find.call_args
     self.assertEqual(transaction, mock_transaction)
     self.assertEqual(table, models.UnittestModel.table)
     self.assertEqual(columns, models.UnittestModel.columns)
-    self.assertEqual(keyset.keys, [[1, 'string']])
+    self.assertEqual(keyset.keys, [[1, 2.3, 'string']])
 
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_result(self, find):
@@ -52,7 +52,8 @@ class ModelApiTest(unittest.TestCase):
     mock_transaction = mock.Mock()
     models.UnittestModel.find_multi(mock_transaction, [{
         'string': 'string',
-        'int_': 1
+        'int_': 1,
+        'float_': 2.3
     }])
 
     find.assert_called_once()
@@ -60,7 +61,7 @@ class ModelApiTest(unittest.TestCase):
     self.assertEqual(transaction, mock_transaction)
     self.assertEqual(table, models.UnittestModel.table)
     self.assertEqual(columns, models.UnittestModel.columns)
-    self.assertEqual(keyset.keys, [[1, 'string']])
+    self.assertEqual(keyset.keys, [[1, 2.3, 'string']])
 
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_multi_result(self, find):

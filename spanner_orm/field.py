@@ -113,6 +113,23 @@ class Integer(FieldType):
       raise error.ValidationError('{} is not of type int'.format(value))
 
 
+class Float(FieldType):
+  """Represents a float type."""
+
+  @staticmethod
+  def ddl() -> str:
+    return "FLOAT64"
+
+  @staticmethod
+  def grpc_type() -> type_pb2.Type:
+    return type_pb2.Type(code=type_pb2.FLOAT64)
+
+  @staticmethod
+  def validate_type(value: Any) -> None:
+    if not isinstance(value, (int, float)):
+      raise error.ValidationError("{} is not of type float".format(value))
+
+
 class String(FieldType):
   """Represents a string type."""
 
@@ -167,4 +184,4 @@ class Timestamp(FieldType):
       raise error.ValidationError('{} is not of type datetime'.format(value))
 
 
-ALL_TYPES = [Boolean, Integer, String, StringArray, Timestamp]
+ALL_TYPES = [Boolean, Integer, Float, String, StringArray, Timestamp]
