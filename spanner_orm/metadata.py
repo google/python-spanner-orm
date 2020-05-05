@@ -94,7 +94,9 @@ class ModelMetadata(object):
   def add_field(self, name: str, new_field: field.Field) -> None:
     new_field.name = name
     new_field.position = len(self.fields)
-    self.fields[new_field.name] = new_field
+    if new_field.name in self.fields:
+      raise error.SpannerError('Already contains a field named "{}"'.format(new_field.name))
+    self.fields[name] = new_field
 
   def add_relation(self, name: str,
                    new_relation: relationship.Relationship) -> None:
@@ -103,4 +105,6 @@ class ModelMetadata(object):
 
   def add_index(self, name: str, new_index: index.Index) -> None:
     new_index.name = name
-    self.indexes[new_index.name] = new_index
+    if new_index.name in self.indexes:
+      raise error.SpannerError('Already contains an index named "{}"'.format(new_index.name))
+    self.indexes[name] = new_index

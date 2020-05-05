@@ -50,8 +50,8 @@ class CreateTable(SchemaUpdate):
 
   def ddl(self) -> str:
     fields = [
-        '{} {}'.format(name, field.ddl())
-        for name, field in self._model.fields.items()
+        '{} {}'.format(field.name, field.ddl())
+        for field in self._model.fields.values()
     ]
     index_ddl = 'PRIMARY KEY ({})'.format(', '.join(self._model.primary_keys))
     statement = 'CREATE TABLE {} ({}) {}'.format(self._model.table,

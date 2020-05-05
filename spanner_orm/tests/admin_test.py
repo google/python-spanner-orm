@@ -170,7 +170,7 @@ class AdminTest(unittest.TestCase):
       ]
       ddl = update.model_creation_ddl(models.IndexTestModel)
       self.assertEqual(ddl, expected_ddl)
-      self.assertCountEqual(models.IndexTestModel.meta.indexes.keys(), ['PRIMARY_KEY', 'value'])
+      self.assertCountEqual(models.IndexTestModel.meta.indexes.keys(), ['PRIMARY_KEY', 'value_idx'])
 
   def test_model_creation_ddl2(self):
       expected_ddl = [
