@@ -71,7 +71,7 @@ class ModelMetadata(object):
     sorted_fields = list(sorted(self.fields.values(), key=lambda f: f.position))
 
     if index.Index.PRIMARY_INDEX not in self.indexes:
-      primary_keys = [f.name for f in sorted_fields if f.primary_key()]
+      primary_keys = [f.name for f in sorted_fields if f.primary_key]
       primary_index = index.Index(primary_keys)
       primary_index.name = index.Index.PRIMARY_INDEX
       self.indexes[index.Index.PRIMARY_INDEX] = primary_index
@@ -94,7 +94,7 @@ class ModelMetadata(object):
   def add_field(self, name: str, new_field: field.Field) -> None:
     new_field.name = name
     new_field.position = len(self.fields)
-    self.fields[name] = new_field
+    self.fields[new_field.name] = new_field
 
   def add_relation(self, name: str,
                    new_relation: relationship.Relationship) -> None:
@@ -103,4 +103,4 @@ class ModelMetadata(object):
 
   def add_index(self, name: str, new_index: index.Index) -> None:
     new_index.name = name
-    self.indexes[name] = new_index
+    self.indexes[new_index.name] = new_index

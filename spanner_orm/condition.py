@@ -151,8 +151,8 @@ class ColumnsEqualCondition(Condition):
           self.destination_column, self.destination_model_class.table))
     dest = self.destination_model_class.fields[self.destination_column]
 
-    if (origin.field_type() != dest.field_type() or
-        origin.nullable() != dest.nullable()):
+    if (origin.field_type != dest.field_type or
+        origin.nullable != dest.nullable):
       raise error.ValidationError('Types of {} and {} do not match'.format(
           origin.name, dest.name))
 

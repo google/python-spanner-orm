@@ -33,9 +33,11 @@ class ColumnSchema(schema.InformationSchema):
   is_nullable = field.Field(field.String)
   spanner_type = field.Field(field.String)
 
+  @property
   def nullable(self) -> bool:
     return self.is_nullable == 'YES'
 
+  @property
   def field_type(self) -> Type[field.FieldType]:
     for field_type in field.ALL_TYPES:
       if self.spanner_type == field_type.ddl():

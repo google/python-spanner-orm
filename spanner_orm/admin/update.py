@@ -154,9 +154,9 @@ class AddColumn(SchemaUpdate):
     model_ = metadata.SpannerMetadata.model(self._table)
     if not model_:
       raise error.SpannerError('Table {} does not exist'.format(self._table))
-    if not self._field.nullable():
+    if not self._field.nullable:
       raise error.SpannerError('Column {} is not nullable'.format(self._column))
-    if self._field.primary_key():
+    if self._field.primary_key:
       raise error.SpannerError('Column {} is a primary key'.format(
           self._column))
 
@@ -218,10 +218,10 @@ class AlterColumn(SchemaUpdate):
 
     old_field = model_.fields[self._column]
     # Validate that the only alteration is to change column nullability
-    if self._field.field_type() != old_field.field_type():
+    if self._field.field_type != old_field.field_type:
       raise error.SpannerError('Column {} is changing type'.format(
           self._column))
-    if self._field.nullable() == old_field.nullable():
+    if self._field.nullable == old_field.nullable:
       raise error.SpannerError('Column {} has no changes'.format(self._column))
 
 

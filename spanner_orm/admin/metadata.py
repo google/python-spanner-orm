@@ -76,7 +76,7 @@ class SpannerMetadata(object):
                                         condition.equal_to('table_schema', ''))
     for column_row in columns:
       new_field = field.Field(
-          column_row.field_type(), nullable=column_row.nullable())
+          column_row.field_type, nullable=column_row.nullable)
       new_field.name = column_row.column_name
       new_field.position = column_row.ordinal_position
       column_data[column_row.table_name][column_row.column_name] = new_field
