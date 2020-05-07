@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from io import StringIO
 import logging
 import os
 import shutil
@@ -249,13 +250,9 @@ class MigrationsTest(unittest.TestCase):
       migrations.return_value = [first, second, third]
       migrated = {'1': True, '2': False, '3': False}
       with mock.patch.object(executor, '_migration_status_map', migrated):
-        with mock.patch('spanner_orm.admin.migration_executor._logger.info') as mock_logging:
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
           executor.show_migrations()
-          mock_logging.assert_has_calls([
-            mock.call('[%s] Migration %s', ' ', '3'),
-            mock.call('[%s] Migration %s', ' ', '2'),
-            mock.call('[%s] Migration %s', 'X', '1'),
-          ])
+          self.assertEqual("[ ] Migration 3\n[ ] Migration 2\n[X] Migration 1\n", mock_stdout.getvalue())
 
   def test_rollback(self):
     connection = mock.Mock()

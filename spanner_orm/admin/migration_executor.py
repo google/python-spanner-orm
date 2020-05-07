@@ -84,7 +84,7 @@ class MigrationExecutor:
 
     for migration_ in reversed(self.migrations()):
       migrated = self.migrated(migration_.migration_id)
-      _logger.info('[%s] Migration %s', 'X' if migrated else ' ', migration_.migration_id)
+      print('[{}] Migration {}'.format('X' if migrated else ' ', migration_.migration_id))
 
     self._hangup()
 
