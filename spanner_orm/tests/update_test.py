@@ -126,6 +126,26 @@ class UpdateTest(unittest.TestCase):
     self.assertEqual(test_update.ddl(),
                      'CREATE UNIQUE INDEX foo ON {} (value_1)'.format(table_name))
 
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
+  def test_add_null_filtered_index(self, get_model):
+    table_name = models.SmallTestModel.table
+    get_model.return_value = models.SmallTestModel
+
+    test_update = update.CreateIndex(table_name, 'foo', ['value_1'], null_filtered=True)
+    test_update.validate()
+    self.assertEqual(test_update.ddl(),
+                     'CREATE NULL_FILTERED INDEX foo ON {} (value_1)'.format(table_name))
+
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
+  def test_add_null_filtered_unique_index(self, get_model):
+    table_name = models.SmallTestModel.table
+    get_model.return_value = models.SmallTestModel
+
+    test_update = update.CreateIndex(table_name, 'foo', ['value_1'], unique=True, null_filtered=True)
+    test_update.validate()
+    self.assertEqual(test_update.ddl(),
+                     'CREATE UNIQUE NULL_FILTERED INDEX foo ON {} (value_1)'.format(table_name))
+
 
 if __name__ == '__main__':
   logging.basicConfig()

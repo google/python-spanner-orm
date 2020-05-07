@@ -234,18 +234,21 @@ class CreateIndex(SchemaUpdate):
                columns: Iterable[str],
                interleaved: Optional[str] = None,
                storing_columns: Optional[Iterable[str]] = None,
-               unique: Optional[bool] = None):
+               unique: Optional[bool] = None,
+               null_filtered: Optional[bool] = None):
     self._table = table_name
     self._index = index_name
     self._columns = columns
     self._parent_table = interleaved
     self._storing_columns = storing_columns or []
     self._unique = unique
+    self._null_filtered = null_filtered
 
   def ddl(self) -> str:
-    statement = 'CREATE {}INDEX {} ON {} ({})'.format('UNIQUE ' if self._unique else '',
-                                                      self._index, self._table,
-                                                      ', '.join(self._columns))
+    statement = 'CREATE {}{}INDEX {} ON {} ({})'.format(
+      'UNIQUE ' if self._unique else '',
+      'NULL_FILTERED ' if self._null_filtered else '',
+      self._index, self._table, ', '.join(self._columns))
     if self._storing_columns:
       statement += 'STORING ({})'.format(', '.join(self._storing_columns))
     if self._parent_table:
