@@ -33,6 +33,12 @@ def migrate(args: Any) -> None:
   executor.migrate(args.name)
 
 
+def show_migrations(args: Any) -> None:
+  connection = api.SpannerConnection(args.instance, args.database)
+  executor = migration_executor.MigrationExecutor(connection, args.directory)
+  executor.show_migrations()
+
+
 def rollback(args: Any) -> None:
   connection = api.SpannerConnection(args.instance, args.database)
   executor = migration_executor.MigrationExecutor(connection, args.directory)
@@ -56,13 +62,20 @@ def main(as_module: bool = False) -> None:
   generate_parser.set_defaults(execute=generate)
 
   migrate_parser = subparsers.add_parser(
-      'migrate', help='Execute unmigrated migrations')
+    'migrate', help='Execute unmigrated migrations')
   migrate_parser.add_argument(
-      '--name', help='Stop migrating after this migration')
+    '--name', help='Stop migrating after this migration')
   migrate_parser.add_argument('--directory')
   migrate_parser.add_argument('instance', help='Name of Spanner instance')
   migrate_parser.add_argument('database', help='Name of Spanner database')
   migrate_parser.set_defaults(execute=migrate)
+
+  show_migrations_parser = subparsers.add_parser(
+    'showmigrations', help='List migrations')
+  show_migrations_parser.add_argument('--directory')
+  show_migrations_parser.add_argument('instance', help='Name of Spanner instance')
+  show_migrations_parser.add_argument('database', help='Name of Spanner database')
+  show_migrations_parser.set_defaults(execute=show_migrations)
 
   rollback_parser = subparsers.add_parser(
       'rollback', help='Roll back migrated migrations')

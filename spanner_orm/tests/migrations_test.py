@@ -225,7 +225,7 @@ class MigrationsTest(unittest.TestCase):
   def test_migrate(self):
     connection = mock.Mock()
     executor = migration_executor.MigrationExecutor(
-        connection, self.TEST_MIGRATIONS_DIR)
+      connection, self.TEST_MIGRATIONS_DIR)
 
     first = migration.Migration('1', None)
     second = migration.Migration('2', '1')
@@ -236,6 +236,26 @@ class MigrationsTest(unittest.TestCase):
       with mock.patch.object(executor, '_migration_status_map', migrated):
         executor.migrate()
         self.assertEqual(migrated, {'1': True, '2': True, '3': True})
+
+  def test_showmigrations(self):
+    connection = mock.Mock()
+    executor = migration_executor.MigrationExecutor(
+      connection, self.TEST_MIGRATIONS_DIR)
+
+    first = migration.Migration('1', None)
+    second = migration.Migration('2', '1')
+    third = migration.Migration('3', '2')
+    with mock.patch.object(executor, 'migrations') as migrations:
+      migrations.return_value = [first, second, third]
+      migrated = {'1': True, '2': False, '3': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        with mock.patch('spanner_orm.admin.migration_executor._logger.info') as mock_logging:
+          executor.show_migrations()
+          mock_logging.assert_has_calls([
+            mock.call('[%s] Migration %s', ' ', '3'),
+            mock.call('[%s] Migration %s', ' ', '2'),
+            mock.call('[%s] Migration %s', 'X', '1'),
+          ])
 
   def test_rollback(self):
     connection = mock.Mock()
