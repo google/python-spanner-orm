@@ -48,16 +48,27 @@ class Field(object):
   def __init__(self,
                field_type: Type[FieldType],
                nullable: bool = False,
-               primary_key: bool = False):
+               primary_key: bool = False,
+               allow_commit_timestamp: bool = False):
     self.name = None
     self._type = field_type
     self._nullable = nullable
     self._primary_key = primary_key
+    self._allow_commit_timestamp = allow_commit_timestamp
+
+    if self._type.ddl() != "TIMESTAMP" and self._allow_commit_timestamp:
+      raise error.ValidationError('allow_commit_timestamp can not be set on field {}'.format(self._type))
 
   def ddl(self) -> str:
     if self._nullable:
-      return self._type.ddl()
-    return '{field_type} NOT NULL'.format(field_type=self._type.ddl())
+      nullable = ''
+    else:
+      nullable = ' NOT NULL'
+    if self._allow_commit_timestamp:
+      options = ' OPTIONS (allow_commit_timestamp=true)'
+    else:
+      options = ''
+    return '{field_type}{nullable}{options}'.format(field_type=self._type.ddl(), nullable=nullable, options=options)
 
   def field_type(self) -> Type[FieldType]:
     return self._type

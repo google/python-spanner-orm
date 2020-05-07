@@ -76,6 +76,7 @@ class UnittestModel(model.Model):
   string = field.Field(field.String, primary_key=True)
   string_2 = field.Field(field.String, nullable=True)
   timestamp = field.Field(field.Timestamp)
+  timestamp_2 = field.Field(field.Timestamp, nullable=True, allow_commit_timestamp=True)
   string_array = field.Field(field.StringArray, nullable=True)
 
   test_index = index.Index(['string_2'])
