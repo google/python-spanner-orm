@@ -73,6 +73,8 @@ class UnittestModel(model.Model):
   __table__ = 'table'
   int_ = field.Field(field.Integer, primary_key=True)
   int_2 = field.Field(field.Integer, nullable=True)
+  float_ = field.Field(field.Float, primary_key=True)
+  float_2 = field.Field(field.Float, nullable=True)
   string = field.Field(field.String, primary_key=True)
   string_2 = field.Field(field.String, nullable=True)
   timestamp = field.Field(field.Timestamp)

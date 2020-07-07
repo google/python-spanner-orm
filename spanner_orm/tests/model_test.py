@@ -40,13 +40,14 @@ class ModelTest(parameterized.TestCase):
     with self.assertRaises(AttributeError):
       test_model.key = 'error'
 
-  @parameterized.parameters(('int_2', 'foo'), ('string_2', 5),
+  @parameterized.parameters(('int_2', 'foo'), ('float_2', 'bar'), ('string_2', 5),
                             ('string_array', 'foo'), ('timestamp', 5))
   def test_set_error_on_invalid_type(self, attribute, value):
     string_array = ['foo', 'bar']
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     test_model = models.UnittestModel({
         'int_': 0,
+        'float_': 0,
         'string': '',
         'string_array': string_array,
         'timestamp': timestamp
@@ -61,7 +62,7 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(test_model.value_2, None)
 
   def test_id(self):
-    primary_key = {'string': 'foo', 'int_': 5}
+    primary_key = {'string': 'foo', 'int_': 5, 'float_': 2.3}
     all_data = primary_key.copy()
     all_data.update({
         'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
@@ -83,6 +84,7 @@ class ModelTest(parameterized.TestCase):
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     test_model = models.UnittestModel({
         'int_': 0,
+        'float_': 0,
         'string': '',
         'string_array': array,
         'timestamp': timestamp

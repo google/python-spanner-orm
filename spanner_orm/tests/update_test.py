@@ -66,9 +66,10 @@ class UpdateTest(unittest.TestCase):
     test_update.validate()
 
     test_model_ddl = ('CREATE TABLE table (int_ INT64 NOT NULL, int_2 INT64,'
+                      ' float_ FLOAT64 NOT NULL, float_2 FLOAT64,'
                       ' string STRING(MAX) NOT NULL, string_2 STRING(MAX),'
                       ' timestamp TIMESTAMP NOT NULL, string_array'
-                      ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, string)')
+                      ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, float_, string)')
     self.assertEqual(test_update.ddl(), test_model_ddl)
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
