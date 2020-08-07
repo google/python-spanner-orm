@@ -10,7 +10,7 @@ import spanner_orm
 from google.cloud.spanner_v1 import client
 from google.cloud.spanner_v1 import database
 from google.cloud.spanner_v1 import instance
-from spanner_orm.tests.spanner_emulator import emulator
+from spanner_orm.testlib.spanner_emulator import emulator
 
 
 def _make_emulator_spanner_orm_connection(

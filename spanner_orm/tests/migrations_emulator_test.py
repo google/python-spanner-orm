@@ -14,15 +14,14 @@
 # limitations under the License.
 import logging
 import os
+import unittest
 
 
 import spanner_orm
 from spanner_orm.tests import models
-from spanner_orm.tests.spanner_emulator import testlib
+from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
 
-_EXAMPLE_TIMESTAMP = None
-
-class MigrationsEmulatorTest(testlib.TestCase):
+class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
   TEST_MIGRATIONS_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     'migrations_for_emulator_test',
