@@ -62,7 +62,7 @@ def _get_instance(spanner_client: client.Client) -> instance.Instance:
   # The emulator has one default config.
   config = list(spanner_client.list_instance_configs())[0]
   inst = spanner_client.instance(
-      'qwiklabs-spanner-instance-name', configuration_name=config.name)
+      'spanner-instance-name', configuration_name=config.name)
   inst.create().result()
   return inst
 
@@ -78,7 +78,7 @@ def _migrate_database_at_connection(connection: spanner_orm.SpannerConnection,
 def _database_id() -> str:
   """Returns a new database ID that's unlikely to conflict with any other."""
   random_string = str(uuid.uuid4()).split('-')[0]
-  return 'qwiklabs-db-' + random_string
+  return 'spanner-db-' + random_string
 
 
 class TestCase(unittest.TestCase):
