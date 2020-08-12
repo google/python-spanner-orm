@@ -49,13 +49,24 @@ class CreateTable(SchemaUpdate):
     self._model = model_
 
   def ddl(self) -> str:
-    fields = [
+    key_fields = [
         '{} {}'.format(name, field.ddl())
         for name, field in self._model.fields.items()
     ]
+    key_fields_ddl = ', '.join(key_fields)
+    if self._model.foreign_key_relations:
+      fk =  list(self._model.foreign_key_relations.values())[0]
+      for referencing_table_col, referenced_table_col in fk.constraints.items():
+        key_fields_ddl += (
+          ', FOREIGN KEY ({referencing_table_col}) REFERENCES'
+          ' {parent} ({referenced_table_col})').format(
+            parent=fk.destination,
+            referencing_table_col=referencing_table_col,
+            referenced_table_col=referenced_table_col,
+          )
     index_ddl = 'PRIMARY KEY ({})'.format(', '.join(self._model.primary_keys))
     statement = 'CREATE TABLE {} ({}) {}'.format(self._model.table,
-                                                 ', '.join(fields), index_ddl)
+                                                 key_fields_ddl, index_ddl)
 
     if self._model.interleaved:
       statement += ', INTERLEAVE IN PARENT {parent} ON DELETE CASCADE'.format(

@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Type, TypeVar,
 from spanner_orm import api
 from spanner_orm import condition
 from spanner_orm import error
+from spanner_orm import foreign_key_relationship
 from spanner_orm import field
 from spanner_orm import index
 from spanner_orm import metadata
@@ -52,12 +53,19 @@ class ModelMetaclass(type):
         model_metadata.table = value
       elif key == '__interleaved__':
         model_metadata.interleaved = value
+      elif key == '__foreign_key__':
+        model_metadata.foreign_key = value
       if isinstance(value, field.Field):
         model_metadata.add_field(key, value)
       elif isinstance(value, index.Index):
         model_metadata.add_index(key, value)
       elif isinstance(value, relationship.Relationship):
         model_metadata.add_relation(key, value)
+      elif isinstance(
+          value,
+          foreign_key_relationship.ForeignKeyRelationship,
+      ):
+        model_metadata.add_foreign_key_relation(key, value)
       else:
         non_model_attrs[key] = value
 
@@ -111,6 +119,14 @@ class ModelMetaclass(type):
   @property
   def relations(cls) -> Dict[str, relationship.Relationship]:
     return cls.meta.relations
+
+  @property
+  def foreign_key_relations(cls) -> Dict[str, foreign_key_relationship.ForeignKeyRelationship]:
+    return cls.meta.foreign_key_relations
+    #if cls.meta.foreign_key:
+    #  return registry.model_registry().get(cls.meta.foreign_key)
+    #return None
+
 
   @property
   def fields(cls) -> Dict[str, field.Field]:

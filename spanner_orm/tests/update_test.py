@@ -87,6 +87,23 @@ class UpdateTest(unittest.TestCase):
     self.assertEqual(test_update.ddl(), test_model_ddl)
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
+  def test_create_table_foreign_key(self, get_model):
+    self.maxDiff = 1000
+    
+    get_model.return_value = None
+    new_model = models.ForeignKeyTestModel
+    test_update = update.CreateTable(new_model)
+    test_update.validate()
+
+    test_model_ddl = (
+        'CREATE TABLE ForeignKeyTestModel ('
+        'referencing_key STRING(MAX) NOT NULL, '
+        'value STRING(MAX) NOT NULL, '
+        'FOREIGN KEY (referencing_key) REFERENCES SmallTestModel (key)) '
+        'PRIMARY KEY (referencing_key)')
+    self.assertEqual(test_update.ddl(), test_model_ddl)
+
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_create_table_error_on_existing_table(self, get_model):
     get_model.return_value = models.SmallTestModel
     new_model = models.SmallTestModel

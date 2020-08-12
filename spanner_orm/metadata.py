@@ -32,6 +32,7 @@ from typing import Any, Dict, Type, Optional
 
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import registry
 from spanner_orm import relationship
@@ -44,6 +45,7 @@ class ModelMetadata(object):
                table: Optional[str] = None,
                fields: Optional[Dict[str, field.Field]] = None,
                relations: Optional[Dict[str, relationship.Relationship]] = None,
+               foreign_key_relations: Optional[Dict[str, foreign_key_relationship.ForeignKeyRelationship]] = None,
                indexes: Optional[Dict[str, index.Index]] = None,
                interleaved: Optional[str] = None,
                model_class: Optional[Type[Any]] = None):
@@ -55,6 +57,7 @@ class ModelMetadata(object):
     self.model_class = model_class
     self.primary_keys = []
     self.relations = dict(relations or {})
+    self.foreign_key_relations = dict(foreign_key_relations or {})
     self.table = table or ''
 
   def finalize(self) -> None:
@@ -100,6 +103,14 @@ class ModelMetadata(object):
                    new_relation: relationship.Relationship) -> None:
     new_relation.name = name
     self.relations[name] = new_relation
+
+  def add_foreign_key_relation(
+      self,
+      name: str,
+      new_relation: foreign_key_relationship.ForeignKeyRelationship,
+  ) -> None:
+    new_relation.name = name
+    self.foreign_key_relations[name] = new_relation
 
   def add_index(self, name: str, new_index: index.Index) -> None:
     new_index.name = name

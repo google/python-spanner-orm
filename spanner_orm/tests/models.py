@@ -15,6 +15,7 @@
 """Models used by unit tests."""
 
 from spanner_orm import field
+from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import model
 from spanner_orm import relationship
@@ -61,6 +62,18 @@ class RelationshipTestModel(model.Model):
   parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
                                       {'parent_key': 'key'})
 
+class ForeignKeyTestModel(model.Model):
+  """Model class for testing foreign keys."""
+
+  __table__ = 'ForeignKeyTestModel'
+ # __foreign_key__ = 'SmallTestModel'
+  referencing_key = field.Field(field.String, primary_key=True)
+  value = field.Field(field.String)
+  foreign_key_relationship = foreign_key_relationship.ForeignKeyRelationship(
+      'SmallTestModel', {'referencing_key': 'key'})
+  #    single=True)
+  #parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
+  #                                    {'parent_key': 'key'})
 
 class InheritanceTestModel(SmallTestModel):
   """Model class used for testing model inheritance."""
