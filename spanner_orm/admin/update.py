@@ -54,13 +54,12 @@ class CreateTable(SchemaUpdate):
         for name, field in self._model.fields.items()
     ]
     key_fields_ddl = ', '.join(key_fields)
-    if self._model.foreign_key_relations:
-      fk =  list(self._model.foreign_key_relations.values())[0]
-      for referencing_table_col, referenced_table_col in fk.constraints.items():
+    for relation in self._model.foreign_key_relations.values():
+      for referencing_table_col, referenced_table_col in relation.constraints.items():
         key_fields_ddl += (
           ', FOREIGN KEY ({referencing_table_col}) REFERENCES'
           ' {parent} ({referenced_table_col})').format(
-            parent=fk.destination,
+            parent=relation.destination,
             referencing_table_col=referencing_table_col,
             referenced_table_col=referenced_table_col,
           )

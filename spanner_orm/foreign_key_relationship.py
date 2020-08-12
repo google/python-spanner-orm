@@ -22,11 +22,11 @@ from spanner_orm import registry
 
 
 @dataclasses.dataclass
-class RelationshipConstraint:
-  destination_class: Type[Any]
-  destination_column: str
-  origin_class: Type[Any]
-  origin_column: str
+class ForeignKeyRelationshipConstraint:
+  referencing_column: str
+  referenced_columns: str
+  referenced_table_name: str
+  
 
 
 class ForeignKeyRelationship(object):
@@ -43,6 +43,7 @@ class ForeignKeyRelationship(object):
       constraints: Dictionary where the keys are names of columns from the
         referencing table and the values are the names of the columns in the
         referenced table.
+      # TODO(dgorelik): Allow constraints to have custom names.
     """
     self.origin = None
     self.name = None
@@ -50,22 +51,18 @@ class ForeignKeyRelationship(object):
     self._constraints = constraints
 
   @property
-  def constraints(self) -> List[RelationshipConstraint]:
+  def constraints(self) -> List[ForeignKeyRelationshipConstraint]:
     return self._constraints
 
   @property
   def destination(self) -> Type[Any]:
-    return self._referenced_table_name
+    return registry.model_registry().get(self._referenced_table_name).table
     if not self._destination:
       self._destination = registry.model_registry().get(
           self._referenced_table_name)
     return self._destination
 
-  @property
-  def single(self) -> bool:
-    return self._single
-
-  def _parse_constraints(self) -> List[RelationshipConstraint]:
+  def _parse_constraints(self) -> List[ForeignKeyRelationshipConstraint]:
     """Validates the dictionary of constraints and turns it into Conditions."""
     constraints = []
     for origin_column, destination_column in self._constraints.items():
