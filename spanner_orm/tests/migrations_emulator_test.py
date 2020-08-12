@@ -17,11 +17,11 @@ import logging
 import os
 import unittest
 
+from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
+from spanner_orm.tests import models
 
 from google.api_core import exceptions as google_api_exceptions
-import spanner_orm
-from spanner_orm.tests import models
-from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
+
 
 class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
   TEST_MIGRATIONS_DIR = os.path.join(
@@ -34,8 +34,7 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
     self.run_orm_migrations(self.TEST_MIGRATIONS_DIR)
 
   def test_basic(self):
-    test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
-    test_model.save()
+    models.SmallTestModel({'key': 'key', 'value_1': 'value'}).save()
     self.assertEqual(
       [x.values for x in models.SmallTestModel.all()],
       [{'key': 'key', 'value_1': 'value', 'value_2': None}],
@@ -54,21 +53,19 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
       }).save()
 
   def test_key(self):
-    test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
-    test_model.save()
+    models.SmallTestModel({'key': 'key', 'value_1': 'value'}).save()
     models.UnittestModel(
       {'string': 'string',
        'int_': 42,
        'float_': 4.2,
        'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
       }).save()
-    test_model_2 = models.ForeignKeyTestModel({
+    models.ForeignKeyTestModel({
         'referencing_key_1': 'key',
         'referencing_key_2': 'string',
         'referencing_key_3': 42,
         'value': 'value'
-      })
-    test_model_2.save()
+      }).save()
 
 if __name__ == '__main__':
   logging.basicConfig()
