@@ -53,8 +53,6 @@ class ModelMetaclass(type):
         model_metadata.table = value
       elif key == '__interleaved__':
         model_metadata.interleaved = value
-      elif key == '__foreign_key__':
-        model_metadata.foreign_key = value
       if isinstance(value, field.Field):
         model_metadata.add_field(key, value)
       elif isinstance(value, index.Index):
@@ -121,11 +119,9 @@ class ModelMetaclass(type):
     return cls.meta.relations
 
   @property
-  def foreign_key_relations(cls) -> Dict[str, foreign_key_relationship.ForeignKeyRelationship]:
+  def foreign_key_relations(
+      cls) -> Dict[str, foreign_key_relationship.ForeignKeyRelationship]:
     return cls.meta.foreign_key_relations
-    #if cls.meta.foreign_key:
-    #  return registry.model_registry().get(cls.meta.foreign_key)
-    #return None
 
 
   @property

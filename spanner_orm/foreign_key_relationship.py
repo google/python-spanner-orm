@@ -14,19 +14,17 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
-from typing import Any, List, Mapping, Type, Union
+from typing import List, Mapping
 
 import dataclasses
-from spanner_orm import error
 from spanner_orm import registry
 
 
 @dataclasses.dataclass
 class ForeignKeyRelationshipConstraint:
   referencing_column: str
-  referenced_columns: str
+  referenced_column: str
   referenced_table_name: str
-  
 
 
 class ForeignKeyRelationship(object):
@@ -38,8 +36,7 @@ class ForeignKeyRelationship(object):
     """Creates a ForeignKeyRelationship.
 
     Args:
-      referenced_table_name: Destination model class or fully qualified class
-        name of the destination model.
+      referenced_table_name: Name of the table which the foreign key references.
       constraints: Dictionary where the keys are names of columns from the
         referencing table and the values are the names of the columns in the
         referenced table.
@@ -52,31 +49,20 @@ class ForeignKeyRelationship(object):
 
   @property
   def constraints(self) -> List[ForeignKeyRelationshipConstraint]:
-    return self._constraints
-
-  @property
-  def destination(self) -> Type[Any]:
-    return registry.model_registry().get(self._referenced_table_name).table
-    if not self._destination:
-      self._destination = registry.model_registry().get(
-          self._referenced_table_name)
-    return self._destination
+    return self._parse_constraints()
 
   def _parse_constraints(self) -> List[ForeignKeyRelationshipConstraint]:
-    """Validates the dictionary of constraints and turns it into Conditions."""
+    """Returns a list of Constraints for the relationship."""
     constraints = []
-    for origin_column, destination_column in self._constraints.items():
-      if origin_column not in self.origin.fields:
-        raise error.ValidationError(
-            'Origin column must be present in origin model')
-
-      if destination_column not in self.destination.fields:
-        raise error.ValidationError(
-           'Destination column must be present in destination model')
-
-      # TODO(dbrandao): remove when pytype #234 is fixed
+    referenced_table = registry.model_registry().get(
+      self._referenced_table_name)
+    for referencing_column, referenced_column in self._constraints.items():
       constraints.append(
-          RelationshipConstraint(self.destination, destination_column,
-                                 self.origin, origin_column))  # type: ignore
+        ForeignKeyRelationshipConstraint(
+          referencing_column,
+          referenced_column,
+          referenced_table.table,
+        )
+      )
 
     return constraints

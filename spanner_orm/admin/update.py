@@ -55,14 +55,14 @@ class CreateTable(SchemaUpdate):
     ]
     key_fields_ddl = ', '.join(key_fields)
     for relation in self._model.foreign_key_relations.values():
-      for referencing_table_col, referenced_table_col in relation.constraints.items():
+      for constraint in relation.constraints:
         key_fields_ddl += (
-          ', FOREIGN KEY ({referencing_table_col}) REFERENCES'
-          ' {parent} ({referenced_table_col})').format(
-            parent=relation.destination,
-            referencing_table_col=referencing_table_col,
-            referenced_table_col=referenced_table_col,
-          )
+            ', FOREIGN KEY ({referencing_column}) REFERENCES'
+            ' {referenced_table} ({referenced_column})').format(
+                referencing_column=constraint.referencing_column,
+                referenced_table=constraint.referenced_table_name,
+                referenced_column=constraint.referenced_column,
+            )
     index_ddl = 'PRIMARY KEY ({})'.format(', '.join(self._model.primary_keys))
     statement = 'CREATE TABLE {} ({}) {}'.format(self._model.table,
                                                  key_fields_ddl, index_ddl)
