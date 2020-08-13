@@ -25,7 +25,7 @@ setup(
     include_package_data=True,
     python_requires='~=3.7',
     install_requires=['google-cloud-spanner >= 1.6, <2.0.0dev'],
-    tests_require=['absl-py', 'google-api-core', 'portpicker'],
+    tests_require=['absl-py', 'portpicker'],
     entry_points={
         'console_scripts': ['spanner-orm = spanner_orm.admin.scripts:main']
     })
