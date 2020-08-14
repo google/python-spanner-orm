@@ -1,5 +1,5 @@
 # python3
-# Copyright 2019 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
-from typing import List, Mapping
+from typing import Mapping
 
 import dataclasses
 from spanner_orm import registry
@@ -22,8 +22,7 @@ from spanner_orm import registry
 
 @dataclasses.dataclass
 class ForeignKeyRelationshipConstraint:
-  referencing_column: str
-  referenced_column: str
+  columns: Mapping[str, str]
   referenced_table_name: str
 
 
@@ -32,37 +31,29 @@ class ForeignKeyRelationship(object):
 
   def __init__(self,
                referenced_table_name: str,
-               constraints: Mapping[str, str]):
+               columns: Mapping[str, str]):
     """Creates a ForeignKeyRelationship.
 
     Args:
       referenced_table_name: Name of the table which the foreign key references.
-      constraints: Dictionary where the keys are names of columns from the
+      columns: Dictionary where the keys are names of columns from the
         referencing table and the values are the names of the columns in the
         referenced table.
-      # TODO(dgorelik): Allow constraints to have custom names.
     """
     self.origin = None
     self.name = None
     self._referenced_table_name = referenced_table_name
-    self._constraints = constraints
+    self._columns = columns
 
   @property
-  def constraints(self) -> List[ForeignKeyRelationshipConstraint]:
-    return self._parse_constraints()
+  def constraint(self) -> ForeignKeyRelationshipConstraint:
+    return self._parse_constraint()
 
-  def _parse_constraints(self) -> List[ForeignKeyRelationshipConstraint]:
-    """Returns a list of Constraints for the relationship."""
-    constraints = []
+  def _parse_constraint(self) -> ForeignKeyRelationshipConstraint:
+    """Return the relationship constraint."""
     referenced_table = registry.model_registry().get(
       self._referenced_table_name)
-    for referencing_column, referenced_column in self._constraints.items():
-      constraints.append(
-        ForeignKeyRelationshipConstraint(
-          referencing_column,
-          referenced_column,
-          referenced_table.table,
-        )
-      )
-
-    return constraints
+    return ForeignKeyRelationshipConstraint(
+      self._columns,
+      referenced_table.table,
+    )

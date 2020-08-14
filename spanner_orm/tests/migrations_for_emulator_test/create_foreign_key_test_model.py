@@ -33,13 +33,15 @@ class OriginalForeignKeyTestModelTable(spanner_orm.model.Model):
   referencing_key_1 = field.Field(field.String, primary_key=True)
   referencing_key_2 = field.Field(field.String, primary_key=True)
   referencing_key_3 = field.Field(field.Integer, primary_key=True)
-  value = field.Field(field.String)
+  self_referencing_key = field.Field(field.String, nullable=True)
   foreign_key_1 = foreign_key_relationship.ForeignKeyRelationship(
-      'SmallTestModel', {'referencing_key_1': 'key'})
+    'SmallTestModel', {'referencing_key_1': 'key'})
   foreign_key_2 = foreign_key_relationship.ForeignKeyRelationship(
     'UnittestModel',
     {'referencing_key_2': 'string', 'referencing_key_3': 'int_'},
   )
+  foreign_key_3 = foreign_key_relationship.ForeignKeyRelationship(
+    'ForeignKeyTestModel', {'self_referencing_key': 'referencing_key_1'})
 
 
 def upgrade() -> spanner_orm.CreateTable:

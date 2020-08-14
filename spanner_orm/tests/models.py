@@ -62,6 +62,7 @@ class RelationshipTestModel(model.Model):
   parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
                                       {'parent_key': 'key'})
 
+
 class ForeignKeyTestModel(model.Model):
   """Model class for testing foreign keys."""
 
@@ -69,13 +70,16 @@ class ForeignKeyTestModel(model.Model):
   referencing_key_1 = field.Field(field.String, primary_key=True)
   referencing_key_2 = field.Field(field.String, primary_key=True)
   referencing_key_3 = field.Field(field.Integer, primary_key=True)
-  value = field.Field(field.String)
+  self_referencing_key = field.Field(field.String, nullable=True)
   foreign_key_1 = foreign_key_relationship.ForeignKeyRelationship(
-      'SmallTestModel', {'referencing_key_1': 'key'})
+    'SmallTestModel', {'referencing_key_1': 'key'})
   foreign_key_2 = foreign_key_relationship.ForeignKeyRelationship(
     'UnittestModel',
     {'referencing_key_2': 'string', 'referencing_key_3': 'int_'},
   )
+  foreign_key_3 = foreign_key_relationship.ForeignKeyRelationship(
+    'ForeignKeyTestModel', {'self_referencing_key': 'referencing_key_1'})
+
 
 class InheritanceTestModel(SmallTestModel):
   """Model class used for testing model inheritance."""
