@@ -62,30 +62,6 @@ class RelationshipTestModel(model.Model):
   parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
                                       {'parent_key': 'key'})
 
-
-class ForeignKeyTestModel(model.Model):
-  """Model class for testing foreign keys."""
-
-  __table__ = 'ForeignKeyTestModel'
-  referencing_key_1 = field.Field(field.String, primary_key=True)
-  referencing_key_2 = field.Field(field.String, primary_key=True)
-  referencing_key_3 = field.Field(field.Integer, primary_key=True)
-  self_referencing_key = field.Field(field.String, nullable=True)
-  foreign_key_1 = foreign_key_relationship.ForeignKeyRelationship(
-    'SmallTestModel', {'referencing_key_1': 'key'})
-  foreign_key_2 = foreign_key_relationship.ForeignKeyRelationship(
-    'UnittestModel',
-    {'referencing_key_2': 'string', 'referencing_key_3': 'int_'},
-  )
-  foreign_key_3 = foreign_key_relationship.ForeignKeyRelationship(
-    'ForeignKeyTestModel', {'self_referencing_key': 'referencing_key_1'})
-
-
-class InheritanceTestModel(SmallTestModel):
-  """Model class used for testing model inheritance."""
-  value_3 = field.Field(field.String, nullable=True)
-
-
 class UnittestModel(model.Model):
   """Model class used for model testing."""
 
@@ -100,3 +76,26 @@ class UnittestModel(model.Model):
   string_array = field.Field(field.StringArray, nullable=True)
 
   test_index = index.Index(['string_2'])
+
+class ForeignKeyTestModel(model.Model):
+  """Model class for testing foreign keys."""
+
+  __table__ = 'ForeignKeyTestModel'
+  referencing_key_1 = field.Field(field.String, primary_key=True)
+  referencing_key_2 = field.Field(field.String, primary_key=True)
+  referencing_key_3 = field.Field(field.Integer, primary_key=True)
+  self_referencing_key = field.Field(field.String, nullable=True)
+  foreign_key_1 = foreign_key_relationship.ForeignKeyRelationship(
+    'spanner_orm.tests.models.SmallTestModel', {'referencing_key_1': 'key'})
+  foreign_key_2 = foreign_key_relationship.ForeignKeyRelationship(
+    'spanner_orm.tests.models.UnittestModel',
+    {'referencing_key_2': 'string', 'referencing_key_3': 'int_'},
+  )
+  foreign_key_3 = foreign_key_relationship.ForeignKeyRelationship(
+    'spanner_orm.tests.models.ForeignKeyTestModel', {'self_referencing_key': 'referencing_key_1'})
+
+
+class InheritanceTestModel(SmallTestModel):
+  """Model class used for testing model inheritance."""
+  value_3 = field.Field(field.String, nullable=True)
+

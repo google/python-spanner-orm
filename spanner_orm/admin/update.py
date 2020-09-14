@@ -20,6 +20,7 @@ from typing import Iterable, List, Optional, Type
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import foreign_key_relationship
 from spanner_orm import model
 from spanner_orm.admin import api
 from spanner_orm.admin import index_column
@@ -55,16 +56,7 @@ class CreateTable(SchemaUpdate):
     ]
     key_fields_ddl = ', '.join(key_fields)
     for relation in self._model.foreign_key_relations.values():
-      referencing_columns_ddl = ', '.join(relation.constraint.columns.keys())
-      referenced_columns_ddl = ', '.join(relation.constraint.columns.values())
-      key_fields_ddl += (
-        ', CONSTRAINT {fk_name} FOREIGN KEY ({referencing_columns}) REFERENCES'
-        ' {referenced_table} ({referenced_columns})').format(
-          fk_name=relation.name,
-          referencing_columns=referencing_columns_ddl,
-          referenced_table=relation.constraint.referenced_table_name,
-          referenced_columns=referenced_columns_ddl,
-        )
+      key_fields_ddl += f', {relation.ddl}'
     index_ddl = 'PRIMARY KEY ({})'.format(', '.join(self._model.primary_keys))
     statement = 'CREATE TABLE {} ({}) {}'.format(self._model.table,
                                                  key_fields_ddl, index_ddl)
@@ -327,6 +319,58 @@ class DropIndex(SchemaUpdate):
       raise error.SpannerError('Index {} is the primary index'.format(
           self._index))
 
+class AddForeignKeyRelationship(SchemaUpdate):
+  """Update for adding a column to an existing table.
+
+  Only supports adding nullable columns
+  """
+
+  def __init__(
+      self,
+      referencing_table_name: str,
+      referenced_table_name: str,
+      column_mapping,
+  ):
+    self._table = table_name
+    self._column = column_name
+    self._field = field_
+
+  def ddl(self) -> str:
+    return 'ALTER TABLE {} ADD'.format(self._table, self._column,
+                                                    self._field.ddl())
+
+  def validate(self) -> None:
+    model_ = metadata.SpannerMetadata.model(self._table)
+    if not model_:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+
+
+class DropForeignKeyRelationship(SchemaUpdate):
+  """Update for dropping a column from an existing table."""
+
+  def __init__(self, table_name: str, column_name: str):
+    self._table = table_name
+    self._column = column_name
+
+  def ddl(self) -> str:
+    return 'ALTER TABLE {} DROP COLUMN {}'.format(self._table, self._column)
+
+  def validate(self) -> None:
+    model_ = metadata.SpannerMetadata.model(self._table)
+    if not model_:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+
+    if self._column not in model_.fields:
+      raise error.SpannerError('Column {} does not exist on {}'.format(
+          self._column, self._table))
+
+    # Verify no indices exist on the column we're trying to drop
+    num_indexed_columns = index_column.IndexColumnSchema.count(
+        None, condition.equal_to('column_name', self._column),
+        condition.equal_to('table_name', self._table))
+    if num_indexed_columns > 0:
+      raise error.SpannerError('Column {} is indexed'.format(self._column))
+    
 
 class NoUpdate(SchemaUpdate):
   """Update that does nothing, for migrations that don't update db schemas."""

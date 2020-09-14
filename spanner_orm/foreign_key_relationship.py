@@ -14,7 +14,7 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
-from typing import Mapping
+from typing import Any, Mapping
 
 import dataclasses
 from spanner_orm import registry
@@ -24,6 +24,7 @@ from spanner_orm import registry
 class ForeignKeyRelationshipConstraint:
   columns: Mapping[str, str]
   referenced_table_name: str
+  referenced_table: Any
 
 
 class ForeignKeyRelationship(object):
@@ -49,6 +50,19 @@ class ForeignKeyRelationship(object):
   def constraint(self) -> ForeignKeyRelationshipConstraint:
     return self._parse_constraint()
 
+  @property
+  def ddl(self) -> str:
+    referencing_columns_ddl = ', '.join(self.constraint.columns.keys())
+    referenced_columns_ddl = ', '.join(self.constraint.columns.values())
+    return (
+      'CONSTRAINT {fk_name} FOREIGN KEY ({referencing_columns}) REFERENCES'
+      ' {referenced_table} ({referenced_columns})').format(
+        fk_name=self.name,
+        referencing_columns=referencing_columns_ddl,
+        referenced_table=self.constraint.referenced_table_name,
+        referenced_columns=referenced_columns_ddl,
+      )
+
   def _parse_constraint(self) -> ForeignKeyRelationshipConstraint:
     """Return the relationship constraint."""
     referenced_table = registry.model_registry().get(
@@ -56,4 +70,9 @@ class ForeignKeyRelationship(object):
     return ForeignKeyRelationshipConstraint(
       self._columns,
       referenced_table.table,
+      referenced_table,
     )
+
+  @property
+  def single(self) -> bool:
+    return True
