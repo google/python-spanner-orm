@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from io import StringIO
 import logging
 import os
 import shutil
@@ -66,9 +67,9 @@ class MigrationsTest(unittest.TestCase):
       shutil.rmtree(self.TEST_MIGRATIONS_DIR)
 
   def test_order_migrations(self):
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     migrations = [third, first, second]
     expected_order = [first, second, third]
 
@@ -76,9 +77,9 @@ class MigrationsTest(unittest.TestCase):
     self.assertEqual(manager._order_migrations(migrations), expected_order)
 
   def test_order_migrations_with_no_none(self):
-    first = migration.Migration('2', '1')
-    second = migration.Migration('3', '2')
-    third = migration.Migration('4', '3')
+    first = migration.Migration('2', '1', '2')
+    second = migration.Migration('3', '2', '3')
+    third = migration.Migration('4', '3', '4')
     migrations = [third, first, second]
     expected_order = [first, second, third]
 
@@ -86,9 +87,9 @@ class MigrationsTest(unittest.TestCase):
     self.assertEqual(manager._order_migrations(migrations), expected_order)
 
   def test_order_migrations_error_on_unclear_successor(self):
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '1')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '1', '3')
     migrations = [third, first, second]
 
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
@@ -96,8 +97,8 @@ class MigrationsTest(unittest.TestCase):
       manager._order_migrations(migrations)
 
   def test_order_migrations_error_on_unclear_start_migration(self):
-    first = migration.Migration('1', None)
-    second = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('3', '2', '3')
     migrations = [first, second]
 
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
@@ -105,9 +106,9 @@ class MigrationsTest(unittest.TestCase):
       manager._order_migrations(migrations)
 
   def test_order_migrations_error_on_circular_dependency(self):
-    first = migration.Migration('1', '3')
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', '3', '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     migrations = [third, first, second]
 
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
@@ -115,9 +116,9 @@ class MigrationsTest(unittest.TestCase):
       manager._order_migrations(migrations)
 
   def test_order_migrations_error_on_no_successor(self):
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '3')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '3', '2')
+    third = migration.Migration('3', '2', '3')
     migrations = [third, first, second]
 
     manager = migration_manager.MigrationManager(self.TEST_MIGRATIONS_DIR)
@@ -129,9 +130,9 @@ class MigrationsTest(unittest.TestCase):
     executor = migration_executor.MigrationExecutor(
         connection, self.TEST_MIGRATIONS_DIR)
 
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     migrations = [first, second, third]
 
     migrated = {'1': True, '2': False, '3': False}
@@ -150,9 +151,9 @@ class MigrationsTest(unittest.TestCase):
     executor = migration_executor.MigrationExecutor(
         connection, self.TEST_MIGRATIONS_DIR)
 
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     migrations = [first, second, third]
 
     migrated = {'1': True, '2': False, '3': False}
@@ -168,9 +169,9 @@ class MigrationsTest(unittest.TestCase):
     executor = migration_executor.MigrationExecutor(
         connection, self.TEST_MIGRATIONS_DIR)
 
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     with mock.patch.object(executor, 'migrations') as migrations:
       migrations.return_value = [first, second, third]
 
@@ -187,9 +188,9 @@ class MigrationsTest(unittest.TestCase):
     executor = migration_executor.MigrationExecutor(
         connection, self.TEST_MIGRATIONS_DIR)
 
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     with mock.patch.object(executor, 'migrations') as migrations:
       migrations.return_value = [first, second, third]
 
@@ -208,7 +209,7 @@ class MigrationsTest(unittest.TestCase):
     executor = migration_executor.MigrationExecutor(
         connection, self.TEST_MIGRATIONS_DIR)
 
-    first = migration.Migration('2', '1')
+    first = migration.Migration('2', '1', '2')
     with mock.patch.object(executor, 'migrations') as migrations:
       migrations.return_value = [first]
 
@@ -225,11 +226,11 @@ class MigrationsTest(unittest.TestCase):
   def test_migrate(self):
     connection = mock.Mock()
     executor = migration_executor.MigrationExecutor(
-        connection, self.TEST_MIGRATIONS_DIR)
+      connection, self.TEST_MIGRATIONS_DIR)
 
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     with mock.patch.object(executor, 'migrations') as migrations:
       migrations.return_value = [first, second, third]
       migrated = {'1': True, '2': False, '3': False}
@@ -237,14 +238,30 @@ class MigrationsTest(unittest.TestCase):
         executor.migrate()
         self.assertEqual(migrated, {'1': True, '2': True, '3': True})
 
+  def test_show_migrations(self):
+    connection = mock.Mock()
+    executor = migration_executor.MigrationExecutor(
+      connection, self.TEST_MIGRATIONS_DIR)
+
+    first = migration.Migration('abcdef', None, '1')
+    second = migration.Migration('012345', 'abcdef', '2')
+    third = migration.Migration('6abcde', '012345', '3')
+    with mock.patch.object(executor, 'migrations') as migrations:
+      migrations.return_value = [first, second, third]
+      migrated = {'abcdef': True, '012345': False, '6abcde': False}
+      with mock.patch.object(executor, '_migration_status_map', migrated):
+        with mock.patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+          executor.show_migrations()
+          self.assertEqual("[ ] 6abcde, 3\n[ ] 012345, 2\n[X] abcdef, 1\n", mock_stdout.getvalue())
+
   def test_rollback(self):
     connection = mock.Mock()
     executor = migration_executor.MigrationExecutor(
         connection, self.TEST_MIGRATIONS_DIR)
 
-    first = migration.Migration('1', None)
-    second = migration.Migration('2', '1')
-    third = migration.Migration('3', '2')
+    first = migration.Migration('1', None, '1')
+    second = migration.Migration('2', '1', '2')
+    third = migration.Migration('3', '2', '3')
     with mock.patch.object(executor, 'migrations') as migrations:
       migrations.return_value = [first, second, third]
       migrated = {'1': True, '2': False, '3': False}

@@ -176,3 +176,6 @@ multiple times, so try not to do that.
 If a migration needs to be rolled back,
 ```spanner-orm rollback <migration_name> <Spanner instance> <Spanner database>```
 or the corresponding ```MigrationExecutor``` method should be used.
+
+To see a list of all migrations found, run ```spanner-orm showmigrations <Spanner instance> <Spanner database>```.
+Migrations that have already been applied migrations are marked by an `[X]`.

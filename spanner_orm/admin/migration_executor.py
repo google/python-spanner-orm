@@ -76,6 +76,18 @@ class MigrationExecutor:
       self._update_status(migration_.migration_id, True)
     self._hangup()
 
+  def show_migrations(self) -> None:
+    """Prints information about all migrations.
+    """
+    self._connect()
+    self._validate_migrations()
+
+    for migration_ in reversed(self.migrations()):
+      migrated = self.migrated(migration_.migration_id)
+      print('[{}] {}, {}'.format('X' if migrated else ' ', migration_.migration_id, migration_.description))
+
+    self._hangup()
+
   def rollback(self, target_migration: str) -> None:
     """Rolls back migrated migrations on the curent database.
 
@@ -117,7 +129,7 @@ class MigrationExecutor:
 
   def _filter_migrations(
       self, migrations: Iterable[migration.Migration], migrated: bool,
-      last_migration: Optional[str]) -> List[migration.Migration]:
+      last_migration: Optional[str] = None) -> List[migration.Migration]:
     """Filters the list of migrations according to the desired conditions.
 
     Args:

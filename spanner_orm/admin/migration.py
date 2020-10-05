@@ -29,9 +29,11 @@ class Migration:
   def __init__(self,
                migration_id: str,
                prev_migration_id: Optional[str],
+               description: str,
                upgrade: Optional[Callable[[], update.SchemaUpdate]] = None,
                downgrade: Optional[Callable[[], update.SchemaUpdate]] = None):
     self._id = migration_id
+    self._description = description
     self._prev = prev_migration_id
     self._upgrade = upgrade or no_update_callable
     self._downgrade = downgrade or no_update_callable
@@ -43,6 +45,10 @@ class Migration:
   @property
   def prev_migration_id(self) -> Optional[str]:
     return self._prev
+
+  @property
+  def description(self) -> str:
+    return self._description
 
   @property
   def upgrade(self) -> Optional[Callable[[], update.SchemaUpdate]]:

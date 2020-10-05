@@ -75,9 +75,15 @@ class MigrationManager:
     spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    module_doc = module.__doc__.split('\n')
+    if not module_doc:
+      description = "<unknown>"
+    else:
+      description = module_doc[0]
     try:
       result = migration.Migration(module.migration_id,
                                    module.prev_migration_id,
+                                   description,
                                    getattr(module, 'upgrade', None),
                                    getattr(module, 'downgrade', None))
     except AttributeError:
