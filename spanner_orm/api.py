@@ -94,10 +94,20 @@ class SpannerConnection:
                pool: Optional[spanner_pool.AbstractSessionPool] = None,
                create_ddl: Optional[Iterable[str]] = None):
     """Connects to the specified Spanner database."""
-    client = spanner.Client(project=project, credentials=credentials)
-    instance = client.instance(instance)
+    self._instance = instance
+    self._database = database
+    self._project = project
+    self._credentials = credentials
+    self._pool = pool
+    self._create_ddl = create_ddl
+    self.connect()
+
+  def connect(self):
+    """Establish a new connection to the specified Spanner database."""
+    client = spanner.Client(project=self._project, credentials=self._credentials)
+    instance = client.instance(self._instance)
     self.database = instance.database(
-        database, pool=pool, ddl_statements=create_ddl or ())
+        self._database, pool=self._pool, ddl_statements=self._create_ddl or ())
 
 
 class SpannerApi(SpannerReadApi, SpannerWriteApi):

@@ -16,6 +16,7 @@
 
 from typing import Callable, TypeVar
 
+from google.api_core import exceptions
 from spanner_orm import api
 
 T = TypeVar('T')
@@ -103,6 +104,12 @@ def _transactional(spanner_api_method_lambda: Callable[[], Callable[..., T]],
       return func(*args, **kwargs)
 
     spanner_api_method = spanner_api_method_lambda()
-    return spanner_api_method(spanner_wrapper, *args, **kwargs)
+    try:
+      return spanner_api_method(spanner_wrapper, *args, **kwargs)
+    except exceptions.NotFound:
+      # https://cloud.google.com/spanner/docs/sessions#handle_deleted_sessions
+      # states that Spanner may delete existing sessions for various reasons.
+      api.spanner_api().connect()
+      return spanner_api_method(spanner_wrapper, *args, **kwargs)
 
   return wrapper
