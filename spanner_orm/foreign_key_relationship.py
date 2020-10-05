@@ -14,7 +14,7 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
-from typing import Any, Mapping
+from typing import Any, Mapping, Type
 
 import dataclasses
 from spanner_orm import registry
@@ -24,7 +24,7 @@ from spanner_orm import registry
 class ForeignKeyRelationshipConstraint:
   columns: Mapping[str, str]
   referenced_table_name: str
-  referenced_table: Any
+  referenced_table: Type[Any]
 
 
 class ForeignKeyRelationship(object):
@@ -32,7 +32,8 @@ class ForeignKeyRelationship(object):
 
   def __init__(self,
                referenced_table_name: str,
-               columns: Mapping[str, str]):
+               columns: Mapping[str, str],
+               single: bool = False):
     """Creates a ForeignKeyRelationship.
 
     Args:
@@ -40,11 +41,14 @@ class ForeignKeyRelationship(object):
       columns: Dictionary where the keys are names of columns from the
         referencing table and the values are the names of the columns in the
         referenced table.
+      single: True if the referenced table should be treated as a single object
+        instead of a list of objects.
     """
     self.origin = None
     self.name = None
     self._referenced_table_name = referenced_table_name
     self._columns = columns
+    self._single = single
 
   @property
   def constraint(self) -> ForeignKeyRelationshipConstraint:
@@ -55,24 +59,25 @@ class ForeignKeyRelationship(object):
     referencing_columns_ddl = ', '.join(self.constraint.columns.keys())
     referenced_columns_ddl = ', '.join(self.constraint.columns.values())
     return (
-      'CONSTRAINT {fk_name} FOREIGN KEY ({referencing_columns}) REFERENCES'
-      ' {referenced_table} ({referenced_columns})').format(
-        fk_name=self.name,
-        referencing_columns=referencing_columns_ddl,
-        referenced_table=self.constraint.referenced_table_name,
-        referenced_columns=referenced_columns_ddl,
-      )
+        'CONSTRAINT {fk_name} FOREIGN KEY ({referencing_columns}) REFERENCES'
+        ' {referenced_table} ({referenced_columns})').format(
+            fk_name=self.name,
+            referencing_columns=referencing_columns_ddl,
+            referenced_table=self.constraint.referenced_table_name,
+            referenced_columns=referenced_columns_ddl,
+        )
 
   def _parse_constraint(self) -> ForeignKeyRelationshipConstraint:
     """Return the relationship constraint."""
     referenced_table = registry.model_registry().get(
-      self._referenced_table_name)
+        self._referenced_table_name)
     return ForeignKeyRelationshipConstraint(
-      self._columns,
-      referenced_table.table,
-      referenced_table,
+        self._columns,
+        referenced_table.table,
+        referenced_table,
     )
 
   @property
   def single(self) -> bool:
+    # self._single
     return True
