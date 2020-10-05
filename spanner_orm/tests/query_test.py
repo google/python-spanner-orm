@@ -301,30 +301,32 @@ class QueryTest(parameterized.TestCase):
     result.append(parents)
     return child, parent, [result]
 
-  
-  def test_includes_single_related_object_result(self):
-    select_query = self.includes('parent')
-    child_values, parent_values, rows = self.includes_result(related=1)
+
+  @parameterized.named_parameters(
+    (
+      'legacy_relationship',
+      {'relation': 'parent'},
+      lambda x: x.parent,
+      lambda x: x.includes_result(related=1),
+    ),
+    (
+      'foreign_key_relationship',
+      {'relation': 'foreign_key_1', 'foreign_key_relation': True},
+      lambda x: x.foreign_key_1,
+      lambda x: x.fk_includes_result(related=1),
+    ),
+  )
+  def test_includes_single_related_object_result(self, includes_kwargs, x, y):
+    select_query = self.includes(**includes_kwargs)
+    child_values, parent_values, rows = y(self)
     result = select_query.process_results(rows)[0]
 
-    self.assertIsInstance(result.parent, models.SmallTestModel)
+    self.assertIsInstance(x(result), models.SmallTestModel)
     for name, value in child_values.items():
       self.assertEqual(getattr(result, name), value)
 
     for name, value in parent_values.items():
-      self.assertEqual(getattr(result.parent, name), value)
-
-  def test_fk_includes_single_related_object_result(self):
-    select_query = self.includes('foreign_key_1', foreign_key_relation = True)
-    child_values, parent_values, rows = self.fk_includes_result(related=1)
-    result = select_query.process_results(rows)[0]
-
-    self.assertIsInstance(result.foreign_key_1, models.SmallTestModel)
-    for name, value in child_values.items():
-      self.assertEqual(getattr(result, name), value)
-
-    for name, value in parent_values.items():
-      self.assertEqual(getattr(result.foreign_key_1, name), value)
+      self.assertEqual(getattr(x(result), name), value)
 
   @parameterized.named_parameters(
     (

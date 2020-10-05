@@ -79,5 +79,6 @@ class ForeignKeyRelationship(object):
 
   @property
   def single(self) -> bool:
-    # self._single
+    # Spanner enforces uniqueness for values of fields referenced by
+    # foreign keys.
     return True
