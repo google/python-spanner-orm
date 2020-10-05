@@ -5,3 +5,4 @@ build
 __pycache__
 .eggs
 *.egg-info
+.pytype
