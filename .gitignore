@@ -6,3 +6,9 @@ __pycache__
 .eggs
 *.egg-info
 .pytype
+
+# Files that may or may not be added to the repo while acquiring the Spanner
+# emulator.
+cloud-spanner-emulator*
+emulator_main
+gateway_main
