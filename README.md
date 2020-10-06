@@ -179,6 +179,11 @@ or the corresponding ```MigrationExecutor``` method should be used.
 
 ## Tests
 
+Note: we suggest using a Python 3.7 
+[virtualenv](https://docs.python.org/3/library/venv.html)
+for running tests and type checking.
+
+
 Before running any tests, you'll need to download the Cloud Spanner Emulator.
 See https://github.com/GoogleCloudPlatform/cloud-spanner-emulator for several
 options. If you're on Linux, we recommend:
