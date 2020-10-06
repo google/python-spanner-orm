@@ -15,7 +15,7 @@
 """Helps build SQL for complex Spanner queries."""
 
 import abc
-from typing import Any, Dict, Iterable, List, Tuple, Type
+from typing import Any, Dict, Iterable, List, Sequence, Tuple, Type
 
 from spanner_orm import condition
 from spanner_orm import error
@@ -47,7 +47,7 @@ class SpannerQuery(abc.ABC):
     return self._types
 
   @abc.abstractmethod
-  def process_results(self, results: List[List[Any]]) -> None:
+  def process_results(self, results: List[Sequence[Any]]) -> None:
     pass
 
   def _segments(self,
@@ -148,7 +148,7 @@ class CountQuery(SpannerQuery):
   def _select(self) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
     return ('SELECT COUNT(*)', {}, {})
 
-  def process_results(self, results: List[List[Any]]) -> int:
+  def process_results(self, results: List[Sequence[Any]]) -> int:
     return int(results[0][0])
 
 
@@ -186,7 +186,7 @@ class SelectQuery(SpannerQuery):
         prefix=self._select_prefix(),
         columns=', '.join(columns)), parameters, types)
 
-  def process_results(self, results: List[List[Any]]) -> List[Type[Any]]:
+  def process_results(self, results: List[Sequence[Any]]) -> List[Type[Any]]:
     return [self._process_row(result) for result in results]
 
   def _process_row(self, row: List[Any]) -> Type[Any]:
