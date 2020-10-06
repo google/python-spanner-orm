@@ -74,7 +74,8 @@ class MigrationManager:
     path = os.path.join(self.basedir, filename)
     spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # TODO(#93): Remove pytype disable below.
+    spec.loader.exec_module(module)  # type: ignore
     try:
       result = migration.Migration(module.migration_id,
                                    module.prev_migration_id,
