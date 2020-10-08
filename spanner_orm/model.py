@@ -35,11 +35,10 @@ from google.cloud.spanner_v1 import transaction as spanner_transaction
 
 class ModelMetaclass(type):
   """Populates ModelMetadata based on class attributes."""
+  meta: metadata.ModelMetadata
 
   def __new__(mcs, name: str, bases: Any, attrs: Dict[str, Any], **kwargs: Any):
     parents = [base for base in bases if isinstance(base, ModelMetaclass)]
-    if not parents:
-      return super().__new__(mcs, name, bases, attrs, **kwargs)
 
     model_metadata = metadata.ModelMetadata()
     for parent in parents:
