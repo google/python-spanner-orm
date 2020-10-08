@@ -176,3 +176,39 @@ multiple times, so try not to do that.
 If a migration needs to be rolled back,
 ```spanner-orm rollback <migration_name> <Spanner instance> <Spanner database>```
 or the corresponding ```MigrationExecutor``` method should be used.
+
+## Tests
+
+Note: we suggest using a Python 3.7 
+[virtualenv](https://docs.python.org/3/library/venv.html)
+for running tests and type checking.
+
+
+Before running any tests, you'll need to download the Cloud Spanner Emulator.
+See https://github.com/GoogleCloudPlatform/cloud-spanner-emulator for several
+options. If you're on Linux, we recommend:
+
+```
+VERSION=1.0.0
+wget https://storage.googleapis.com/cloud-spanner-emulator/releases/${VERSION}/cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
+tar zxvf cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
+chmod u+x gateway_main emulator_main
+```
+
+```
+git clone git@github.com:GoogleCloudPlatform/cloud-spanner-emulator.git
+```
+
+To check type annotations, run:
+
+```
+pip install pytype
+# https://github.com/google/pytype/issues/80#issuecomment-385128856
+pytype -V 3.7 spanner_orm -d import-error
+```
+
+Then run tests with:
+
+```
+SPANNER_EMULATOR_BINARY_PATH=$(pwd)/emulator_main python3 setup.py test
+```

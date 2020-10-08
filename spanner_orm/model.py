@@ -325,7 +325,8 @@ class ModelApi(metaclass=ModelMetaclass):
   def _results_to_models(cls,
                          results: Iterable[Iterable[Any]]) -> List['ModelObject']:
     items = [dict(zip(cls.columns, result)) for result in results]
-    return [cls(item, persisted=True) for item in items]
+    # TODO(#93): Remove pytype disable below.
+    return [cls(item, persisted=True) for item in items]  # type: ignore
 
   @classmethod
   def _execute_read(cls, db_api: Callable[..., CallableReturn],

@@ -72,9 +72,9 @@ class MigrationManager:
     """Loads a single migration from the given filename in the base dir."""
     module_name = re.sub(r'\W', '_', filename)
     path = os.path.join(self.basedir, filename)
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = importlib.util.module_from_spec(
+        importlib.util.spec_from_file_location(module_name, path))
+    importlib.machinery.SourceFileLoader(module_name, path).exec_module(module)
     try:
       result = migration.Migration(module.migration_id,
                                    module.prev_migration_id,
