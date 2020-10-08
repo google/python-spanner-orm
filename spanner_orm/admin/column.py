@@ -14,6 +14,7 @@
 # limitations under the License.
 """Model for interacting with Spanner column schema table."""
 
+import typing
 from typing import Type
 
 from spanner_orm import error
@@ -25,13 +26,13 @@ class ColumnSchema(schema.InformationSchema):
   """Model for interacting with Spanner column schema table."""
 
   __table__ = 'information_schema.columns'
-  table_catalog = field.Field(field.String, primary_key=True)
-  table_schema = field.Field(field.String, primary_key=True)
-  table_name = field.Field(field.String, primary_key=True)
-  column_name = field.Field(field.String, primary_key=True)
-  ordinal_position = field.Field(field.Integer)
-  is_nullable = field.Field(field.String)
-  spanner_type = field.Field(field.String)
+  table_catalog = typing.cast(str, field.Field(field.String, primary_key=True))
+  table_schema = typing.cast(str, field.Field(field.String, primary_key=True))
+  table_name = typing.cast(str, field.Field(field.String, primary_key=True))
+  column_name = typing.cast(str, field.Field(field.String, primary_key=True))
+  ordinal_position = typing.cast(int, field.Field(field.Integer))
+  is_nullable = typing.cast(str, field.Field(field.String))
+  spanner_type = typing.cast(str, field.Field(field.String))
 
   def nullable(self) -> bool:
     return self.is_nullable == 'YES'
