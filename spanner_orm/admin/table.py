@@ -14,6 +14,9 @@
 # limitations under the License.
 """Model for interacting with Spanner column schema table."""
 
+import typing
+from typing import Optional
+
 from spanner_orm import field
 from spanner_orm.admin import schema
 
@@ -22,8 +25,10 @@ class TableSchema(schema.InformationSchema):
   """Model for interacting with Spanner column schema table."""
 
   __table__ = 'information_schema.tables'
-  table_catalog = field.Field(field.String, primary_key=True)
-  table_schema = field.Field(field.String, primary_key=True)
-  table_name = field.Field(field.String, primary_key=True)
-  parent_table_name = field.Field(field.String, nullable=True)
-  on_delete_action = field.Field(field.String, nullable=True)
+  table_catalog = typing.cast(str, field.Field(field.String, primary_key=True))
+  table_schema = typing.cast(str, field.Field(field.String, primary_key=True))
+  table_name = typing.cast(str, field.Field(field.String, primary_key=True))
+  parent_table_name = typing.cast(Optional[str],
+                                  field.Field(field.String, nullable=True))
+  on_delete_action = typing.cast(Optional[str],
+                                 field.Field(field.String, nullable=True))
