@@ -148,7 +148,7 @@ class ModelApi(metaclass=ModelMetaclass):
   @classmethod
   def all(
       cls,
-      transaction: Optional[spanner_transaction.Transaction] = None
+      transaction: Optional[spanner_transaction.Transaction] = None,
   ) -> List['ModelObject']:
     """Returns all objects of this type stored in Spanner.
 
@@ -168,8 +168,11 @@ class ModelApi(metaclass=ModelMetaclass):
     return cls._results_to_models(results)
 
   @classmethod
-  def count(cls, transaction: Optional[spanner_transaction.Transaction],
-            *conditions: condition.Condition) -> int:
+  def count(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction],
+      *conditions: condition.Condition,
+  ) -> int:
     """Returns the number of objects in Spanner that match the given conditions.
 
     Args:
@@ -188,9 +191,11 @@ class ModelApi(metaclass=ModelMetaclass):
     return builder.process_results(results)
 
   @classmethod
-  def count_equal(cls,
-                  transaction: Optional[spanner_transaction.Transaction] = None,
-                  **constraints: Any) -> int:
+  def count_equal(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **constraints: Any,
+  ) -> int:
     """Returns the number of objects in Spanner that match the given conditions.
 
     Convenience method that generates equality conditions based on the keyword
@@ -215,9 +220,11 @@ class ModelApi(metaclass=ModelMetaclass):
     return cls.count(transaction, *conditions)
 
   @classmethod
-  def find(cls,
-           transaction: Optional[spanner_transaction.Transaction] = None,
-           **keys: Any) -> Optional['ModelObject']:
+  def find(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **keys: Any,
+  ) -> Optional['ModelObject']:
     """Retrieves an object from Spanner based on the provided key.
 
     Args:
@@ -234,8 +241,11 @@ class ModelApi(metaclass=ModelMetaclass):
     return resources[0] if resources else None
 
   @classmethod
-  def find_multi(cls, transaction: Optional[spanner_transaction.Transaction],
-                 keys: Iterable[Dict[str, Any]]) -> List['ModelObject']:
+  def find_multi(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction],
+      keys: Iterable[Dict[str, Any]],
+  ) -> List['ModelObject']:
     """Retrieves objects from Spanner based on the provided keys.
 
     Args:
@@ -259,8 +269,11 @@ class ModelApi(metaclass=ModelMetaclass):
     return cls._results_to_models(results)
 
   @classmethod
-  def where(cls, transaction: Optional[spanner_transaction.Transaction],
-            *conditions: condition.Condition) -> List['ModelObject']:
+  def where(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction],
+      *conditions: condition.Condition,
+  ) -> List['ModelObject']:
     """Retrieves objects from Spanner based on the provided conditions.
 
     Args:
@@ -279,9 +292,11 @@ class ModelApi(metaclass=ModelMetaclass):
     return builder.process_results(results)
 
   @classmethod
-  def where_equal(cls,
-                  transaction: Optional[spanner_transaction.Transaction] = None,
-                  **constraints: Any) -> List['ModelObject']:
+  def where_equal(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **constraints: Any,
+  ) -> List['ModelObject']:
     """Retrieves objects from Spanner based on the provided constraints.
 
     Args:
@@ -304,16 +319,21 @@ class ModelApi(metaclass=ModelMetaclass):
     return cls.where(transaction, *conditions)
 
   @classmethod
-  def _results_to_models(cls,
-                         results: Iterable[Iterable[Any]]) -> List['ModelObject']:
+  def _results_to_models(
+      cls,
+      results: Iterable[Iterable[Any]],
+  ) -> List['ModelObject']:
     items = [dict(zip(cls.columns, result)) for result in results]
     # TODO(#93): Remove pytype disable below.
     return [cls(item, persisted=True) for item in items]  # type: ignore
 
   @classmethod
-  def _execute_read(cls, db_api: Callable[..., CallableReturn],
-                    transaction: Optional[spanner_transaction.Transaction],
-                    args: List[Any]) -> CallableReturn:
+  def _execute_read(
+      cls,
+      db_api: Callable[..., CallableReturn],
+      transaction: Optional[spanner_transaction.Transaction],
+      args: List[Any],
+  ) -> CallableReturn:
     if transaction is not None:
       return db_api(transaction, *args)
     else:
@@ -321,9 +341,11 @@ class ModelApi(metaclass=ModelMetaclass):
 
   # Table write methods
   @classmethod
-  def create(cls,
-             transaction: Optional[spanner_transaction.Transaction] = None,
-             **kwargs: Any) -> None:
+  def create(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **kwargs: Any,
+  ) -> None:
     """Creates a row in Spanner based on the provided data.
 
     Note: may throw an exception if bad values are provided.
@@ -338,15 +360,19 @@ class ModelApi(metaclass=ModelMetaclass):
     cls._execute_write(table_apis.insert, transaction, [kwargs])
 
   @classmethod
-  def create_or_update(cls,
-                       transaction: Optional[
-                           spanner_transaction.Transaction] = None,
-                       **kwargs: Any) -> None:
+  def create_or_update(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **kwargs: Any,
+  ) -> None:
     cls._execute_write(table_apis.upsert, transaction, [kwargs])
 
   @classmethod
-  def delete_batch(cls, transaction: Optional[spanner_transaction.Transaction],
-                   models: List['ModelObject']) -> None:
+  def delete_batch(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction],
+      models: List['ModelObject'],
+  ) -> None:
     """Deletes rows from Spanner based on the provided models' primary keys.
 
     Args:
@@ -367,10 +393,12 @@ class ModelApi(metaclass=ModelMetaclass):
       cls.spanner_api().run_write(db_api, *args)
 
   @classmethod
-  def save_batch(cls,
-                 transaction: Optional[spanner_transaction.Transaction],
-                 models: List['ModelObject'],
-                 force_write: bool = False) -> None:
+  def save_batch(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction],
+      models: List['ModelObject'],
+      force_write: bool = False,
+  ) -> None:
     """Writes rows to Spanner based on the provided model data.
 
     Args:
@@ -400,9 +428,11 @@ class ModelApi(metaclass=ModelMetaclass):
       cls._execute_write(api_method, transaction, values)
 
   @classmethod
-  def update(cls,
-             transaction: Optional[spanner_transaction.Transaction] = None,
-             **kwargs: Any) -> None:
+  def update(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **kwargs: Any,
+  ) -> None:
     """Updates a row in Spanner based on the provided data.
 
     Args:
@@ -416,9 +446,12 @@ class ModelApi(metaclass=ModelMetaclass):
     cls._execute_write(table_apis.update, transaction, [kwargs])
 
   @classmethod
-  def _execute_write(cls, db_api: Callable[..., Any],
-                     transaction: Optional[spanner_transaction.Transaction],
-                     dictionaries: Iterable[Dict[str, Any]]) -> None:
+  def _execute_write(
+      cls,
+      db_api: Callable[..., Any],
+      transaction: Optional[spanner_transaction.Transaction],
+      dictionaries: Iterable[Dict[str, Any]],
+  ) -> None:
     """Validates all write value types and commits write to Spanner."""
     columns, values = None, []
     for dictionary in dictionaries:
