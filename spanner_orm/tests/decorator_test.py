@@ -91,6 +91,25 @@ class DecoratorTest(parameterized.TestCase):
     mock_api_method.assert_has_calls(
         [mock.call(mock.ANY, 123, genre='horror')] * 2)
 
+  @parameterized.parameters(
+      (decorator.transactional_read, 'run_read_only'),
+      (decorator.transactional_write, 'run_write'),
+  )
+  @mock.patch('spanner_orm.api.spanner_api')
+  def test_raise_on_expected_error(self, decorator_in_test,
+                                       method_name_to_mock,
+                                       mock_spanner_api):
+    mock_api_method = getattr(mock_spanner_api.return_value,
+                              method_name_to_mock)
+    mock_api_method.side_effect = exceptions.NotFound('404 Database not found')
+
+    @decorator_in_test
+    def get_book(book_id, genre=None, transaction=None):
+      pass
+
+    with self.assertRaises(exceptions.NotFound):
+      get_book(123, genre='horror')
+
 
 def mock_spanner_method(mock_transaction):
 

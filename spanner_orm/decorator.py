@@ -106,9 +106,12 @@ def _transactional(spanner_api_method_lambda: Callable[[], Callable[..., T]],
     spanner_api_method = spanner_api_method_lambda()
     try:
       return spanner_api_method(spanner_wrapper, *args, **kwargs)
-    except exceptions.NotFound:
+    except exceptions.NotFound as e:
       # https://cloud.google.com/spanner/docs/sessions#handle_deleted_sessions
       # states that Spanner may delete existing sessions for various reasons.
+      if not 'Session not found' in e.message:
+        raise
+
       api.spanner_api().connect()
       return spanner_api_method(spanner_wrapper, *args, **kwargs)
 
