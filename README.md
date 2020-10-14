@@ -1,6 +1,7 @@
 # Google Cloud Spanner ORM
 
 This is a lightweight ORM written in Python and built on top of Cloud Spanner.
+This is not an officially supported Google product.
 
 ## Getting started
 
