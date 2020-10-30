@@ -17,17 +17,30 @@
 import abc
 from typing import Any, Callable, Iterable, Optional, TypeVar
 
-from spanner_orm import error
-
+from google.api_core import exceptions
 from google.auth import credentials as auth_credentials
 from google.cloud import spanner
 from google.cloud.spanner_v1 import database as spanner_database
 from google.cloud.spanner_v1 import pool as spanner_pool
+from spanner_orm import error
 
 CallableReturn = TypeVar('CallableReturn')
 
+class SpannerRetryableApi(abc.ABC):
+  def _ensure_session(self, api_method, *args, **kwargs):
+    try:
+      return api_method(*args, **kwargs)
+    except exceptions.NotFound as e:
+      # https://cloud.google.com/spanner/docs/sessions#handle_deleted_sessions
+      # states that Spanner may delete existing sessions for various reasons.
+      if not 'Session not found' in e.message:
+        raise
 
-class SpannerReadApi(abc.ABC):
+      spanner_api().connect()
+      return api_method(*args, **kwargs)
+
+
+class SpannerReadApi(SpannerRetryableApi):
   """Handles sending read requests to Spanner."""
 
   @property
@@ -51,10 +64,10 @@ class SpannerReadApi(abc.ABC):
       The return value from `method` will be returned from this method
     """
     with self._connection.snapshot(multi_use=True) as snapshot:
-      return method(snapshot, *args, **kwargs)
+      return self._ensure_session(method, snapshot, *args, **kwargs)
 
 
-class SpannerWriteApi(abc.ABC):
+class SpannerWriteApi(SpannerRetryableApi):
   """Handles sending write requests to Spanner."""
 
   @property
@@ -80,7 +93,8 @@ class SpannerWriteApi(abc.ABC):
     Returns:
       The return value from `method` will be returned from this method
     """
-    return self._connection.run_in_transaction(method, *args, **kwargs)
+    return self._ensure_session(
+        self._connection.run_in_transaction, method, *args, **kwargs)
 
 
 class SpannerConnection:
