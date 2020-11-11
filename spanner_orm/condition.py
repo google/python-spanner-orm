@@ -485,8 +485,8 @@ class ListComparisonCondition(ComparisonCondition):
     return {self._column_key: list_type}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    if not isinstance(self.value, list):
-      raise error.ValidationError('{} is not a list'.format(self.value))
+    if not isinstance(self.value, Iterable):
+      raise error.ValidationError('{} is not iterable'.format(self.value))
     if self.column not in model_class.fields:
       raise error.ValidationError('{} is not a column on {}'.format(
           self.column, model_class.table))
