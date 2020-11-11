@@ -14,6 +14,9 @@
 # limitations under the License.
 """Model for interacting with Spanner index column schema table."""
 
+import typing
+from typing import Optional
+
 from spanner_orm import field
 from spanner_orm.admin import schema
 
@@ -22,12 +25,14 @@ class IndexColumnSchema(schema.InformationSchema):
   """Model for interacting with Spanner index column schema table."""
 
   __table__ = 'information_schema.index_columns'
-  table_catalog = field.Field(field.String, primary_key=True)
-  table_schema = field.Field(field.String, primary_key=True)
-  table_name = field.Field(field.String, primary_key=True)
-  index_name = field.Field(field.String, primary_key=True)
-  column_name = field.Field(field.String, primary_key=True)
-  ordinal_position = field.Field(field.Integer, nullable=True)
-  column_ordering = field.Field(field.String, nullable=True)
-  is_nullable = field.Field(field.String)
-  spanner_type = field.Field(field.String)
+  table_catalog = typing.cast(str, field.Field(field.String, primary_key=True))
+  table_schema = typing.cast(str, field.Field(field.String, primary_key=True))
+  table_name = typing.cast(str, field.Field(field.String, primary_key=True))
+  index_name = typing.cast(str, field.Field(field.String, primary_key=True))
+  column_name = typing.cast(str, field.Field(field.String, primary_key=True))
+  ordinal_position = typing.cast(Optional[int],
+                                 field.Field(field.Integer, nullable=True))
+  column_ordering = typing.cast(Optional[str],
+                                field.Field(field.String, nullable=True))
+  is_nullable = typing.cast(str, field.Field(field.String))
+  spanner_type = typing.cast(str, field.Field(field.String))
