@@ -17,17 +17,30 @@
 import abc
 from typing import Any, Callable, Iterable, Optional, TypeVar
 
-from spanner_orm import error
-
+from google.api_core import exceptions
 from google.auth import credentials as auth_credentials
 from google.cloud import spanner
 from google.cloud.spanner_v1 import database as spanner_database
 from google.cloud.spanner_v1 import pool as spanner_pool
+from spanner_orm import error
 
 CallableReturn = TypeVar('CallableReturn')
 
+class SpannerRetryableApi(abc.ABC):
+  def _ensure_session(self, api_method, *args, **kwargs):
+    try:
+      return api_method(*args, **kwargs)
+    except exceptions.NotFound as e:
+      # https://cloud.google.com/spanner/docs/sessions#handle_deleted_sessions
+      # states that Spanner may delete existing sessions for various reasons.
+      if not 'Session not found' in e.message:
+        raise
 
-class SpannerReadApi(abc.ABC):
+      spanner_api().connect()
+      return api_method(*args, **kwargs)
+
+
+class SpannerReadApi(SpannerRetryableApi):
   """Handles sending read requests to Spanner."""
 
   @property
@@ -50,11 +63,13 @@ class SpannerReadApi(abc.ABC):
     Returns:
       The return value from `method` will be returned from this method
     """
+    return self._ensure_session(self._run_read_only, method, *args, **kwargs)
+
+  def _run_read_only(self, method, *args, **kwargs):
     with self._connection.snapshot(multi_use=True) as snapshot:
       return method(snapshot, *args, **kwargs)
 
-
-class SpannerWriteApi(abc.ABC):
+class SpannerWriteApi(SpannerRetryableApi):
   """Handles sending write requests to Spanner."""
 
   @property
@@ -80,7 +95,8 @@ class SpannerWriteApi(abc.ABC):
     Returns:
       The return value from `method` will be returned from this method
     """
-    return self._connection.run_in_transaction(method, *args, **kwargs)
+    return self._ensure_session(
+        self._connection.run_in_transaction, method, *args, **kwargs)
 
 
 class SpannerConnection:
@@ -94,10 +110,20 @@ class SpannerConnection:
                pool: Optional[spanner_pool.AbstractSessionPool] = None,
                create_ddl: Optional[Iterable[str]] = None):
     """Connects to the specified Spanner database."""
-    client = spanner.Client(project=project, credentials=credentials)
-    instance = client.instance(instance)
+    self._instance = instance
+    self._database = database
+    self._project = project
+    self._credentials = credentials
+    self._pool = pool
+    self._create_ddl = create_ddl
+    self.connect()
+
+  def connect(self):
+    """Establish a new connection to the specified Spanner database."""
+    client = spanner.Client(project=self._project, credentials=self._credentials)
+    instance = client.instance(self._instance)
     self.database = instance.database(
-        database, pool=pool, ddl_statements=create_ddl or ())
+        self._database, pool=self._pool, ddl_statements=self._create_ddl or ())
 
 
 class SpannerApi(SpannerReadApi, SpannerWriteApi):
