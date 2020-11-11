@@ -63,9 +63,11 @@ class SpannerReadApi(SpannerRetryableApi):
     Returns:
       The return value from `method` will be returned from this method
     """
-    with self._connection.snapshot(multi_use=True) as snapshot:
-      return self._ensure_session(method, snapshot, *args, **kwargs)
+    return self._ensure_session(self._run_read_only, method, *args, **kwargs)
 
+  def _run_read_only(self, method, *args, **kwargs):
+    with self._connection.snapshot(multi_use=True) as snapshot:
+      return method(snapshot, *args, **kwargs)
 
 class SpannerWriteApi(SpannerRetryableApi):
   """Handles sending write requests to Spanner."""
