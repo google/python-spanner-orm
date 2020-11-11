@@ -165,6 +165,7 @@ class QueryTest(parameterized.TestCase):
 
   @parameterized.parameters(
       ('int_', [1, 2, 3], field.Integer.grpc_type()),
+      ('int_', (4, 5, 6), field.Integer.grpc_type()),
       ('string', ['a', 'b', 'c'], field.String.grpc_type()),
       ('timestamp', [now()], field.Timestamp.grpc_type()))
   def test_query_where_list_comparison(self, column, values, grpc_type):
