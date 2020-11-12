@@ -88,6 +88,7 @@ ORDER_DESC = condition.OrderType.DESC
 transactional_read = decorator.transactional_read
 transactional_write = decorator.transactional_write
 
+SchemaUpdate = update_module.SchemaUpdate
 CreateTable = update_module.CreateTable
 DropTable = update_module.DropTable
 AddColumn = update_module.AddColumn
