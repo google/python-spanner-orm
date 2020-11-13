@@ -1,4 +1,4 @@
-"""$migration_name
+"""Spanner ORM migration: $migration_name
 
 Migration ID: $migration_id
 Created: $current_date
@@ -9,10 +9,12 @@ import spanner_orm
 migration_id = $migration_id
 prev_migration_id = $prev_migration_id
 
-# Returns a SchemaUpdate object that tells what should be changed
-def upgrade() -> spanner_orm.NoUpdate:
+
+def upgrade() -> spanner_orm.SchemaUpdate:
+  """See spanner_orm migrations interface."""
   return spanner_orm.NoUpdate()
 
-# Returns a SchemaUpdate object that tells how to roll back the changes
-def downgrade() -> spanner_orm.NoUpdate:
+
+def downgrade() -> spanner_orm.SchemaUpdate:
+  """See spanner_orm migrations interface."""
   return spanner_orm.NoUpdate()
