@@ -91,18 +91,18 @@ def _transactional(spanner_api_method_lambda: Callable[[], Callable[..., T]],
                    func: Callable[..., T]) -> Callable[..., T]:
   """Returns decorated function."""
 
-  # Spanner library calls given function with transaction as first argument.
-  # It will call 'spanner_wrapper', and we will move transaction from first
-  # argument to 'transaction' kwarg and call actual 'func'
-
-  def spanner_wrapper(transaction, *args, **kwargs) -> T:
-    return func(*args, transaction=transaction, **kwargs)
-
   def wrapper(*args, **kwargs) -> T:
+
+    def spanner_wrapper(transaction) -> T:
+      # Spanner library calls given function with transaction as first argument.
+      # It will call 'spanner_wrapper', and we will move transaction from first
+      # argument to 'transaction' kwarg and call actual 'func'
+      return func(*args, transaction=transaction, **kwargs)
+
     if 'transaction' in kwargs:
       return func(*args, **kwargs)
 
     spanner_api_method = spanner_api_method_lambda()
-    return spanner_api_method(spanner_wrapper, *args, **kwargs)
+    return spanner_api_method(spanner_wrapper)
 
   return wrapper
