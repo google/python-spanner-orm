@@ -138,14 +138,17 @@ class Model(metaclass=ModelMetaclass):
   associated tables. Violating this will cause an exception to be raised.
   """
 
-  def __init__(self, values: Dict[str, Any], persisted: bool = False):
+  def __init__(self,
+               values: Dict[str, Any],
+               persisted: bool = False,
+               skip_validation: bool = False):
     start_values = {}
     self.__dict__['start_values'] = start_values
     self.__dict__['_persisted'] = persisted
 
-    # If the values came from Spanner, trust them and skip validation
-    if not persisted:
-      # An object is invalid if primary key values are missing
+    # If the values came from Spanner or validation is explicitly skipped, trust
+    # them and skip validation
+    if not persisted and not skip_validation:
       missing_keys = set(self._primary_keys) - set(values.keys())
       if missing_keys:
         raise error.SpannerError(

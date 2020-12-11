@@ -180,6 +180,26 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(test_model.value_1, 'value')
     self.assertEqual(test_model.value_2, None)
 
+  @parameterized.parameters(
+      (True, True),
+      (True, False),
+      (False, True),
+  )
+  def test_skip_validation(self, persisted, skip_validation):
+    models.SmallTestModel(
+        {'value_1': 'value'},
+        persisted=persisted,
+        skip_validation=skip_validation,
+    )
+
+  def test_validation(self):
+    with self.assertRaises(error.SpannerError):
+      models.SmallTestModel(
+          {'value_1': 'value'},
+          persisted=False,
+          skip_validation=False,
+      )
+
   def test_id(self):
     primary_key = {'string': 'foo', 'int_': 5, 'float_': 2.3}
     all_data = primary_key.copy()
