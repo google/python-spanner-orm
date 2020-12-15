@@ -218,22 +218,35 @@ class ModelTest(parameterized.TestCase):
     })
     self.assertEqual(test_model1, test_model2)
 
-  def test_model_are_different(self):
-    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
-    test_model1 = models.UnittestModel({
-        'int_': 0,
-        'float_': 0,
-        'string': '',
-        'string_array': ['foo', 'bar'],
-        'timestamp': timestamp,
-    })
-    test_model2 = models.UnittestModel({
-        'int_': 0,
-        'float_': 0,
-        'string': '',
-        'string_array': ['bar', 'foo'],
-        'timestamp': timestamp,
-    })
+  @parameterized.parameters(
+      (models.UnittestModel({
+          'int_': 0,
+          'float_': 0,
+          'string': '1',
+          'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+      }),
+       models.UnittestModel({
+           'int_': 0,
+           'float_': 0,
+           'string': 'a',
+           'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+       })),
+      (models.UnittestModel({
+          'int_': 0,
+          'float_': 0,
+          'string': '',
+          'string_array': ['foo', 'bar'],
+          'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+      }),
+       models.UnittestModel({
+           'int_': 0,
+           'float_': 0,
+           'string': '',
+           'string_array': ['bar', 'foo'],
+           'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+       })),
+  )
+  def test_model_are_different(self, test_model1, test_model2):
     self.assertNotEqual(test_model1, test_model2)
 
   def test_id(self):
