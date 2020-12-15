@@ -200,6 +200,42 @@ class ModelTest(parameterized.TestCase):
           skip_validation=False,
       )
 
+  def test_model_equates(self):
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+    test_model1 = models.UnittestModel({
+        'int_': 0,
+        'float_': 0,
+        'string': '',
+        'string_array': ['foo', 'bar'],
+        'timestamp': timestamp,
+    })
+    test_model2 = models.UnittestModel({
+        'int_': 0,
+        'float_': 0.0,
+        'string': '',
+        'string_array': ['foo', 'bar'],
+        'timestamp': timestamp,
+    })
+    self.assertEqual(test_model1, test_model2)
+
+  def test_model_are_different(self):
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+    test_model1 = models.UnittestModel({
+        'int_': 0,
+        'float_': 0,
+        'string': '',
+        'string_array': ['foo', 'bar'],
+        'timestamp': timestamp,
+    })
+    test_model2 = models.UnittestModel({
+        'int_': 0,
+        'float_': 0,
+        'string': '',
+        'string_array': ['bar', 'foo'],
+        'timestamp': timestamp,
+    })
+    self.assertNotEqual(test_model1, test_model2)
+
   def test_id(self):
     primary_key = {'string': 'foo', 'int_': 5, 'float_': 2.3}
     all_data = primary_key.copy()
