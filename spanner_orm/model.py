@@ -149,6 +149,7 @@ class Model(metaclass=ModelMetaclass):
     # If the values came from Spanner or validation is explicitly skipped, trust
     # them and skip validation
     if not persisted and not skip_validation:
+      # An object is invalid if primary key values are missing
       missing_keys = set(self._primary_keys) - set(values.keys())
       if missing_keys:
         raise error.SpannerError(
