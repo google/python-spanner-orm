@@ -245,6 +245,13 @@ class ModelTest(parameterized.TestCase):
            'string_array': ['bar', 'foo'],
            'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
        })),
+      (models.SmallTestModel({
+          'key': 'key',
+          'value_1': 'value'
+      }), models.InheritanceTestModel({
+          'key': 'key',
+          'value_1': 'value'
+      })),
   )
   def test_model_are_different(self, test_model1, test_model2):
     self.assertNotEqual(test_model1, test_model2)
