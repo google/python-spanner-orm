@@ -168,6 +168,12 @@ class Model(metaclass=ModelMetaclass):
       if relation in values:
         self.__dict__[relation] = values[relation]
 
+  def __eq__(self, other: Any) -> bool:
+    """Compares objects by their type and attributes."""
+    if type(self) != type(other):
+      return NotImplemented
+    return self.values == other.values
+
   @classmethod
   def spanner_api(cls) -> api.SpannerApi:
     if not cls.table:
