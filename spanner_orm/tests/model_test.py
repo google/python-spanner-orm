@@ -23,6 +23,8 @@ from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.tests import models
 
+_TIMESTAMP = datetime.datetime.now(tz=datetime.timezone.utc)
+
 
 class ModelTest(parameterized.TestCase):
 
@@ -223,27 +225,27 @@ class ModelTest(parameterized.TestCase):
           'int_': 0,
           'float_': 0,
           'string': '1',
-          'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+          'timestamp': _TIMESTAMP,
       }),
        models.UnittestModel({
            'int_': 0,
            'float_': 0,
            'string': 'a',
-           'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+           'timestamp': _TIMESTAMP,
        })),
       (models.UnittestModel({
           'int_': 0,
           'float_': 0,
           'string': '',
           'string_array': ['foo', 'bar'],
-          'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+          'timestamp': _TIMESTAMP,
       }),
        models.UnittestModel({
            'int_': 0,
            'float_': 0,
            'string': '',
            'string_array': ['bar', 'foo'],
-           'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+           'timestamp': _TIMESTAMP,
        })),
       (models.SmallTestModel({
           'key': 'key',
