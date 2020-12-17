@@ -1,4 +1,4 @@
-"""Spanner ORM migration: $migration_name
+"""Spanner ORM migration: $migration_name.
 
 Migration ID: $migration_id
 Created: $current_date
