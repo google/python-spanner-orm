@@ -403,6 +403,19 @@ class Model(metaclass=ModelMetaclass):
     cls._execute_write(table_apis.upsert, transaction, [kwargs])
 
   @classmethod
+  def _delete_by_keyset(
+      cls: Type[T],
+      transaction: Optional[spanner_transaction.Transaction],
+      keyset: spanner.KeySet,
+  ) -> None:
+    db_api = table_apis.delete
+    args = [cls.table, keyset]
+    if transaction is not None:
+      db_api(transaction, *args)
+    else:
+      cls.spanner_api().run_write(db_api, *args)
+
+  @classmethod
   def delete_batch(
       cls: Type[T],
       transaction: Optional[spanner_transaction.Transaction],
@@ -418,14 +431,31 @@ class Model(metaclass=ModelMetaclass):
     key_list = []
     for model in models:
       key_list.append([getattr(model, column) for column in cls.primary_keys])
-    keyset = spanner.KeySet(keys=key_list)
+    cls._delete_by_keyset(
+        transaction=transaction,
+        keyset=spanner.KeySet(keys=key_list),
+    )
 
-    db_api = table_apis.delete
-    args = [cls.table, keyset]
-    if transaction is not None:
-      db_api(transaction, *args)
-    else:
-      cls.spanner_api().run_write(db_api, *args)
+  @classmethod
+  def delete_by_key(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **keys: Any,
+  ) -> None:
+    """Deletes rows from Spanner based on the provided primary key.
+
+    Args:
+      transaction: The existing transaction to use, or None to start a new
+        transaction.
+      **keys: The keys provided are the complete set of primary keys for this
+        table and the corresponding values make up the unique identifier of the
+        object being deleted.
+    """
+    cls._delete_by_keyset(
+        transaction=transaction,
+        keyset=spanner.KeySet(
+            keys=[[keys[column] for column in cls.primary_keys]]),
+    )
 
   @classmethod
   def save_batch(

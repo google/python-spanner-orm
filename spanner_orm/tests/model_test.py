@@ -19,6 +19,7 @@ import unittest
 from unittest import mock
 
 from absl.testing import parameterized
+from google.cloud import spanner
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.tests import models
@@ -144,6 +145,16 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(transaction, mock_transaction)
     self.assertEqual(table, models.SmallTestModel.table)
     self.assertEqual(keyset.keys, [[model.key]])
+
+  @mock.patch('spanner_orm.table_apis.delete')
+  def test_delete_by_key_deletes(self, delete):
+    mock_transaction = mock.Mock()
+    models.SmallTestModel.delete_by_key(mock_transaction, key='some-key')
+    delete.assert_called_once_with(
+        mock_transaction,
+        models.SmallTestModel.table,
+        spanner.KeySet(keys=[['some-key']]),
+    )
 
   def test_set_attr(self):
     test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
