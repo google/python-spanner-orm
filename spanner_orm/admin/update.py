@@ -24,6 +24,7 @@ from spanner_orm import model
 from spanner_orm.admin import api
 from spanner_orm.admin import index_column
 from spanner_orm.admin import metadata
+from spanner_orm.index import Index
 
 
 class SchemaUpdate(abc.ABC):
@@ -230,19 +231,39 @@ class CreateIndex(SchemaUpdate):
 
   def __init__(self,
                table_name: str,
-               index_name: str,
-               columns: Iterable[str],
+               index_name: Optional[str] = None,
+               columns: Optional[Iterable[str]] = None,
+               model_index: Optional[Index] = None,
                interleaved: Optional[str] = None,
-               storing_columns: Optional[Iterable[str]] = None):
+               storing_columns: Optional[Iterable[str]] = None,
+               unique: Optional[bool] = None,
+               null_filtered: Optional[bool] = None):
+    if not ((model_index is not None) ^ (index_name is not None and columns is not None)):
+      raise error.SpannerError('Exactly one of: [model_index], [index_name, columns] is required')
+    if model_index and (index_name or columns or interleaved or storing_columns or unique or null_filtered):
+      raise error.SpannerError('Can not specify any other optional param if model_index is specified')
+
+    if model_index:
+      index_name = model_index.name
+      columns = model_index.columns
+      interleaved = model_index.parent
+      storing_columns = model_index.storing_columns
+      unique = model_index.unique
+      null_filtered = model_index.null_filtered
+
     self._table = table_name
     self._index = index_name
     self._columns = columns
     self._parent_table = interleaved
     self._storing_columns = storing_columns or []
+    self._unique = unique
+    self._null_filtered = null_filtered
 
   def ddl(self) -> str:
-    statement = 'CREATE INDEX {} ON {} ({})'.format(self._index, self._table,
-                                                    ', '.join(self._columns))
+    statement = 'CREATE {}{}INDEX {} ON {} ({})'.format(
+      'UNIQUE ' if self._unique else '',
+      'NULL_FILTERED ' if self._null_filtered else '',
+      self._index, self._table, ', '.join(self._columns))
     if self._storing_columns:
       statement += 'STORING ({})'.format(', '.join(self._storing_columns))
     if self._parent_table:
@@ -338,10 +359,8 @@ def model_creation_ddl(model_: Type[model.Model]) -> List[str]:
       continue
     create_index = CreateIndex(
         model_.table,
-        model_index.name,
-        model_index.columns,
-        interleaved=model_index.parent,
-        storing_columns=model_index.storing_columns)
+        model_index=model_index
+    )
     ddl_list.append(create_index.ddl())
 
   return ddl_list
