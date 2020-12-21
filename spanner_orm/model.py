@@ -168,7 +168,7 @@ class Model(metaclass=ModelMetaclass):
       if relation in values:
         self.__dict__[relation] = values[relation]
 
-  def __eq__(self, other: Any) -> bool:
+  def __eq__(self, other: Any) -> Union[bool, type(NotImplemented)]:
     """Compares objects by their type and attributes."""
     if type(self) != type(other):
       return NotImplemented
@@ -404,7 +404,7 @@ class Model(metaclass=ModelMetaclass):
 
   @classmethod
   def _delete_by_keyset(
-      cls: Type[T],
+      cls,
       transaction: Optional[spanner_transaction.Transaction],
       keyset: spanner.KeySet,
   ) -> None:
