@@ -33,7 +33,11 @@ class ModelTest(parameterized.TestCase):
   def test_find_calls_api(self, find):
     mock_transaction = mock.Mock()
     models.UnittestModel.find(
-        mock_transaction, string='string', int_=1, float_=2.3)
+        string='string',
+        int_=1,
+        float_=2.3,
+        transaction=mock_transaction,
+    )
 
     find.assert_called_once()
     (transaction, table, columns, keyset), _ = find.call_args
@@ -47,7 +51,7 @@ class ModelTest(parameterized.TestCase):
     mock_transaction = mock.Mock()
 
     find.return_value = [['key', 'value_1', None]]
-    result = models.SmallTestModel.find(mock_transaction, key='key')
+    result = models.SmallTestModel.find(key='key', transaction=mock_transaction)
     if result:
       self.assertEqual(result.key, 'key')
       self.assertEqual(result.value_1, 'value_1')
@@ -58,11 +62,14 @@ class ModelTest(parameterized.TestCase):
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_multi_calls_api(self, find):
     mock_transaction = mock.Mock()
-    models.UnittestModel.find_multi(mock_transaction, [{
-        'string': 'string',
-        'int_': 1,
-        'float_': 2.3
-    }])
+    models.UnittestModel.find_multi(
+        [{
+            'string': 'string',
+            'int_': 1,
+            'float_': 2.3
+        }],
+        transaction=mock_transaction,
+    )
 
     find.assert_called_once()
     (transaction, table, columns, keyset), _ = find.call_args
@@ -75,9 +82,12 @@ class ModelTest(parameterized.TestCase):
   def test_find_multi_result(self, find):
     mock_transaction = mock.Mock()
     find.return_value = [['key', 'value_1', None]]
-    results = models.SmallTestModel.find_multi(mock_transaction, [{
-        'key': 'key'
-    }])
+    results = models.SmallTestModel.find_multi(
+        [{
+            'key': 'key'
+        }],
+        transaction=mock_transaction,
+    )
 
     self.assertEqual(results[0].key, 'key')
     self.assertEqual(results[0].value_1, 'value_1')
@@ -86,7 +96,11 @@ class ModelTest(parameterized.TestCase):
   @mock.patch('spanner_orm.table_apis.insert')
   def test_create_calls_api(self, insert):
     mock_transaction = mock.Mock()
-    models.SmallTestModel.create(mock_transaction, key='key', value_1='value')
+    models.SmallTestModel.create(
+        key='key',
+        value_1='value',
+        transaction=mock_transaction,
+    )
 
     insert.assert_called_once()
     (transaction, table, columns, values), _ = insert.call_args
@@ -112,7 +126,8 @@ class ModelTest(parameterized.TestCase):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value'}
     not_persisted = models.SmallTestModel(values)
-    models.SmallTestModel.save_batch(mock_transaction, [not_persisted])
+    models.SmallTestModel.save_batch([not_persisted],
+                                     transaction=mock_transaction)
     self.assert_api_called(insert, mock_transaction)
 
   @mock.patch('spanner_orm.table_apis.update')
@@ -120,7 +135,7 @@ class ModelTest(parameterized.TestCase):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value'}
     persisted = models.SmallTestModel(values, persisted=True)
-    models.SmallTestModel.save_batch(mock_transaction, [persisted])
+    models.SmallTestModel.save_batch([persisted], transaction=mock_transaction)
 
     self.assert_api_called(update, mock_transaction)
 
@@ -130,7 +145,10 @@ class ModelTest(parameterized.TestCase):
     values = {'key': 'key', 'value_1': 'value'}
     not_persisted = models.SmallTestModel(values)
     models.SmallTestModel.save_batch(
-        mock_transaction, [not_persisted], force_write=True)
+        [not_persisted],
+        force_write=True,
+        transaction=mock_transaction,
+    )
     self.assert_api_called(upsert, mock_transaction)
 
   @mock.patch('spanner_orm.table_apis.delete')
@@ -138,7 +156,7 @@ class ModelTest(parameterized.TestCase):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value'}
     model = models.SmallTestModel(values)
-    models.SmallTestModel.delete_batch(mock_transaction, [model])
+    models.SmallTestModel.delete_batch([model], transaction=mock_transaction)
 
     delete.assert_called_once()
     (transaction, table, keyset), _ = delete.call_args
@@ -149,7 +167,10 @@ class ModelTest(parameterized.TestCase):
   @mock.patch('spanner_orm.table_apis.delete')
   def test_delete_by_key_deletes(self, delete):
     mock_transaction = mock.Mock()
-    models.SmallTestModel.delete_by_key(mock_transaction, key='some-key')
+    models.SmallTestModel.delete_by_key(
+        key='some-key',
+        transaction=mock_transaction,
+    )
     delete.assert_called_once_with(
         mock_transaction,
         models.SmallTestModel.table,
@@ -343,10 +364,7 @@ class ModelTest(parameterized.TestCase):
 
     find.return_value = None
     self.assertIsNone(model.reload())
-    find.assert_called_once()
-    (transaction,), kwargs = find.call_args
-    self.assertIsNone(transaction)
-    self.assertEqual(kwargs, model.id())
+    find.assert_called_once_with(**model.id(), transaction=None)
 
   @mock.patch('spanner_orm.model.Model.find')
   def test_reload_reloads(self, find):
@@ -365,10 +383,7 @@ class ModelTest(parameterized.TestCase):
     model = models.SmallTestModel(values, persisted=False)
     model.save()
 
-    create.assert_called_once()
-    (transaction,), kwargs = create.call_args
-    self.assertIsNone(transaction)
-    self.assertEqual(kwargs, {**values, 'value_2': None})
+    create.assert_called_once_with(**values, value_2=None, transaction=None)
 
   @mock.patch('spanner_orm.model.Model.update')
   def test_save_updates(self, update):
@@ -379,10 +394,7 @@ class ModelTest(parameterized.TestCase):
     model.value_1 = values['value_1']
     model.save()
 
-    update.assert_called_once()
-    (transaction,), kwargs = update.call_args
-    self.assertIsNone(transaction)
-    self.assertEqual(kwargs, values)
+    update.assert_called_once_with(**values, transaction=None)
 
   @mock.patch('spanner_orm.model.Model.update')
   def test_save_no_changes(self, update):
@@ -396,7 +408,7 @@ class ModelTest(parameterized.TestCase):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values)
-    model.delete(mock_transaction)
+    model.delete(transaction=mock_transaction)
 
     delete.assert_called_once()
     (transaction, table, keyset), _ = delete.call_args

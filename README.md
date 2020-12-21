@@ -84,23 +84,24 @@ The two main ways of retrieving data through the ORM are ```where()``` and
 ```find()```/```find_multi()```:
 
 ``` python
-# where() is invokes on a model class to retrieve models of that tyep. it takes a
-# transaction and then a sequence of conditions.
-# Most conditions that specify a Field, Index, Relationship, or Model can take
-# either the name of the object or the object itself
-test_objects = TestModel.where(None, spanner_orm.greater_than('value', '50'))
+# where() is invokes on a model class to retrieve models of that type. it takes
+# a sequence of conditions. Most conditions that specify a Field, Index,
+# Relationship, or Model can take  either the name of the object or the object
+# itself
+test_objects = TestModel.where(spanner_orm.greater_than('value', '50'))
 
 # To also retrieve related objects, the includes() condition should be used:
-test_and_other_objects = TestModel.where(None,
-                                         spanner_orm.greater_than(TestModel.value, '50'),
-                                         spanner_orm.includes(TestModel.fake_relationship))
+test_and_other_objects = TestModel.where(
+    spanner_orm.greater_than(TestModel.value, '50'),
+    spanner_orm.includes(TestModel.fake_relationship),
+)
 
 # To create a transaction, run_read_only() or run_write() are used with the
 # method to be run inside the transaction and any arguments to passs to the method.
 # The method is invoked with the transaction as the first argument and then the
 # rest of the provided arguments:
 def callback_1(transaction, argument):
-  return TestModel.find(transaction, id=argument)
+  return TestModel.find(id=argument, transaction=transaction)
 
 specific_object = spanner_orm.spanner_api().run_read_only(callback, 1)
 
@@ -108,7 +109,7 @@ specific_object = spanner_orm.spanner_api().run_read_only(callback, 1)
 # call a bit:
 @transactional_read
 def finder(argument, transaction=None):
-  return TestModel.find(transaction, id=argument)
+  return TestModel.find(id=argument, transaction=transaction)
 specific_object = finder(1)
 ```
 
@@ -131,7 +132,7 @@ models = []
 for i in range(10):
   key = 'test_{}'.format(i)
   models.append(TestModel({'key': key, 'value': value}))
-TestModel.save_batch(None, models)
+TestModel.save_batch(models)
 ```
 
 ```spanner_orm.spanner_api().run_write()``` can be used for executing read-write

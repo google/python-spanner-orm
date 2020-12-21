@@ -184,6 +184,7 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def all(
       cls: Type[T],
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
   ) -> List[T]:
     """Returns all objects of this type stored in Spanner.
@@ -206,17 +207,17 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def count(
       cls,
-      transaction: Optional[spanner_transaction.Transaction],
       *conditions: condition.Condition,
+      transaction: Optional[spanner_transaction.Transaction] = None,
   ) -> int:
     """Returns the number of objects in Spanner that match the given conditions.
 
     Args:
-      transaction: The existing transaction to use, or None to start a new
-        transaction
       *conditions: Instances of subclasses of Condition that help specify which
         rows should be included in the count. The includes condition is not
         allowed here
+      transaction: The existing transaction to use, or None to start a new
+        transaction
 
     Returns:
       The integer result of the COUNT query
@@ -229,6 +230,7 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def count_equal(
       cls,
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **constraints: Any,
   ) -> int:
@@ -253,11 +255,12 @@ class Model(metaclass=ModelMetaclass):
         conditions.append(condition.in_list(column, value))
       else:
         conditions.append(condition.equal_to(column, value))
-    return cls.count(transaction, *conditions)
+    return cls.count(*conditions, transaction=transaction)
 
   @classmethod
   def find(
       cls: Type[T],
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **keys: Any,
   ) -> Optional[T]:
@@ -273,23 +276,24 @@ class Model(metaclass=ModelMetaclass):
     Returns:
       The requested object or None if no such object exists
     """
-    resources = cls.find_multi(transaction, [keys])
+    resources = cls.find_multi([keys], transaction=transaction)
     return resources[0] if resources else None
 
   @classmethod
   def find_multi(
       cls: Type[T],
-      transaction: Optional[spanner_transaction.Transaction],
       keys: Iterable[Dict[str, Any]],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
   ) -> List[T]:
     """Retrieves objects from Spanner based on the provided keys.
 
     Args:
-      transaction: The existing transaction to use, or None to start a new
-        transaction
       keys: An iterable of dictionaries, each dictionary representing the set of
         primary key values necessary to uniquely identify an object in this
         table.
+      transaction: The existing transaction to use, or None to start a new
+        transaction
 
     Returns:
       A list containing all requested objects that exist in the table (can be
@@ -307,16 +311,16 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def where(
       cls: Type[T],
-      transaction: Optional[spanner_transaction.Transaction],
       *conditions: condition.Condition,
+      transaction: Optional[spanner_transaction.Transaction] = None,
   ) -> List[T]:
     """Retrieves objects from Spanner based on the provided conditions.
 
     Args:
-      transaction: The existing transaction to use, or None to start a new
-        transaction
       *conditions: Instances of subclasses of Condition that help specify which
         objects should be retrieved
+      transaction: The existing transaction to use, or None to start a new
+        transaction
 
     Returns:
       A list containing all requested objects that exist in the table (can be
@@ -330,6 +334,7 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def where_equal(
       cls: Type[T],
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **constraints: Any,
   ) -> List[T]:
@@ -352,7 +357,7 @@ class Model(metaclass=ModelMetaclass):
         conditions.append(condition.in_list(column, value))
       else:
         conditions.append(condition.equal_to(column, value))
-    return cls.where(transaction, *conditions)
+    return cls.where(*conditions, transaction=transaction)
 
   @classmethod
   def _results_to_models(
@@ -378,6 +383,7 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def create(
       cls,
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **kwargs: Any,
   ) -> None:
@@ -397,6 +403,7 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def create_or_update(
       cls,
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **kwargs: Any,
   ) -> None:
@@ -418,15 +425,16 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def delete_batch(
       cls: Type[T],
-      transaction: Optional[spanner_transaction.Transaction],
       models: List[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
   ) -> None:
     """Deletes rows from Spanner based on the provided models' primary keys.
 
     Args:
+      models: A list of models to be deleted from Spanner.
       transaction: The existing transaction to use, or None to start a new
         transaction
-      models: A list of models to be deleted from Spanner.
     """
     key_list = []
     for model in models:
@@ -439,6 +447,7 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def delete_by_key(
       cls,
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **keys: Any,
   ) -> None:
@@ -460,20 +469,21 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def save_batch(
       cls: Type[T],
-      transaction: Optional[spanner_transaction.Transaction],
       models: List[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
       force_write: bool = False,
   ) -> None:
     """Writes rows to Spanner based on the provided model data.
 
     Args:
-      transaction: The existing transaction to use, or None to start a new
-        transaction
       models: A list of models to be written to Spanner. If the _persisted flag
         is set, by default we try to issue an UPDATE with values set for all
         columns in the table. Otherwise, we try to issue an INSERT for all
         columns in the table. If we try to INSERTa row that already exists (or
         update one that is missing), an exception will be thrown.
+      transaction: The existing transaction to use, or None to start a new
+        transaction
       force_write: If true, we use UPSERT instead of UPDATE/INSERT, so no
         exceptions are thrown based on the presence or absence of data in
         Spanner
@@ -495,6 +505,7 @@ class Model(metaclass=ModelMetaclass):
   @classmethod
   def update(
       cls,
+      *,
       transaction: Optional[spanner_transaction.Transaction] = None,
       **kwargs: Any,
   ) -> None:
@@ -596,7 +607,11 @@ class Model(metaclass=ModelMetaclass):
         if values[key] != self.start_values.get(key)
     }
 
-  def delete(self, transaction: spanner_transaction.Transaction = None) -> None:
+  def delete(
+      self,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> None:
     """Deletes this object from the Spanner database.
 
     Args:
@@ -625,7 +640,9 @@ class Model(metaclass=ModelMetaclass):
 
   def reload(
       self,
-      transaction: spanner_transaction.Transaction = None) -> Optional['Model']:
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> Optional['Model']:
     """Refreshes this object with information from Spanner.
 
     Args:
@@ -637,7 +654,7 @@ class Model(metaclass=ModelMetaclass):
       in Spanner, or None if no information was found (object was deleted or
       never was persisted)
     """
-    updated_object = self._metaclass.find(transaction, **self.id())
+    updated_object = self._metaclass.find(transaction=transaction, **self.id())
     if updated_object is None:
       return None
     start_values = {}
@@ -652,8 +669,11 @@ class Model(metaclass=ModelMetaclass):
     self._persisted = True
     return self
 
-  def save(self,
-           transaction: spanner_transaction.Transaction = None) -> 'Model':
+  def save(
+      self,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> 'Model':
     """Persists this object to Spanner.
 
     Note: if the _persisted flag doesn't match whether this object is actually
@@ -671,8 +691,8 @@ class Model(metaclass=ModelMetaclass):
       changed_values = self.changes()
       if changed_values:
         changed_values.update(self.id())
-        self._metaclass.update(transaction, **changed_values)
+        self._metaclass.update(transaction=transaction, **changed_values)
     else:
-      self._metaclass.create(transaction, **self.values)
+      self._metaclass.create(transaction=transaction, **self.values)
       self._persisted = True
     return self
