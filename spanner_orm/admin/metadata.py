@@ -71,9 +71,10 @@ class SpannerMetadata(object):
   def tables(cls) -> Dict[str, Dict[str, Any]]:
     """Compiles table information from column schema."""
     column_data = collections.defaultdict(dict)
-    columns = column.ColumnSchema.where(None,
-                                        condition.equal_to('table_catalog', ''),
-                                        condition.equal_to('table_schema', ''))
+    columns = column.ColumnSchema.where(
+        condition.equal_to('table_catalog', ''),
+        condition.equal_to('table_schema', ''),
+    )
     for column_row in columns:
       new_field = field.Field(
           column_row.field_type(), nullable=column_row.nullable())
@@ -82,9 +83,10 @@ class SpannerMetadata(object):
       column_data[column_row.table_name][column_row.column_name] = new_field
 
     table_data = collections.defaultdict(dict)
-    tables = table.TableSchema.where(None,
-                                     condition.equal_to('table_catalog', ''),
-                                     condition.equal_to('table_schema', ''))
+    tables = table.TableSchema.where(
+        condition.equal_to('table_catalog', ''),
+        condition.equal_to('table_schema', ''),
+    )
     for table_row in tables:
       name = table_row.table_name
       table_data[name]['parent_table'] = table_row.parent_table_name
@@ -98,9 +100,10 @@ class SpannerMetadata(object):
     # Results are ordered by that so the index columns are added in the
     # correct order.
     index_column_schemas = index_column.IndexColumnSchema.where(
-        None, condition.equal_to('table_catalog', ''),
+        condition.equal_to('table_catalog', ''),
         condition.equal_to('table_schema', ''),
-        condition.order_by(('ordinal_position', condition.OrderType.ASC)))
+        condition.order_by(('ordinal_position', condition.OrderType.ASC)),
+    )
 
     index_columns = collections.defaultdict(list)
     storing_columns = collections.defaultdict(list)
@@ -112,8 +115,9 @@ class SpannerMetadata(object):
         storing_columns[key].append(schema.column_name)
 
     index_schemas = index_schema.IndexSchema.where(
-        None, condition.equal_to('table_catalog', ''),
-        condition.equal_to('table_schema', ''))
+        condition.equal_to('table_catalog', ''),
+        condition.equal_to('table_schema', ''),
+    )
     indexes = collections.defaultdict(dict)
     for schema in index_schemas:
       key = (schema.table_name, schema.index_name)

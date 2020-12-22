@@ -182,8 +182,9 @@ class DropColumn(SchemaUpdate):
 
     # Verify no indices exist on the column we're trying to drop
     num_indexed_columns = index_column.IndexColumnSchema.count(
-        None, condition.equal_to('column_name', self._column),
-        condition.equal_to('table_name', self._table))
+        condition.equal_to('column_name', self._column),
+        condition.equal_to('table_name', self._table),
+    )
     if num_indexed_columns > 0:
       raise error.SpannerError('Column {} is indexed'.format(self._column))
 
