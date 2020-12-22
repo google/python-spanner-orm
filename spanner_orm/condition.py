@@ -571,6 +571,34 @@ def columns_equal(origin_column: str, dest_model_class: Type[Any],
   return ColumnsEqualCondition(origin_column, dest_model_class, dest_column)
 
 
+def contains(
+    column: Union[field.Field, str],
+    value: str,
+) -> ComparisonCondition:
+  """Condition where the specified column contains the given substring.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
+  value_escaped = value.translate(
+      str.maketrans({
+          # https://cloud.google.com/spanner/docs/functions-and-operators#comparison_operators
+          '%': r'\%',
+          '_': r'\_',
+          '\\': '\\\\',
+      }))
+  return ComparisonCondition(
+      operator='LIKE',
+      field_or_name=column,
+      value=f'%{value_escaped}%',
+  )
+
+
 def equal_to(column: Union[field.Field, str], value: Any) -> EqualityCondition:
   """Condition where the specified column is equal to the given value.
 

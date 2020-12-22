@@ -68,6 +68,7 @@ String = field.String
 StringArray = field.StringArray
 Timestamp = field.Timestamp
 
+contains = condition.contains
 equal_to = condition.equal_to
 force_index = condition.force_index
 greater_than = condition.greater_than
