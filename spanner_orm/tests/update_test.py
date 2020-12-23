@@ -61,7 +61,7 @@ class UpdateTest(unittest.TestCase):
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_create_table(self, get_model):
     get_model.return_value = None
-    new_model = models.UnittestModel
+    new_model = models.UnittestModelWithoutSecondaryIndexes
     test_update = update.CreateTable(new_model)
     test_update.validate()
 
@@ -92,6 +92,17 @@ class UpdateTest(unittest.TestCase):
     new_model = models.SmallTestModel
     test_update = update.CreateTable(new_model)
     with self.assertRaisesRegex(error.SpannerError, 'already exists'):
+      test_update.validate()
+
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
+  def test_create_table_error_on_table_with_index(self, get_model):
+    get_model.return_value = None
+    new_model = models.IndexTestModel
+    test_update = update.CreateTable(new_model)
+    with self.assertRaisesRegex(
+        error.SpannerError,
+        'indexes cannot be created',
+    ):
       test_update.validate()
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.indexes')
