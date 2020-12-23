@@ -20,6 +20,7 @@ from typing import Iterable, List, Optional, Type
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import index
 from spanner_orm import model
 from spanner_orm.admin import api
 from spanner_orm.admin import index_column
@@ -76,6 +77,11 @@ class CreateTable(SchemaUpdate):
 
     self._validate_primary_keys()
 
+    if self._model.indexes.keys() - {index.Index.PRIMARY_INDEX}:
+      raise error.SpannerError(
+          'Secondary indexes cannot be created by CreateTable; use CreateIndex '
+          'in a separate migration.')
+
   def _validate_parent(self) -> None:
     """Verifies that the parent table information is valid."""
     parent_primary_keys = self._model.interleaved.primary_keys
@@ -129,10 +135,10 @@ class DropTable(SchemaUpdate):
       if model_.interleaved == existing_model:
         raise error.SpannerError('Table {} has interleaved table {}'.format(
             self._table, model_.table))
-      for index in model_.indexes.values():
-        if index.parent == self._table:
+      for index_ in model_.indexes.values():
+        if index_.parent == self._table:
           raise error.SpannerError('Table {} has interleaved index {}'.format(
-              self._table, index.name))
+              self._table, index_.name))
 
 
 class AddColumn(SchemaUpdate):
