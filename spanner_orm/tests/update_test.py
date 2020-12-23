@@ -16,13 +16,15 @@ import logging
 import unittest
 from unittest import mock
 
+from absl.testing import parameterized
+
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.admin import update
 from spanner_orm.tests import models
 
 
-class UpdateTest(unittest.TestCase):
+class UpdateTest(parameterized.TestCase):
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_add_column(self, get_model):
@@ -118,15 +120,35 @@ class UpdateTest(unittest.TestCase):
     test_update.validate()
     self.assertEqual(test_update.ddl(), 'DROP TABLE {}'.format(table_name))
 
+  @parameterized.named_parameters(
+      (
+          'basic',
+          update.CreateIndex(
+              table_name=models.SmallTestModel.table,
+              index_name='foo',
+              columns=['value_1'],
+          ),
+          f'CREATE INDEX foo ON {models.SmallTestModel.table} (value_1)',
+      ),
+      (
+          'with_options',
+          update.CreateIndex(
+              table_name=models.SmallTestModel.table,
+              index_name='foo',
+              columns=['value_1'],
+              null_filtered=True,
+              unique=True,
+          ),
+          (f'CREATE UNIQUE NULL_FILTERED INDEX foo '
+           f'ON {models.SmallTestModel.table} (value_1)'),
+      ),
+  )
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
-  def test_add_index(self, get_model):
-    table_name = models.SmallTestModel.table
+  def test_add_index(self, test_update, expected_ddl, get_model):
     get_model.return_value = models.SmallTestModel
 
-    test_update = update.CreateIndex(table_name, 'foo', ['value_1'])
     test_update.validate()
-    self.assertEqual(test_update.ddl(),
-                     'CREATE INDEX foo ON {} (value_1)'.format(table_name))
+    self.assertEqual(test_update.ddl(), expected_ddl)
 
 
 if __name__ == '__main__':
