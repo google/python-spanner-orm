@@ -14,20 +14,34 @@
 # limitations under the License.
 import datetime
 import logging
+import os
 from typing import List
 import unittest
 from unittest import mock
 
 from absl.testing import parameterized
+from google.api_core import exceptions
 from google.cloud import spanner
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
 from spanner_orm.tests import models
 
 _TIMESTAMP = datetime.datetime.now(tz=datetime.timezone.utc)
 
 
-class ModelTest(parameterized.TestCase):
+class ModelTest(
+    spanner_emulator_testlib.TestCase,
+    parameterized.TestCase,
+):
+
+  def setUp(self):
+    super().setUp()
+    self.run_orm_migrations(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'migrations_for_emulator_test',
+        ))
 
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_calls_api(self, find):
@@ -58,6 +72,24 @@ class ModelTest(parameterized.TestCase):
       self.assertIsNone(result.value_2)
     else:
       self.fail('Failed to find result')
+
+  def test_find_required(self):
+    test_model = models.SmallTestModel(
+        dict(
+            key='some-key',
+            value_1='foo',
+            value_2='bar',
+        ))
+    test_model.save()
+    self.assertEqual(
+        test_model,
+        models.SmallTestModel.find_required(key='some-key'),
+    )
+
+  def test_find_required_not_found(self):
+    with self.assertRaisesRegex(exceptions.NotFound,
+                                'SmallTestModel has no object'):
+      models.SmallTestModel.find_required(key='some-key')
 
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_multi_calls_api(self, find):
