@@ -29,6 +29,7 @@ from spanner_orm import registry
 from spanner_orm import relationship
 from spanner_orm import table_apis
 
+from google.api_core import exceptions
 from google.cloud import spanner
 from google.cloud.spanner_v1 import transaction as spanner_transaction
 
@@ -278,6 +279,34 @@ class Model(metaclass=ModelMetaclass):
     """
     resources = cls.find_multi([keys], transaction=transaction)
     return resources[0] if resources else None
+
+  @classmethod
+  def find_required(
+      cls: Type[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **keys: Any,
+  ) -> T:
+    """Retrieves an object from Spanner based on the provided key.
+
+    Args:
+      transaction: The existing transaction to use, or None to start a new
+        transaction
+      **keys: The keys provided are the complete set of primary keys for this
+        table and the corresponding values make up the unique identifier of the
+        object being retrieved
+
+    Returns:
+      The requested object.
+
+    Raises:
+      exceptions.NotFound: The object wasn't found.
+    """
+    result = cls.find(**keys, transaction=transaction)
+    if result is None:
+      raise exceptions.NotFound(
+          f'{cls.__qualname__} has no object with primary key {keys}')
+    return result
 
   @classmethod
   def find_multi(
