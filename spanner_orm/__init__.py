@@ -68,9 +68,13 @@ String = field.String
 StringArray = field.StringArray
 Timestamp = field.Timestamp
 
+ArbitraryCondition = condition.ArbitraryCondition
+Column = condition.Column
 Condition = condition.Condition
 ORDER_ASC = condition.OrderType.ASC
 ORDER_DESC = condition.OrderType.DESC
+Param = condition.Param
+Segment = condition.Segment
 columns_equal = condition.columns_equal
 contains = condition.contains
 equal_to = condition.equal_to
