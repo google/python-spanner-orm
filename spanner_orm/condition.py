@@ -15,7 +15,10 @@
 """Used with Model#where and Model#count to help create Spanner queries."""
 
 import abc
+import base64
 import dataclasses
+import datetime
+import decimal
 import enum
 import string
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
@@ -26,6 +29,7 @@ from spanner_orm import index
 from spanner_orm import relationship
 
 import frozendict
+from google.api_core import datetime_helpers
 from google.cloud.spanner_v1.proto import type_pb2
 
 
@@ -118,11 +122,89 @@ class Condition(abc.ABC):
     raise NotImplementedError
 
 
+def _spanner_type_of_python_object(value: Any) -> type_pb2.Type:
+  """Returns the Cloud Spanner type of the given object.
+
+  Args:
+    value: Object to guess the type of.
+
+  Raises:
+    TypeError: The value either doesn't correspond to a valid Cloud Spanner
+      type, or this function was unable to guess the type.
+  """
+  # See
+  # https://github.com/googleapis/python-spanner/blob/master/google/cloud/spanner_v1/proto/type.proto
+  # for the Cloud Spanner types, and
+  # https://github.com/googleapis/python-spanner/blob/e981adb3157bb06e4cb466ca81d74d85da976754/google/cloud/spanner_v1/_helpers.py#L91-L133
+  # for Python types.
+  if value is None:
+    raise TypeError(
+        'Cannot infer type of None, because any SQL type can be NULL.')
+  simple_type_code = {
+      bool: type_pb2.BOOL,
+      int: type_pb2.INT64,
+      float: type_pb2.FLOAT64,
+      datetime_helpers.DatetimeWithNanoseconds: type_pb2.TIMESTAMP,
+      datetime.datetime: type_pb2.TIMESTAMP,
+      datetime.date: type_pb2.DATE,
+      bytes: type_pb2.BYTES,
+      str: type_pb2.STRING,
+      decimal.Decimal: type_pb2.NUMERIC,
+  }.get(type(value))
+  if simple_type_code is not None:
+    return type_pb2.Type(code=simple_type_code)
+  elif isinstance(value, (list, tuple)):
+    element_types = tuple(
+        _spanner_type_of_python_object(item)
+        for item in value
+        if item is not None)
+    unique_element_type_count = len({
+        # Protos aren't hashable, so use their serializations.
+        element_type.SerializeToString(deterministic=True)
+        for element_type in element_types
+    })
+    if unique_element_type_count == 1:
+      return type_pb2.Type(
+          code=type_pb2.ARRAY,
+          array_element_type=element_types[0],
+      )
+    else:
+      raise TypeError(
+          f'Array does not have elements of exactly one type: {value!r}')
+  else:
+    raise TypeError('Unknown type: {value!r}')
+
+
 @dataclasses.dataclass
 class Param:
-  """Parameter for substitution into a SQL query."""
+  """Parameter for substitution into a SQL query.
+
+  Attributes:
+    value: Value of the parameter.
+    type: Type of the parameter. If unspecified, the type will be guessed from
+      the value.
+  """
   value: Any
-  type: type_pb2.Type
+  type: type_pb2.Type = dataclasses.field(default_factory=type_pb2.Type)
+
+  def __post_init__(self):
+    if not self.type.code:
+      self.type = _spanner_type_of_python_object(self.value)
+
+    # BYTES must be base64-encoded, see
+    # https://github.com/googleapis/python-spanner/blob/87789c939990794bfd91f5300bedc449fd74bd7e/google/cloud/spanner_v1/proto/type.proto#L108-L110
+    if (isinstance(self.value, bytes) and
+        self.type == type_pb2.Type(code=type_pb2.BYTES)):
+      self.value = base64.b64encode(self.value).decode()
+    elif (isinstance(self.value, (list, tuple)) and
+          all(isinstance(x, bytes) for x in self.value if x is not None) and
+          self.type == type_pb2.Type(
+              code=type_pb2.ARRAY,
+              array_element_type=type_pb2.Type(code=type_pb2.BYTES),
+          )):
+      self.value = tuple(
+          None if item is None else base64.b64encode(item).decode()
+          for item in self.value)
 
 
 @dataclasses.dataclass
