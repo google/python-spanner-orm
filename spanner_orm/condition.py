@@ -15,14 +15,17 @@
 """Used with Model#where and Model#count to help create Spanner queries."""
 
 import abc
+import dataclasses
 import enum
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
+import string
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm import index
 from spanner_orm import relationship
 
+import frozendict
 from google.cloud.spanner_v1.proto import type_pb2
 
 
@@ -113,6 +116,97 @@ class Condition(abc.ABC):
   @abc.abstractmethod
   def _validate(self, model_class: Type[Any]) -> None:
     raise NotImplementedError
+
+
+@dataclasses.dataclass
+class Param:
+  """Parameter for substitution into a SQL query."""
+  value: Any
+  type: type_pb2.Type
+
+
+@dataclasses.dataclass
+class Column:
+  """Named column; consider using field.Field instead."""
+  name: str
+
+
+# Something that can be substituted into a SQL query.
+Substitution = Union[Param, field.Field, Column]
+
+
+class ArbitraryCondition(Condition):
+  """Condition with support for arbitrary SQL."""
+
+  def __init__(
+      self,
+      sql_template: str,
+      substitutions: Mapping[str, Substitution] = frozendict.frozendict(),
+      *,
+      segment: Segment,
+  ):
+    """Initializer.
+
+    Args:
+      sql_template: string.Template-compatible template string for the SQL.
+      substitutions: Substitutions to make in sql_template.
+      segment: Segment for this Condition.
+    """
+    super().__init__()
+    self._sql_template = string.Template(sql_template)
+    self._substitutions = substitutions
+    self._segment = segment
+
+    # This validates the template.
+    self._sql_template.substitute({k: '' for k in self._substitutions})
+
+  def segment(self) -> Segment:
+    """See base class."""
+    return self._segment
+
+  def _validate(self, model_class: Type[Any]) -> None:
+    """See base class."""
+    for substitution in self._substitutions.values():
+      if isinstance(substitution, field.Field):
+        if substitution not in model_class.fields.values():
+          raise error.ValidationError(
+              f'Field {substitution.name!r} does not belong to the Model for '
+              f'table {model_class.table!r}.')
+      elif isinstance(substitution, Column):
+        if substitution.name not in model_class.fields:
+          raise error.ValidationError(
+              f'Column {substitution.name!r} does not exist in the Model for '
+              f'table {model_class.table!r}.')
+
+  def _params(self) -> Dict[str, Any]:
+    """See base class."""
+    return {
+        self.key(k): v.value
+        for k, v in self._substitutions.items()
+        if isinstance(v, Param)
+    }
+
+  def _types(self) -> Dict[str, type_pb2.Type]:
+    """See base class."""
+    return {
+        self.key(k): v.type
+        for k, v in self._substitutions.items()
+        if isinstance(v, Param)
+    }
+
+  def _sql_for_substitution(self, key: str, substitution: Substitution) -> str:
+    if isinstance(substitution, Param):
+      return f'@{self.key(key)}'
+    else:
+      assert isinstance(substitution, (field.Field, Column))
+      return f'{self.model_class.column_prefix}.{substitution.name}'
+
+  def _sql(self) -> str:
+    """See base class."""
+    return self._sql_template.substitute({
+        k: self._sql_for_substitution(k, v)
+        for k, v in self._substitutions.items()
+    })
 
 
 class ColumnsEqualCondition(Condition):
