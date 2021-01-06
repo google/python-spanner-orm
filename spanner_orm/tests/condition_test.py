@@ -14,11 +14,14 @@
 # limitations under the License.
 """Tests for spanner_orm.condition."""
 
+import datetime
+import decimal
 import logging
 import os
 import unittest
 
 from absl.testing import parameterized
+from google.api_core import datetime_helpers
 from google.cloud.spanner_v1.proto import type_pb2
 
 import spanner_orm
@@ -41,6 +44,100 @@ class ConditionTest(
             'migrations_for_emulator_test',
         ))
 
+  @parameterized.parameters(
+      (True, type_pb2.Type(code=type_pb2.BOOL)),
+      (0, type_pb2.Type(code=type_pb2.INT64)),
+      (0.0, type_pb2.Type(code=type_pb2.FLOAT64)),
+      (
+          datetime_helpers.DatetimeWithNanoseconds(2021, 1, 5),
+          type_pb2.Type(code=type_pb2.TIMESTAMP),
+      ),
+      (datetime.datetime(2021, 1, 5), type_pb2.Type(code=type_pb2.TIMESTAMP)),
+      (datetime.date(2021, 1, 5), type_pb2.Type(code=type_pb2.DATE)),
+      (b'\x01', type_pb2.Type(code=type_pb2.BYTES)),
+      ('foo', type_pb2.Type(code=type_pb2.STRING)),
+      (decimal.Decimal('1.23'), type_pb2.Type(code=type_pb2.NUMERIC)),
+      (
+          (0, 1),
+          type_pb2.Type(
+              code=type_pb2.ARRAY,
+              array_element_type=type_pb2.Type(code=type_pb2.INT64),
+          ),
+      ),
+      (
+          ['a', None, 'b'],
+          type_pb2.Type(
+              code=type_pb2.ARRAY,
+              array_element_type=type_pb2.Type(code=type_pb2.STRING),
+          ),
+      ),
+  )
+  def test_param_infers_type(self, value, expected_type):
+    param = condition.Param(value)
+    self.assertEqual(expected_type, param.type)
+    # Test that the value and inferred type are compatible. This will raise an
+    # exception if they're not.
+    self.assertEmpty(
+        models.SmallTestModel.where(
+            condition.ArbitraryCondition(
+                '$param IS NULL',
+                dict(param=param),
+                segment=condition.Segment.WHERE,
+            )))
+
+  @parameterized.parameters(
+      (None, 'Cannot infer type of None'),
+      ((0, 'some-string'), 'elements of exactly one type'),
+      ((0, 'some-string', None), 'elements of exactly one type'),
+      (object(), 'Unknown type'),
+  )
+  def test_param_infer_type_error(self, value, error_regex):
+    with self.assertRaisesRegex(TypeError, error_regex):
+      condition.Param(value)
+
+  def test_param_explicit_type(self):
+    explicit_type = type_pb2.Type(code=type_pb2.STRING)
+    self.assertEqual(
+        explicit_type,
+        condition.Param(None, type=explicit_type).type,
+    )
+
+  @parameterized.named_parameters(
+      (
+          'bytes',
+          condition.ArbitraryCondition(
+              '$param = b"\x01\x02"',
+              dict(param=condition.Param(b'\x01\x02')),
+              segment=condition.Segment.WHERE,
+          ),
+      ),
+      (
+          'array_of_bytes',
+          condition.ArbitraryCondition(
+              '${param}[OFFSET(0)] = b"\x01\x02"',
+              dict(param=condition.Param([b'\x01\x02'])),
+              segment=condition.Segment.WHERE,
+          ),
+      ),
+      (
+          'array_of_bytes_and_null',
+          condition.ArbitraryCondition(
+              '${param}[OFFSET(0)] IS NULL',
+              dict(param=condition.Param((None, b'\x01\x02'))),
+              segment=condition.Segment.WHERE,
+          ),
+      ),
+  )
+  def test_param_correctly_encodes(self, tautology):
+    test_model = models.SmallTestModel(
+        dict(
+            key='some-key',
+            value_1='some-value',
+            value_2='other-value',
+        ))
+    test_model.save()
+    self.assertCountEqual((test_model,), models.SmallTestModel.where(tautology))
+
   @parameterized.named_parameters(
       (
           'minimal',
@@ -59,14 +156,8 @@ class ConditionTest(
               '$key = IF($true_param, ${key_param}, $value_1)',
               dict(
                   key=models.SmallTestModel.key,
-                  true_param=condition.Param(
-                      True,
-                      type=type_pb2.Type(code=type_pb2.BOOL),
-                  ),
-                  key_param=condition.Param(
-                      'some-key',
-                      type=type_pb2.Type(code=type_pb2.STRING),
-                  ),
+                  true_param=condition.Param(True),
+                  key_param=condition.Param('some-key'),
                   value_1=condition.Column('value_1'),
               ),
               segment=condition.Segment.WHERE,
