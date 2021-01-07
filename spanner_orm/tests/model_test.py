@@ -39,7 +39,7 @@ class ModelTest(
     super().setUp()
     self.run_orm_migrations(
         os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
+            os.path.dirname(os.path.abspath(__file__)),
             'migrations_for_emulator_test',
         ))
 

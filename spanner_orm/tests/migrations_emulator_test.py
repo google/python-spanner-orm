@@ -23,7 +23,7 @@ from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_tes
 
 class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
   TEST_MIGRATIONS_DIR = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
+    os.path.dirname(os.path.abspath(__file__)),
     'migrations_for_emulator_test',
   )
 
