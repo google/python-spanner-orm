@@ -21,7 +21,7 @@ import datetime
 import decimal
 import enum
 import string
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 from spanner_orm import error
 from spanner_orm import field
@@ -31,6 +31,8 @@ from spanner_orm import relationship
 import frozendict
 from google.api_core import datetime_helpers
 from google.cloud.spanner_v1.proto import type_pb2
+
+T = TypeVar('T')
 
 
 class Segment(enum.Enum):
@@ -122,15 +124,44 @@ class Condition(abc.ABC):
     raise NotImplementedError
 
 
-def _spanner_type_of_python_object(value: Any) -> type_pb2.Type:
+GuessableParamType = Union[
+    bool,  #
+    int,  #
+    float,  #
+    datetime_helpers.DatetimeWithNanoseconds,  #
+    datetime.datetime,  #
+    datetime.date,  #
+    bytes,  #
+    str,  #
+    decimal.Decimal,  #
+    # These types technically include List[None] and Tuple[None, ...], but
+    # those can't be guessed.
+    List[Optional[bool]],  #
+    List[Optional[int]],  #
+    List[Optional[float]],  #
+    List[Optional[datetime_helpers.DatetimeWithNanoseconds]],  #
+    List[Optional[datetime.datetime]],  #
+    List[Optional[datetime.date]],  #
+    List[Optional[bytes]],  #
+    List[Optional[str]],  #
+    List[Optional[decimal.Decimal]],  #
+    Tuple[Optional[bool], ...],  #
+    Tuple[Optional[int], ...],  #
+    Tuple[Optional[float], ...],  #
+    Tuple[Optional[datetime_helpers.DatetimeWithNanoseconds], ...],  #
+    Tuple[Optional[datetime.datetime], ...],  #
+    Tuple[Optional[datetime.date], ...],  #
+    Tuple[Optional[bytes], ...],  #
+    Tuple[Optional[str], ...],  #
+    Tuple[Optional[decimal.Decimal], ...],  #
+]
+
+
+def _spanner_type_of_python_object(value: GuessableParamType) -> type_pb2.Type:
   """Returns the Cloud Spanner type of the given object.
 
   Args:
     value: Object to guess the type of.
-
-  Raises:
-    TypeError: The value either doesn't correspond to a valid Cloud Spanner
-      type, or this function was unable to guess the type.
   """
   # See
   # https://github.com/googleapis/python-spanner/blob/master/google/cloud/spanner_v1/proto/type.proto
@@ -177,34 +208,33 @@ def _spanner_type_of_python_object(value: Any) -> type_pb2.Type:
 
 @dataclasses.dataclass
 class Param:
-  """Parameter for substitution into a SQL query.
-
-  Attributes:
-    value: Value of the parameter.
-    type: Type of the parameter. If unspecified, the type will be guessed from
-      the value.
-  """
+  """Parameter for substitution into a SQL query."""
   value: Any
-  type: type_pb2.Type = dataclasses.field(default_factory=type_pb2.Type)
+  type: type_pb2.Type
 
-  def __post_init__(self):
-    if not self.type.code:
-      self.type = _spanner_type_of_python_object(self.value)
+  @classmethod
+  def from_value(cls: Type[T], value: GuessableParamType) -> T:
+    """Returns a Param with the type guessed from a Python value."""
+    guessed_type = _spanner_type_of_python_object(value)
 
     # BYTES must be base64-encoded, see
     # https://github.com/googleapis/python-spanner/blob/87789c939990794bfd91f5300bedc449fd74bd7e/google/cloud/spanner_v1/proto/type.proto#L108-L110
-    if (isinstance(self.value, bytes) and
-        self.type == type_pb2.Type(code=type_pb2.BYTES)):
-      self.value = base64.b64encode(self.value).decode()
-    elif (isinstance(self.value, (list, tuple)) and
-          all(isinstance(x, bytes) for x in self.value if x is not None) and
-          self.type == type_pb2.Type(
+    if (isinstance(value, bytes) and
+        guessed_type == type_pb2.Type(code=type_pb2.BYTES)):
+      encoded_value = base64.b64encode(value).decode()
+    elif (isinstance(value, (list, tuple)) and
+          all(isinstance(x, bytes) for x in value if x is not None) and
+          guessed_type == type_pb2.Type(
               code=type_pb2.ARRAY,
               array_element_type=type_pb2.Type(code=type_pb2.BYTES),
           )):
-      self.value = tuple(
+      encoded_value = tuple(
           None if item is None else base64.b64encode(item).decode()
-          for item in self.value)
+          for item in value)
+    else:
+      encoded_value = value
+
+    return cls(value=encoded_value, type=guessed_type)
 
 
 @dataclasses.dataclass

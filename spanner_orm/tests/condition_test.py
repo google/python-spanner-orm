@@ -72,8 +72,8 @@ class ConditionTest(
           ),
       ),
   )
-  def test_param_infers_type(self, value, expected_type):
-    param = condition.Param(value)
+  def test_param_from_value(self, value, expected_type):
+    param = condition.Param.from_value(value)
     self.assertEqual(expected_type, param.type)
     # Test that the value and inferred type are compatible. This will raise an
     # exception if they're not.
@@ -91,23 +91,16 @@ class ConditionTest(
       ((0, 'some-string', None), 'elements of exactly one type'),
       (object(), 'Unknown type'),
   )
-  def test_param_infer_type_error(self, value, error_regex):
+  def test_param_from_value_error(self, value, error_regex):
     with self.assertRaisesRegex(TypeError, error_regex):
-      condition.Param(value)
-
-  def test_param_explicit_type(self):
-    explicit_type = type_pb2.Type(code=type_pb2.STRING)
-    self.assertEqual(
-        explicit_type,
-        condition.Param(None, type=explicit_type).type,
-    )
+      condition.Param.from_value(value)
 
   @parameterized.named_parameters(
       (
           'bytes',
           condition.ArbitraryCondition(
               '$param = b"\x01\x02"',
-              dict(param=condition.Param(b'\x01\x02')),
+              dict(param=condition.Param.from_value(b'\x01\x02')),
               segment=condition.Segment.WHERE,
           ),
       ),
@@ -115,7 +108,7 @@ class ConditionTest(
           'array_of_bytes',
           condition.ArbitraryCondition(
               '${param}[OFFSET(0)] = b"\x01\x02"',
-              dict(param=condition.Param([b'\x01\x02'])),
+              dict(param=condition.Param.from_value([b'\x01\x02'])),
               segment=condition.Segment.WHERE,
           ),
       ),
@@ -123,12 +116,12 @@ class ConditionTest(
           'array_of_bytes_and_null',
           condition.ArbitraryCondition(
               '${param}[OFFSET(0)] IS NULL',
-              dict(param=condition.Param((None, b'\x01\x02'))),
+              dict(param=condition.Param.from_value((None, b'\x01\x02'))),
               segment=condition.Segment.WHERE,
           ),
       ),
   )
-  def test_param_correctly_encodes(self, tautology):
+  def test_param_from_value_correctly_encodes(self, tautology):
     test_model = models.SmallTestModel(
         dict(
             key='some-key',
@@ -156,8 +149,8 @@ class ConditionTest(
               '$key = IF($true_param, ${key_param}, $value_1)',
               dict(
                   key=models.SmallTestModel.key,
-                  true_param=condition.Param(True),
-                  key_param=condition.Param('some-key'),
+                  true_param=condition.Param.from_value(True),
+                  key_param=condition.Param.from_value('some-key'),
                   value_1=condition.Column('value_1'),
               ),
               segment=condition.Segment.WHERE,
