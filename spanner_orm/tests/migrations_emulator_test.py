@@ -16,15 +16,15 @@ import logging
 import os
 import unittest
 
-
 import spanner_orm
 from spanner_orm.tests import models
 from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
 
+
 class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
   TEST_MIGRATIONS_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'migrations_for_emulator_test',
+      os.path.dirname(os.path.abspath(__file__)),
+      'migrations_for_emulator_test',
   )
 
   def setUp(self):
@@ -35,9 +35,14 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
     test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
     test_model.save()
     self.assertEqual(
-      [x.values for x in models.SmallTestModel.all()],
-      [{'key': 'key', 'value_1': 'value', 'value_2': None}],
+        [x.values for x in models.SmallTestModel.all()],
+        [{
+            'key': 'key',
+            'value_1': 'value',
+            'value_2': None,
+        }],
     )
+
 
 if __name__ == '__main__':
   logging.basicConfig()
