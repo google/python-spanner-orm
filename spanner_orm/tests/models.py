@@ -46,7 +46,13 @@ class IndexTestModel(model.Model):
   key = field.Field(field.String, primary_key=True)
   value = field.Field(field.String)
 
-  value_index = index.Index(['value'])
+  value_idx = index.Index(['value'], name='value')
+
+
+class FieldCustomNameTestModel(model.Model):
+  __table__ = 'FieldCustomNameTestModel'
+
+  key = field.Field(field.String, primary_key=True, name='key2')
 
 
 class RelationshipTestModel(model.Model):

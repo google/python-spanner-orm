@@ -14,7 +14,7 @@
 # limitations under the License.
 """Helps define a foreign key relationship between two models."""
 
-from typing import Any, Dict, List, Type, Union
+from typing import Any, Dict, List, Type, Union, Optional
 
 import dataclasses
 from spanner_orm import error

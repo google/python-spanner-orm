@@ -47,8 +47,8 @@ class AdminTest(unittest.TestCase):
           'table_name': model.table,
           'column_name': row.name,
           'ordinal_position': iteration,
-          'is_nullable': 'YES' if row.nullable() else 'NO',
-          'spanner_type': row.field_type().ddl()
+          'is_nullable': 'YES' if row.nullable else 'NO',
+          'spanner_type': row.field_type.ddl()
       })
       iteration += 1
     return [column.ColumnSchema(row) for row in columns]
@@ -109,10 +109,10 @@ class AdminTest(unittest.TestCase):
     self.assertEqual(meta.table, model.table)
     self.assertEqual(meta.columns, model.columns)
     for row in model.columns:
-      self.assertEqual(meta.fields[row].field_type(),
-                       model.fields[row].field_type())
-      self.assertEqual(meta.fields[row].nullable(),
-                       model.fields[row].nullable())
+      self.assertEqual(meta.fields[row].field_type,
+                       model.fields[row].field_type)
+      self.assertEqual(meta.fields[row].nullable,
+                       model.fields[row].nullable)
     self.assertEqual(meta.primary_keys, model.primary_keys)
     self.assertEqual(
         getattr(meta, index.Index.PRIMARY_INDEX).columns, model.primary_keys)
@@ -163,13 +163,23 @@ class AdminTest(unittest.TestCase):
     self.assertEqual(getattr(meta, name).columns, index_cols)
 
   def test_model_creation_ddl(self):
-    expected_ddl = [
-        'CREATE TABLE IndexTestModel (key STRING(MAX) NOT NULL,'
-        ' value STRING(MAX) NOT NULL) PRIMARY KEY (key)',
-        'CREATE INDEX value_index ON IndexTestModel (value)'
-    ]
-    ddl = update.model_creation_ddl(models.IndexTestModel)
-    self.assertEqual(ddl, expected_ddl)
+      expected_ddl = [
+          'CREATE TABLE IndexTestModel (key STRING(MAX) NOT NULL,'
+          ' value STRING(MAX) NOT NULL) PRIMARY KEY (key)',
+          'CREATE INDEX value ON IndexTestModel (value)'
+      ]
+      ddl = update.model_creation_ddl(models.IndexTestModel)
+      self.assertEqual(ddl, expected_ddl)
+      self.assertCountEqual(models.IndexTestModel.meta.indexes.keys(), ['PRIMARY_KEY', 'value_idx'])
+
+  def test_model_creation_ddl2(self):
+      expected_ddl = [
+          'CREATE TABLE FieldCustomNameTestModel (key2 STRING(MAX) NOT NULL)'
+          ' PRIMARY KEY (key2)'
+      ]
+      ddl = update.model_creation_ddl(models.FieldCustomNameTestModel)
+      self.assertEqual(ddl, expected_ddl)
+      self.assertCountEqual(models.FieldCustomNameTestModel.meta.indexes.keys(), ['PRIMARY_KEY'])
 
 
 if __name__ == '__main__':

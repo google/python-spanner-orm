@@ -16,7 +16,7 @@
 
 import abc
 import datetime
-from typing import Any, Type
+from typing import Any, Type, Optional
 
 from spanner_orm import error
 
@@ -48,8 +48,9 @@ class Field(object):
   def __init__(self,
                field_type: Type[FieldType],
                nullable: bool = False,
-               primary_key: bool = False):
-    self.name = None
+               primary_key: bool = False,
+               name: Optional[str] = None):
+    self._name = name
     self._type = field_type
     self._nullable = nullable
     self._primary_key = primary_key
@@ -59,17 +60,29 @@ class Field(object):
       return self._type.ddl()
     return '{field_type} NOT NULL'.format(field_type=self._type.ddl())
 
+  @property
   def field_type(self) -> Type[FieldType]:
     return self._type
 
   def grpc_type(self) -> str:
     return self._type.grpc_type()
 
+  @property
   def nullable(self) -> bool:
     return self._nullable
 
+  @property
   def primary_key(self) -> bool:
     return self._primary_key
+
+  @property
+  def name(self) -> Optional[str]:
+    return self._name
+
+  @name.setter
+  def name(self, value: str) -> None:
+    if not self._name:
+      self._name = value
 
   def validate(self, value) -> None:
     if value is None:

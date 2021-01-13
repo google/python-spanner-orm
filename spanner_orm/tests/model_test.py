@@ -358,8 +358,8 @@ class ModelTest(
 
   def test_field_exists_on_model_class(self):
     self.assertIsInstance(models.SmallTestModel.key, field.Field)
-    self.assertEqual(models.SmallTestModel.key.field_type(), field.String)
-    self.assertFalse(models.SmallTestModel.key.nullable())
+    self.assertEqual(models.SmallTestModel.key.field_type, field.String)
+    self.assertFalse(models.SmallTestModel.key.nullable)
     self.assertEqual(models.SmallTestModel.key.name, 'key')
 
   def test_field_inheritance(self):
