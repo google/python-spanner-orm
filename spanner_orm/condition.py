@@ -15,8 +15,13 @@
 """Used with Model#where and Model#count to help create Spanner queries."""
 
 import abc
+import base64
+import dataclasses
+import datetime
+import decimal
 import enum
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
+import string
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 from spanner_orm import error
 from spanner_orm import field
@@ -24,7 +29,11 @@ from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import relationship
 
+import frozendict
+from google.api_core import datetime_helpers
 from google.cloud.spanner_v1.proto import type_pb2
+
+T = TypeVar('T')
 
 
 class Segment(enum.Enum):
@@ -114,6 +123,203 @@ class Condition(abc.ABC):
   @abc.abstractmethod
   def _validate(self, model_class: Type[Any]) -> None:
     raise NotImplementedError
+
+
+GuessableParamType = Union[
+    bool,  #
+    int,  #
+    float,  #
+    datetime_helpers.DatetimeWithNanoseconds,  #
+    datetime.datetime,  #
+    datetime.date,  #
+    bytes,  #
+    str,  #
+    decimal.Decimal,  #
+    # These types technically include List[None] and Tuple[None, ...], but
+    # those can't be guessed.
+    List[Optional[bool]],  #
+    List[Optional[int]],  #
+    List[Optional[float]],  #
+    List[Optional[datetime_helpers.DatetimeWithNanoseconds]],  #
+    List[Optional[datetime.datetime]],  #
+    List[Optional[datetime.date]],  #
+    List[Optional[bytes]],  #
+    List[Optional[str]],  #
+    List[Optional[decimal.Decimal]],  #
+    Tuple[Optional[bool], ...],  #
+    Tuple[Optional[int], ...],  #
+    Tuple[Optional[float], ...],  #
+    Tuple[Optional[datetime_helpers.DatetimeWithNanoseconds], ...],  #
+    Tuple[Optional[datetime.datetime], ...],  #
+    Tuple[Optional[datetime.date], ...],  #
+    Tuple[Optional[bytes], ...],  #
+    Tuple[Optional[str], ...],  #
+    Tuple[Optional[decimal.Decimal], ...],  #
+]
+
+
+def _spanner_type_of_python_object(value: GuessableParamType) -> type_pb2.Type:
+  """Returns the Cloud Spanner type of the given object.
+
+  Args:
+    value: Object to guess the type of.
+  """
+  # See
+  # https://github.com/googleapis/python-spanner/blob/master/google/cloud/spanner_v1/proto/type.proto
+  # for the Cloud Spanner types, and
+  # https://github.com/googleapis/python-spanner/blob/e981adb3157bb06e4cb466ca81d74d85da976754/google/cloud/spanner_v1/_helpers.py#L91-L133
+  # for Python types.
+  if value is None:
+    raise TypeError(
+        'Cannot infer type of None, because any SQL type can be NULL.')
+  simple_type_code = {
+      bool: type_pb2.BOOL,
+      int: type_pb2.INT64,
+      float: type_pb2.FLOAT64,
+      datetime_helpers.DatetimeWithNanoseconds: type_pb2.TIMESTAMP,
+      datetime.datetime: type_pb2.TIMESTAMP,
+      datetime.date: type_pb2.DATE,
+      bytes: type_pb2.BYTES,
+      str: type_pb2.STRING,
+      decimal.Decimal: type_pb2.NUMERIC,
+  }.get(type(value))
+  if simple_type_code is not None:
+    return type_pb2.Type(code=simple_type_code)
+  elif isinstance(value, (list, tuple)):
+    element_types = tuple(
+        _spanner_type_of_python_object(item)
+        for item in value
+        if item is not None)
+    unique_element_type_count = len({
+        # Protos aren't hashable, so use their serializations.
+        element_type.SerializeToString(deterministic=True)
+        for element_type in element_types
+    })
+    if unique_element_type_count == 1:
+      return type_pb2.Type(
+          code=type_pb2.ARRAY,
+          array_element_type=element_types[0],
+      )
+    else:
+      raise TypeError(
+          f'Array does not have elements of exactly one type: {value!r}')
+  else:
+    raise TypeError('Unknown type: {value!r}')
+
+
+@dataclasses.dataclass
+class Param:
+  """Parameter for substitution into a SQL query."""
+  value: Any
+  type: type_pb2.Type
+
+  @classmethod
+  def from_value(cls: Type[T], value: GuessableParamType) -> T:
+    """Returns a Param with the type guessed from a Python value."""
+    guessed_type = _spanner_type_of_python_object(value)
+
+    # BYTES must be base64-encoded, see
+    # https://github.com/googleapis/python-spanner/blob/87789c939990794bfd91f5300bedc449fd74bd7e/google/cloud/spanner_v1/proto/type.proto#L108-L110
+    if (isinstance(value, bytes) and
+        guessed_type == type_pb2.Type(code=type_pb2.BYTES)):
+      encoded_value = base64.b64encode(value).decode()
+    elif (isinstance(value, (list, tuple)) and
+          all(isinstance(x, bytes) for x in value if x is not None) and
+          guessed_type == type_pb2.Type(
+              code=type_pb2.ARRAY,
+              array_element_type=type_pb2.Type(code=type_pb2.BYTES),
+          )):
+      encoded_value = tuple(
+          None if item is None else base64.b64encode(item).decode()
+          for item in value)
+    else:
+      encoded_value = value
+
+    return cls(value=encoded_value, type=guessed_type)
+
+
+@dataclasses.dataclass
+class Column:
+  """Named column; consider using field.Field instead."""
+  name: str
+
+
+# Something that can be substituted into a SQL query.
+Substitution = Union[Param, field.Field, Column]
+
+
+class ArbitraryCondition(Condition):
+  """Condition with support for arbitrary SQL."""
+
+  def __init__(
+      self,
+      sql_template: str,
+      substitutions: Mapping[str, Substitution] = frozendict.frozendict(),
+      *,
+      segment: Segment,
+  ):
+    """Initializer.
+
+    Args:
+      sql_template: string.Template-compatible template string for the SQL.
+      substitutions: Substitutions to make in sql_template.
+      segment: Segment for this Condition.
+    """
+    super().__init__()
+    self._sql_template = string.Template(sql_template)
+    self._substitutions = substitutions
+    self._segment = segment
+
+    # This validates the template.
+    self._sql_template.substitute({k: '' for k in self._substitutions})
+
+  def segment(self) -> Segment:
+    """See base class."""
+    return self._segment
+
+  def _validate(self, model_class: Type[Any]) -> None:
+    """See base class."""
+    for substitution in self._substitutions.values():
+      if isinstance(substitution, field.Field):
+        if substitution not in model_class.fields.values():
+          raise error.ValidationError(
+              f'Field {substitution.name!r} does not belong to the Model for '
+              f'table {model_class.table!r}.')
+      elif isinstance(substitution, Column):
+        if substitution.name not in model_class.fields:
+          raise error.ValidationError(
+              f'Column {substitution.name!r} does not exist in the Model for '
+              f'table {model_class.table!r}.')
+
+  def _params(self) -> Dict[str, Any]:
+    """See base class."""
+    return {
+        self.key(k): v.value
+        for k, v in self._substitutions.items()
+        if isinstance(v, Param)
+    }
+
+  def _types(self) -> Dict[str, type_pb2.Type]:
+    """See base class."""
+    return {
+        self.key(k): v.type
+        for k, v in self._substitutions.items()
+        if isinstance(v, Param)
+    }
+
+  def _sql_for_substitution(self, key: str, substitution: Substitution) -> str:
+    if isinstance(substitution, Param):
+      return f'@{self.key(key)}'
+    else:
+      assert isinstance(substitution, (field.Field, Column))
+      return f'{self.model_class.column_prefix}.{substitution.name}'
+
+  def _sql(self) -> str:
+    """See base class."""
+    return self._sql_template.substitute({
+        k: self._sql_for_substitution(k, v)
+        for k, v in self._substitutions.items()
+    })
 
 
 class ColumnsEqualCondition(Condition):
@@ -537,8 +743,8 @@ class ListComparisonCondition(ComparisonCondition):
     return {self._column_key: list_type}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    if not isinstance(self.value, list):
-      raise error.ValidationError('{} is not a list'.format(self.value))
+    if not isinstance(self.value, Iterable):
+      raise error.ValidationError('{} is not iterable'.format(self.value))
     if self.column not in model_class.fields:
       raise error.ValidationError('{} is not a column on {}'.format(
           self.column, model_class.table))
@@ -621,6 +827,34 @@ def columns_equal(origin_column: str, dest_model_class: Type[Any],
     A Condition subclass that will be used in the query
   """
   return ColumnsEqualCondition(origin_column, dest_model_class, dest_column)
+
+
+def contains(
+    column: Union[field.Field, str],
+    value: str,
+) -> ComparisonCondition:
+  """Condition where the specified column contains the given substring.
+
+  Args:
+    column: Name of the column on the origin model or the Field on the origin
+      model class to compare from
+    value: The value to compare against
+
+  Returns:
+    A Condition subclass that will be used in the query
+  """
+  value_escaped = value.translate(
+      str.maketrans({
+          # https://cloud.google.com/spanner/docs/functions-and-operators#comparison_operators
+          '%': r'\%',
+          '_': r'\_',
+          '\\': '\\\\',
+      }))
+  return ComparisonCondition(
+      operator='LIKE',
+      field_or_name=column,
+      value=f'%{value_escaped}%',
+  )
 
 
 def equal_to(column: Union[field.Field, str], value: Any) -> EqualityCondition:

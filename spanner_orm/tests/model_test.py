@@ -14,16 +14,200 @@
 # limitations under the License.
 import datetime
 import logging
+import os
 from typing import List
 import unittest
 from unittest import mock
 
 from absl.testing import parameterized
+from google.api_core import exceptions
+from google.cloud import spanner
+from spanner_orm import error
 from spanner_orm import field
+from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
 from spanner_orm.tests import models
 
+_TIMESTAMP = datetime.datetime.now(tz=datetime.timezone.utc)
 
-class ModelTest(parameterized.TestCase):
+
+class ModelTest(
+    spanner_emulator_testlib.TestCase,
+    parameterized.TestCase,
+):
+
+  def setUp(self):
+    super().setUp()
+    self.run_orm_migrations(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'migrations_for_emulator_test',
+        ))
+
+  @mock.patch('spanner_orm.table_apis.find')
+  def test_find_calls_api(self, find):
+    mock_transaction = mock.Mock()
+    models.UnittestModel.find(
+        string='string',
+        int_=1,
+        float_=2.3,
+        transaction=mock_transaction,
+    )
+
+    find.assert_called_once()
+    (transaction, table, columns, keyset), _ = find.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.UnittestModel.table)
+    self.assertEqual(columns, models.UnittestModel.columns)
+    self.assertEqual(keyset.keys, [[1, 2.3, 'string']])
+
+  @mock.patch('spanner_orm.table_apis.find')
+  def test_find_result(self, find):
+    mock_transaction = mock.Mock()
+
+    find.return_value = [['key', 'value_1', None]]
+    result = models.SmallTestModel.find(key='key', transaction=mock_transaction)
+    if result:
+      self.assertEqual(result.key, 'key')
+      self.assertEqual(result.value_1, 'value_1')
+      self.assertIsNone(result.value_2)
+    else:
+      self.fail('Failed to find result')
+
+  def test_find_required(self):
+    test_model = models.SmallTestModel(
+        dict(
+            key='some-key',
+            value_1='foo',
+            value_2='bar',
+        ))
+    test_model.save()
+    self.assertEqual(
+        test_model,
+        models.SmallTestModel.find_required(key='some-key'),
+    )
+
+  def test_find_required_not_found(self):
+    with self.assertRaisesRegex(exceptions.NotFound,
+                                'SmallTestModel has no object'):
+      models.SmallTestModel.find_required(key='some-key')
+
+  @mock.patch('spanner_orm.table_apis.find')
+  def test_find_multi_calls_api(self, find):
+    mock_transaction = mock.Mock()
+    models.UnittestModel.find_multi(
+        [{
+            'string': 'string',
+            'int_': 1,
+            'float_': 2.3
+        }],
+        transaction=mock_transaction,
+    )
+
+    find.assert_called_once()
+    (transaction, table, columns, keyset), _ = find.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.UnittestModel.table)
+    self.assertEqual(columns, models.UnittestModel.columns)
+    self.assertEqual(keyset.keys, [[1, 2.3, 'string']])
+
+  @mock.patch('spanner_orm.table_apis.find')
+  def test_find_multi_result(self, find):
+    mock_transaction = mock.Mock()
+    find.return_value = [['key', 'value_1', None]]
+    results = models.SmallTestModel.find_multi(
+        [{
+            'key': 'key'
+        }],
+        transaction=mock_transaction,
+    )
+
+    self.assertEqual(results[0].key, 'key')
+    self.assertEqual(results[0].value_1, 'value_1')
+    self.assertIsNone(results[0].value_2)
+
+  @mock.patch('spanner_orm.table_apis.insert')
+  def test_create_calls_api(self, insert):
+    mock_transaction = mock.Mock()
+    models.SmallTestModel.create(
+        key='key',
+        value_1='value',
+        transaction=mock_transaction,
+    )
+
+    insert.assert_called_once()
+    (transaction, table, columns, values), _ = insert.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.SmallTestModel.table)
+    self.assertEqual(list(columns), ['key', 'value_1'])
+    self.assertEqual(list(values), [['key', 'value']])
+
+  def test_create_error_on_invalid_keys(self):
+    with self.assertRaises(error.SpannerError):
+      models.SmallTestModel.create(key_2='key')
+
+  def assert_api_called(self, mock_api, mock_transaction):
+    mock_api.assert_called_once()
+    (transaction, table, columns, values), _ = mock_api.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.SmallTestModel.table)
+    self.assertEqual(list(columns), ['key', 'value_1', 'value_2'])
+    self.assertEqual(list(values), [['key', 'value', None]])
+
+  @mock.patch('spanner_orm.table_apis.insert')
+  def test_save_batch_inserts(self, insert):
+    mock_transaction = mock.Mock()
+    values = {'key': 'key', 'value_1': 'value'}
+    not_persisted = models.SmallTestModel(values)
+    models.SmallTestModel.save_batch([not_persisted],
+                                     transaction=mock_transaction)
+    self.assert_api_called(insert, mock_transaction)
+
+  @mock.patch('spanner_orm.table_apis.update')
+  def test_save_batch_updates(self, update):
+    mock_transaction = mock.Mock()
+    values = {'key': 'key', 'value_1': 'value'}
+    persisted = models.SmallTestModel(values, persisted=True)
+    models.SmallTestModel.save_batch([persisted], transaction=mock_transaction)
+
+    self.assert_api_called(update, mock_transaction)
+
+  @mock.patch('spanner_orm.table_apis.upsert')
+  def test_save_batch_force_write_upserts(self, upsert):
+    mock_transaction = mock.Mock()
+    values = {'key': 'key', 'value_1': 'value'}
+    not_persisted = models.SmallTestModel(values)
+    models.SmallTestModel.save_batch(
+        [not_persisted],
+        force_write=True,
+        transaction=mock_transaction,
+    )
+    self.assert_api_called(upsert, mock_transaction)
+
+  @mock.patch('spanner_orm.table_apis.delete')
+  def test_delete_batch_deletes(self, delete):
+    mock_transaction = mock.Mock()
+    values = {'key': 'key', 'value_1': 'value'}
+    model = models.SmallTestModel(values)
+    models.SmallTestModel.delete_batch([model], transaction=mock_transaction)
+
+    delete.assert_called_once()
+    (transaction, table, keyset), _ = delete.call_args
+    self.assertEqual(transaction, mock_transaction)
+    self.assertEqual(table, models.SmallTestModel.table)
+    self.assertEqual(keyset.keys, [[model.key]])
+
+  @mock.patch('spanner_orm.table_apis.delete')
+  def test_delete_by_key_deletes(self, delete):
+    mock_transaction = mock.Mock()
+    models.SmallTestModel.delete_by_key(
+        key='some-key',
+        transaction=mock_transaction,
+    )
+    delete.assert_called_once_with(
+        mock_transaction,
+        models.SmallTestModel.table,
+        spanner.KeySet(keys=[['some-key']]),
+    )
 
   def test_set_attr(self):
     test_model = models.SmallTestModel({'key': 'key', 'value_1': 'value'})
@@ -40,8 +224,9 @@ class ModelTest(parameterized.TestCase):
     with self.assertRaises(AttributeError):
       test_model.key = 'error'
 
-  @parameterized.parameters(('int_2', 'foo'), ('float_2', 'bar'), ('string_2', 5),
-                            ('string_array', 'foo'), ('timestamp', 5))
+  @parameterized.parameters(('int_2', 'foo'), ('float_2', 'bar'),
+                            ('string_2', 5), ('string_array', 'foo'),
+                            ('timestamp', 5))
   def test_set_error_on_invalid_type(self, attribute, value):
     string_array = ['foo', 'bar']
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -60,6 +245,82 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(test_model.key, 'key')
     self.assertEqual(test_model.value_1, 'value')
     self.assertEqual(test_model.value_2, None)
+
+  @parameterized.parameters(
+      (True, True),
+      (True, False),
+      (False, True),
+  )
+  def test_skip_validation(self, persisted, skip_validation):
+    models.SmallTestModel(
+        {'value_1': 'value'},
+        persisted=persisted,
+        skip_validation=skip_validation,
+    )
+
+  def test_validation(self):
+    with self.assertRaises(error.SpannerError):
+      models.SmallTestModel(
+          {'value_1': 'value'},
+          persisted=False,
+          skip_validation=False,
+      )
+
+  def test_model_equates(self):
+    timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+    test_model1 = models.UnittestModel({
+        'int_': 0,
+        'float_': 0,
+        'string': '',
+        'string_array': ['foo', 'bar'],
+        'timestamp': timestamp,
+    })
+    test_model2 = models.UnittestModel({
+        'int_': 0,
+        'float_': 0.0,
+        'string': '',
+        'string_array': ['foo', 'bar'],
+        'timestamp': timestamp,
+    })
+    self.assertEqual(test_model1, test_model2)
+
+  @parameterized.parameters(
+      (models.UnittestModel({
+          'int_': 0,
+          'float_': 0,
+          'string': '1',
+          'timestamp': _TIMESTAMP,
+      }),
+       models.UnittestModel({
+           'int_': 0,
+           'float_': 0,
+           'string': 'a',
+           'timestamp': _TIMESTAMP,
+       })),
+      (models.UnittestModel({
+          'int_': 0,
+          'float_': 0,
+          'string': '',
+          'string_array': ['foo', 'bar'],
+          'timestamp': _TIMESTAMP,
+      }),
+       models.UnittestModel({
+           'int_': 0,
+           'float_': 0,
+           'string': '',
+           'string_array': ['bar', 'foo'],
+           'timestamp': _TIMESTAMP,
+       })),
+      (models.SmallTestModel({
+          'key': 'key',
+          'value_1': 'value'
+      }), models.InheritanceTestModel({
+          'key': 'key',
+          'value_1': 'value'
+      })),
+  )
+  def test_model_are_different(self, test_model1, test_model2):
+    self.assertNotEqual(test_model1, test_model2)
 
   def test_id(self):
     primary_key = {'string': 'foo', 'int_': 5, 'float_': 2.3}
@@ -128,19 +389,16 @@ class ModelTest(parameterized.TestCase):
   def test_interleaved(self):
     self.assertEqual(models.ChildTestModel.interleaved, models.SmallTestModel)
 
-  @mock.patch('spanner_orm.model.ModelApi.find')
+  @mock.patch('spanner_orm.model.Model.find')
   def test_reload(self, find):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=False)
 
     find.return_value = None
     self.assertIsNone(model.reload())
-    find.assert_called_once()
-    (transaction,), kwargs = find.call_args
-    self.assertIsNone(transaction)
-    self.assertEqual(kwargs, model.id())
+    find.assert_called_once_with(**model.id(), transaction=None)
 
-  @mock.patch('spanner_orm.model.ModelApi.find')
+  @mock.patch('spanner_orm.model.Model.find')
   def test_reload_reloads(self, find):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=False)
@@ -151,18 +409,15 @@ class ModelTest(parameterized.TestCase):
     self.assertEqual(model.value_1, updated_values['value_1'])
     self.assertEqual(model.changes(), {})
 
-  @mock.patch('spanner_orm.model.ModelApi.create')
+  @mock.patch('spanner_orm.model.Model.create')
   def test_save_creates(self, create):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=False)
     model.save()
 
-    create.assert_called_once()
-    (transaction,), kwargs = create.call_args
-    self.assertIsNone(transaction)
-    self.assertEqual(kwargs, {**values, 'value_2': None})
+    create.assert_called_once_with(**values, value_2=None, transaction=None)
 
-  @mock.patch('spanner_orm.model.ModelApi.update')
+  @mock.patch('spanner_orm.model.Model.update')
   def test_save_updates(self, update):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=True)
@@ -171,12 +426,9 @@ class ModelTest(parameterized.TestCase):
     model.value_1 = values['value_1']
     model.save()
 
-    update.assert_called_once()
-    (transaction,), kwargs = update.call_args
-    self.assertIsNone(transaction)
-    self.assertEqual(kwargs, values)
+    update.assert_called_once_with(**values, transaction=None)
 
-  @mock.patch('spanner_orm.model.ModelApi.update')
+  @mock.patch('spanner_orm.model.Model.update')
   def test_save_no_changes(self, update):
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values, persisted=True)
@@ -188,7 +440,7 @@ class ModelTest(parameterized.TestCase):
     mock_transaction = mock.Mock()
     values = {'key': 'key', 'value_1': 'value_1'}
     model = models.SmallTestModel(values)
-    model.delete(mock_transaction)
+    model.delete(transaction=mock_transaction)
 
     delete.assert_called_once()
     (transaction, table, keyset), _ = delete.call_args

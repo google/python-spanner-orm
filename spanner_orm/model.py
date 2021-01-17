@@ -30,17 +30,19 @@ from spanner_orm import registry
 from spanner_orm import relationship
 from spanner_orm import table_apis
 
+from google.api_core import exceptions
 from google.cloud import spanner
 from google.cloud.spanner_v1 import transaction as spanner_transaction
+
+T = TypeVar('T')
 
 
 class ModelMetaclass(type):
   """Populates ModelMetadata based on class attributes."""
+  meta: metadata.ModelMetadata
 
   def __new__(mcs, name: str, bases: Any, attrs: Dict[str, Any], **kwargs: Any):
     parents = [base for base in bases if isinstance(base, ModelMetaclass)]
-    if not parents:
-      return super().__new__(mcs, name, bases, attrs, **kwargs)
 
     model_metadata = metadata.ModelMetadata()
     for parent in parents:
@@ -148,13 +150,52 @@ class ModelMetaclass(type):
 CallableReturn = TypeVar('CallableReturn')
 
 
-class ModelApi(metaclass=ModelMetaclass):
-  """Implements class-level Spanner queries on top of ModelMetaclass.
+class Model(metaclass=ModelMetaclass):
+  """Maps to a table in spanner and has basic functions for querying tables.
 
-  Note: all methods in this class should only be called on subclasses of Model
-  that have associated tables. Violating this will cause an exception to be
-  raised.
+  Note: all methods in this class should only be called on subclasses that have
+  associated tables. Violating this will cause an exception to be raised.
   """
+
+  def __init__(self,
+               values: Dict[str, Any],
+               persisted: bool = False,
+               skip_validation: bool = False):
+    start_values = {}
+    self.__dict__['start_values'] = start_values
+    self.__dict__['_persisted'] = persisted
+
+    # If the values came from Spanner or validation is explicitly skipped, trust
+    # them and skip validation
+    if not persisted and not skip_validation:
+      # An object is invalid if primary key values are missing
+      missing_keys = set(self._primary_keys) - set(values.keys())
+      if missing_keys:
+        raise error.SpannerError(
+            'All primary keys must be specified. Missing: {keys}'.format(
+                keys=missing_keys))
+
+      for column in self._columns:
+        self._metaclass.validate_value(column, values.get(column), ValueError)
+
+    for column in self._columns:
+      value = values.get(column)
+      start_values[column] = copy.copy(value)
+      self.__dict__[column] = value
+
+    for relation in self._relations:
+      if relation in values:
+        self.__dict__[relation] = values[relation]
+
+    for foreign_key_relation in self._foreign_key_relations:
+      if foreign_key_relation in values:
+        self.__dict__[foreign_key_relation] = values[foreign_key_relation]
+
+  def __eq__(self, other: Any) -> Union[bool, type(NotImplemented)]:
+    """Compares objects by their type and attributes."""
+    if type(self) != type(other):
+      return NotImplemented
+    return self.values == other.values
 
   @classmethod
   def spanner_api(cls) -> api.SpannerApi:
@@ -165,9 +206,10 @@ class ModelApi(metaclass=ModelMetaclass):
   # Table read methods
   @classmethod
   def all(
-      cls,
-      transaction: Optional[spanner_transaction.Transaction] = None
-  ) -> List['ModelObject']:
+      cls: Type[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> List[T]:
     """Returns all objects of this type stored in Spanner.
 
     Note: this method should only be called on subclasses of Model that have
@@ -186,16 +228,19 @@ class ModelApi(metaclass=ModelMetaclass):
     return cls._results_to_models(results)
 
   @classmethod
-  def count(cls, transaction: Optional[spanner_transaction.Transaction],
-            *conditions: condition.Condition) -> int:
+  def count(
+      cls,
+      *conditions: condition.Condition,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> int:
     """Returns the number of objects in Spanner that match the given conditions.
 
     Args:
-      transaction: The existing transaction to use, or None to start a new
-        transaction
       *conditions: Instances of subclasses of Condition that help specify which
         rows should be included in the count. The includes condition is not
         allowed here
+      transaction: The existing transaction to use, or None to start a new
+        transaction
 
     Returns:
       The integer result of the COUNT query
@@ -206,9 +251,12 @@ class ModelApi(metaclass=ModelMetaclass):
     return builder.process_results(results)
 
   @classmethod
-  def count_equal(cls,
-                  transaction: Optional[spanner_transaction.Transaction] = None,
-                  **constraints: Any) -> int:
+  def count_equal(
+      cls,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **constraints: Any,
+  ) -> int:
     """Returns the number of objects in Spanner that match the given conditions.
 
     Convenience method that generates equality conditions based on the keyword
@@ -230,12 +278,15 @@ class ModelApi(metaclass=ModelMetaclass):
         conditions.append(condition.in_list(column, value))
       else:
         conditions.append(condition.equal_to(column, value))
-    return cls.count(transaction, *conditions)
+    return cls.count(*conditions, transaction=transaction)
 
   @classmethod
-  def find(cls,
-           transaction: Optional[spanner_transaction.Transaction] = None,
-           **keys: Any) -> Optional['ModelObject']:
+  def find(
+      cls: Type[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **keys: Any,
+  ) -> Optional[T]:
     """Retrieves an object from Spanner based on the provided key.
 
     Args:
@@ -248,20 +299,52 @@ class ModelApi(metaclass=ModelMetaclass):
     Returns:
       The requested object or None if no such object exists
     """
-    resources = cls.find_multi(transaction, [keys])
+    resources = cls.find_multi([keys], transaction=transaction)
     return resources[0] if resources else None
 
   @classmethod
-  def find_multi(cls, transaction: Optional[spanner_transaction.Transaction],
-                 keys: Iterable[Dict[str, Any]]) -> List['ModelObject']:
-    """Retrieves objects from Spanner based on the provided keys.
+  def find_required(
+      cls: Type[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **keys: Any,
+  ) -> T:
+    """Retrieves an object from Spanner based on the provided key.
 
     Args:
       transaction: The existing transaction to use, or None to start a new
         transaction
+      **keys: The keys provided are the complete set of primary keys for this
+        table and the corresponding values make up the unique identifier of the
+        object being retrieved
+
+    Returns:
+      The requested object.
+
+    Raises:
+      exceptions.NotFound: The object wasn't found.
+    """
+    result = cls.find(**keys, transaction=transaction)
+    if result is None:
+      raise exceptions.NotFound(
+          f'{cls.__qualname__} has no object with primary key {keys}')
+    return result
+
+  @classmethod
+  def find_multi(
+      cls: Type[T],
+      keys: Iterable[Dict[str, Any]],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> List[T]:
+    """Retrieves objects from Spanner based on the provided keys.
+
+    Args:
       keys: An iterable of dictionaries, each dictionary representing the set of
         primary key values necessary to uniquely identify an object in this
         table.
+      transaction: The existing transaction to use, or None to start a new
+        transaction
 
     Returns:
       A list containing all requested objects that exist in the table (can be
@@ -277,15 +360,18 @@ class ModelApi(metaclass=ModelMetaclass):
     return cls._results_to_models(results)
 
   @classmethod
-  def where(cls, transaction: Optional[spanner_transaction.Transaction],
-            *conditions: condition.Condition) -> List['ModelObject']:
+  def where(
+      cls: Type[T],
+      *conditions: condition.Condition,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> List[T]:
     """Retrieves objects from Spanner based on the provided conditions.
 
     Args:
-      transaction: The existing transaction to use, or None to start a new
-        transaction
       *conditions: Instances of subclasses of Condition that help specify which
         objects should be retrieved
+      transaction: The existing transaction to use, or None to start a new
+        transaction
 
     Returns:
       A list containing all requested objects that exist in the table (can be
@@ -297,9 +383,12 @@ class ModelApi(metaclass=ModelMetaclass):
     return builder.process_results(results)
 
   @classmethod
-  def where_equal(cls,
-                  transaction: Optional[spanner_transaction.Transaction] = None,
-                  **constraints: Any) -> List['ModelObject']:
+  def where_equal(
+      cls: Type[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **constraints: Any,
+  ) -> List[T]:
     """Retrieves objects from Spanner based on the provided constraints.
 
     Args:
@@ -319,18 +408,23 @@ class ModelApi(metaclass=ModelMetaclass):
         conditions.append(condition.in_list(column, value))
       else:
         conditions.append(condition.equal_to(column, value))
-    return cls.where(transaction, *conditions)
+    return cls.where(*conditions, transaction=transaction)
 
   @classmethod
-  def _results_to_models(cls,
-                         results: Iterable[Iterable[Any]]) -> List['ModelObject']:
+  def _results_to_models(
+      cls: Type[T],
+      results: Iterable[Iterable[Any]],
+  ) -> List[T]:
     items = [dict(zip(cls.columns, result)) for result in results]
     return [cls(item, persisted=True) for item in items]
 
   @classmethod
-  def _execute_read(cls, db_api: Callable[..., CallableReturn],
-                    transaction: Optional[spanner_transaction.Transaction],
-                    args: List[Any]) -> CallableReturn:
+  def _execute_read(
+      cls,
+      db_api: Callable[..., CallableReturn],
+      transaction: Optional[spanner_transaction.Transaction],
+      args: List[Any],
+  ) -> CallableReturn:
     if transaction is not None:
       return db_api(transaction, *args)
     else:
@@ -338,9 +432,12 @@ class ModelApi(metaclass=ModelMetaclass):
 
   # Table write methods
   @classmethod
-  def create(cls,
-             transaction: Optional[spanner_transaction.Transaction] = None,
-             **kwargs: Any) -> None:
+  def create(
+      cls,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **kwargs: Any,
+  ) -> None:
     """Creates a row in Spanner based on the provided data.
 
     Note: may throw an exception if bad values are provided.
@@ -355,27 +452,20 @@ class ModelApi(metaclass=ModelMetaclass):
     cls._execute_write(table_apis.insert, transaction, [kwargs])
 
   @classmethod
-  def create_or_update(cls,
-                       transaction: Optional[
-                           spanner_transaction.Transaction] = None,
-                       **kwargs: Any) -> None:
+  def create_or_update(
+      cls,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **kwargs: Any,
+  ) -> None:
     cls._execute_write(table_apis.upsert, transaction, [kwargs])
 
   @classmethod
-  def delete_batch(cls, transaction: Optional[spanner_transaction.Transaction],
-                   models: List['ModelObject']) -> None:
-    """Deletes rows from Spanner based on the provided models' primary keys.
-
-    Args:
-      transaction: The existing transaction to use, or None to start a new
-        transaction
-      models: A list of models to be deleted from Spanner.
-    """
-    key_list = []
-    for model in models:
-      key_list.append([getattr(model, column) for column in cls.primary_keys])
-    keyset = spanner.KeySet(keys=key_list)
-
+  def _delete_by_keyset(
+      cls,
+      transaction: Optional[spanner_transaction.Transaction],
+      keyset: spanner.KeySet,
+  ) -> None:
     db_api = table_apis.delete
     args = [cls.table, keyset]
     if transaction is not None:
@@ -384,20 +474,67 @@ class ModelApi(metaclass=ModelMetaclass):
       cls.spanner_api().run_write(db_api, *args)
 
   @classmethod
-  def save_batch(cls,
-                 transaction: Optional[spanner_transaction.Transaction],
-                 models: List['ModelObject'],
-                 force_write: bool = False) -> None:
-    """Writes rows to Spanner based on the provided model data.
+  def delete_batch(
+      cls: Type[T],
+      models: List[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> None:
+    """Deletes rows from Spanner based on the provided models' primary keys.
+
+    Args:
+      models: A list of models to be deleted from Spanner.
+      transaction: The existing transaction to use, or None to start a new
+        transaction
+    """
+    key_list = []
+    for model in models:
+      key_list.append([getattr(model, column) for column in cls.primary_keys])
+    cls._delete_by_keyset(
+        transaction=transaction,
+        keyset=spanner.KeySet(keys=key_list),
+    )
+
+  @classmethod
+  def delete_by_key(
+      cls,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **keys: Any,
+  ) -> None:
+    """Deletes rows from Spanner based on the provided primary key.
 
     Args:
       transaction: The existing transaction to use, or None to start a new
-        transaction
+        transaction.
+      **keys: The keys provided are the complete set of primary keys for this
+        table and the corresponding values make up the unique identifier of the
+        object being deleted.
+    """
+    cls._delete_by_keyset(
+        transaction=transaction,
+        keyset=spanner.KeySet(
+            keys=[[keys[column] for column in cls.primary_keys]]),
+    )
+
+  @classmethod
+  def save_batch(
+      cls: Type[T],
+      models: List[T],
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      force_write: bool = False,
+  ) -> None:
+    """Writes rows to Spanner based on the provided model data.
+
+    Args:
       models: A list of models to be written to Spanner. If the _persisted flag
         is set, by default we try to issue an UPDATE with values set for all
         columns in the table. Otherwise, we try to issue an INSERT for all
         columns in the table. If we try to INSERTa row that already exists (or
         update one that is missing), an exception will be thrown.
+      transaction: The existing transaction to use, or None to start a new
+        transaction
       force_write: If true, we use UPSERT instead of UPDATE/INSERT, so no
         exceptions are thrown based on the presence or absence of data in
         Spanner
@@ -417,9 +554,12 @@ class ModelApi(metaclass=ModelMetaclass):
       cls._execute_write(api_method, transaction, values)
 
   @classmethod
-  def update(cls,
-             transaction: Optional[spanner_transaction.Transaction] = None,
-             **kwargs: Any) -> None:
+  def update(
+      cls,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+      **kwargs: Any,
+  ) -> None:
     """Updates a row in Spanner based on the provided data.
 
     Args:
@@ -433,9 +573,12 @@ class ModelApi(metaclass=ModelMetaclass):
     cls._execute_write(table_apis.update, transaction, [kwargs])
 
   @classmethod
-  def _execute_write(cls, db_api: Callable[..., Any],
-                     transaction: Optional[spanner_transaction.Transaction],
-                     dictionaries: Iterable[Dict[str, Any]]) -> None:
+  def _execute_write(
+      cls,
+      db_api: Callable[..., Any],
+      transaction: Optional[spanner_transaction.Transaction],
+      dictionaries: Iterable[Dict[str, Any]],
+  ) -> None:
     """Validates all write value types and commits write to Spanner."""
     columns, values = None, []
     for dictionary in dictionaries:
@@ -460,39 +603,6 @@ class ModelApi(metaclass=ModelMetaclass):
     else:
       return cls.spanner_api().run_write(db_api, *args)
 
-
-class Model(ModelApi):
-  """Maps to a table in spanner and has basic functions for querying tables."""
-
-  def __init__(self, values: Dict[str, Any], persisted: bool = False):
-    start_values = {}
-    self.__dict__['start_values'] = start_values
-    self.__dict__['_persisted'] = persisted
-
-    # If the values came from Spanner, trust them and skip validation
-    if not persisted:
-      # An object is invalid if primary key values are missing
-      missing_keys = set(self._primary_keys) - set(values.keys())
-      if missing_keys:
-        raise error.SpannerError(
-            'All primary keys must be specified. Missing: {keys}'.format(
-                keys=missing_keys))
-
-      for column in self._columns:
-        self._metaclass.validate_value(column, values.get(column), ValueError)
-
-    for column in self._columns:
-      value = values.get(column)
-      start_values[column] = copy.copy(value)
-      self.__dict__[column] = value
-
-    for relation in self._relations:
-      if relation in values:
-        self.__dict__[relation] = values[relation]
-
-    for foreign_key_relation in self._foreign_key_relations:
-      if foreign_key_relation in values:
-        self.__dict__[foreign_key_relation] = values[foreign_key_relation]
 
   def __setattr__(self, name: str, value: Any) -> None:
     if name in self._relations:
@@ -554,7 +664,11 @@ class Model(ModelApi):
         if values[key] != self.start_values.get(key)
     }
 
-  def delete(self, transaction: spanner_transaction.Transaction = None) -> None:
+  def delete(
+      self,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> None:
     """Deletes this object from the Spanner database.
 
     Args:
@@ -583,7 +697,9 @@ class Model(ModelApi):
 
   def reload(
       self,
-      transaction: spanner_transaction.Transaction = None) -> Optional['Model']:
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> Optional['Model']:
     """Refreshes this object with information from Spanner.
 
     Args:
@@ -595,7 +711,7 @@ class Model(ModelApi):
       in Spanner, or None if no information was found (object was deleted or
       never was persisted)
     """
-    updated_object = self._metaclass.find(transaction, **self.id())
+    updated_object = self._metaclass.find(transaction=transaction, **self.id())
     if updated_object is None:
       return None
     start_values = {}
@@ -610,8 +726,11 @@ class Model(ModelApi):
     self._persisted = True
     return self
 
-  def save(self,
-           transaction: spanner_transaction.Transaction = None) -> 'Model':
+  def save(
+      self,
+      *,
+      transaction: Optional[spanner_transaction.Transaction] = None,
+  ) -> 'Model':
     """Persists this object to Spanner.
 
     Note: if the _persisted flag doesn't match whether this object is actually
@@ -629,11 +748,8 @@ class Model(ModelApi):
       changed_values = self.changes()
       if changed_values:
         changed_values.update(self.id())
-        self._metaclass.update(transaction, **changed_values)
+        self._metaclass.update(transaction=transaction, **changed_values)
     else:
-      self._metaclass.create(transaction, **self.values)
+      self._metaclass.create(transaction=transaction, **self.values)
       self._persisted = True
     return self
-
-
-ModelObject = TypeVar('ModelObject', bound=Model)

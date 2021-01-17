@@ -62,21 +62,6 @@ class RelationshipTestModel(model.Model):
   parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
                                       {'parent_key': 'key'})
 
-class UnittestModel(model.Model):
-  """Model class used for model testing."""
-
-  __table__ = 'table'
-  int_ = field.Field(field.Integer, primary_key=True)
-  int_2 = field.Field(field.Integer, nullable=True)
-  float_ = field.Field(field.Float, primary_key=True)
-  float_2 = field.Field(field.Float, nullable=True)
-  string = field.Field(field.String, primary_key=True)
-  string_2 = field.Field(field.String, nullable=True)
-  timestamp = field.Field(field.Timestamp)
-  string_array = field.Field(field.StringArray, nullable=True)
-
-  test_index = index.Index(['string_2'])
-
 class ForeignKeyTestModel(model.Model):
   """Model class for testing foreign keys."""
 
@@ -99,3 +84,33 @@ class InheritanceTestModel(SmallTestModel):
   """Model class used for testing model inheritance."""
   value_3 = field.Field(field.String, nullable=True)
 
+
+class UnittestModel(model.Model):
+  """Model class used for model testing."""
+
+  __table__ = 'table'
+  int_ = field.Field(field.Integer, primary_key=True)
+  int_2 = field.Field(field.Integer, nullable=True)
+  float_ = field.Field(field.Float, primary_key=True)
+  float_2 = field.Field(field.Float, nullable=True)
+  string = field.Field(field.String, primary_key=True)
+  string_2 = field.Field(field.String, nullable=True)
+  timestamp = field.Field(field.Timestamp)
+  string_array = field.Field(field.StringArray, nullable=True)
+
+  test_index = index.Index(['string_2'])
+
+
+class UnittestModelWithoutSecondaryIndexes(model.Model):
+  """Same as UnittestModel, but with no secondary indexes."""
+
+  __table__ = 'table'
+  int_ = field.Field(field.Integer, primary_key=True)
+  int_2 = field.Field(field.Integer, nullable=True)
+  float_ = field.Field(field.Float, primary_key=True)
+  float_2 = field.Field(field.Float, nullable=True)
+  string = field.Field(field.String, primary_key=True)
+  string_2 = field.Field(field.String, nullable=True)
+  timestamp = field.Field(field.Timestamp)
+  string_array = field.Field(field.StringArray, nullable=True)
+>>>>>>> foreign_key_data_class

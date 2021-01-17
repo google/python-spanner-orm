@@ -15,7 +15,7 @@
 """Table-level API lambdas for Spanner transactions."""
 
 import logging
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Sequence
 
 from google.cloud import spanner
 from google.cloud.spanner_v1 import transaction as spanner_transaction
@@ -26,7 +26,7 @@ _logger = logging.getLogger(__name__)
 
 # Read methods
 def find(transaction: spanner_transaction.Transaction, table_name: str,
-         columns: Iterable[str], keyset: spanner.KeySet) -> List[Iterable[Any]]:
+         columns: Iterable[str], keyset: spanner.KeySet) -> List[Sequence[Any]]:
   """Retrieves rows from the given table based on the provided KeySet.
 
   Args:
@@ -51,7 +51,7 @@ def find(transaction: spanner_transaction.Transaction, table_name: str,
 
 def sql_query(transaction: spanner_transaction.Transaction, query: str,
               parameters: Dict[str, Any],
-              parameter_types: Dict[str, type_pb2.Type]) -> List[Iterable[Any]]:
+              parameter_types: Dict[str, type_pb2.Type]) -> List[Sequence[Any]]:
   """Executes a given SQL query against the Spanner database.
 
   This isn't technically read-only, but it's necessary to implement the read-

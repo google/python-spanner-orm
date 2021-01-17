@@ -17,16 +17,18 @@ import logging
 import os
 import unittest
 
-from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
+import spanner_orm
 from spanner_orm.tests import models
+from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
 
 from google.api_core import exceptions as google_api_exceptions
 
 
+
 class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
   TEST_MIGRATIONS_DIR = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    'migrations_for_emulator_test',
+      os.path.dirname(os.path.abspath(__file__)),
+      'migrations_for_emulator_test',
   )
 
   def setUp(self):
@@ -36,8 +38,12 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
   def test_basic(self):
     models.SmallTestModel({'key': 'key', 'value_1': 'value'}).save()
     self.assertEqual(
-      [x.values for x in models.SmallTestModel.all()],
-      [{'key': 'key', 'value_1': 'value', 'value_2': None}],
+        [x.values for x in models.SmallTestModel.all()],
+        [{
+            'key': 'key',
+            'value_1': 'value',
+            'value_2': None,
+        }],
     )
 
   def test_error_with_missing_referencing_key(self):

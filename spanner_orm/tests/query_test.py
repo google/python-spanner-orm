@@ -37,7 +37,7 @@ class QueryTest(parameterized.TestCase):
   def test_where(self, sql_query):
     sql_query.return_value = []
 
-    models.UnittestModel.where_equal(True, int_=3)
+    models.UnittestModel.where_equal(int_=3, transaction=True)
     (_, sql, parameters, types), _ = sql_query.call_args
 
     expected_sql = 'SELECT .* FROM table WHERE table.int_ = @int_0'
@@ -49,7 +49,7 @@ class QueryTest(parameterized.TestCase):
   def test_count(self, sql_query):
     sql_query.return_value = [[0]]
     column, value = 'int_', 3
-    models.UnittestModel.count_equal(True, int_=3)
+    models.UnittestModel.count_equal(int_=3, transaction=True)
     (_, sql, parameters, types), _ = sql_query.call_args
 
     column_key = '{}0'.format(column)
@@ -165,6 +165,7 @@ class QueryTest(parameterized.TestCase):
 
   @parameterized.parameters(
       ('int_', [1, 2, 3], field.Integer.grpc_type()),
+      ('int_', (4, 5, 6), field.Integer.grpc_type()),
       ('string', ['a', 'b', 'c'], field.String.grpc_type()),
       ('timestamp', [now()], field.Timestamp.grpc_type()))
   def test_query_where_list_comparison(self, column, values, grpc_type):
