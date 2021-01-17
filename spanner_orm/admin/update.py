@@ -20,6 +20,7 @@ from typing import Iterable, List, Optional, Type
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import index
 from spanner_orm import model
 from spanner_orm.admin import api
 from spanner_orm.admin import index_column
@@ -88,6 +89,11 @@ class CreateTable(SchemaUpdate):
 
     self._validate_primary_keys()
 
+    if self._model.indexes.keys() - {index.Index.PRIMARY_INDEX}:
+      raise error.SpannerError(
+          'Secondary indexes cannot be created by CreateTable; use CreateIndex '
+          'in a separate migration.')
+
   def _validate_parent(self) -> None:
     """Verifies that the parent table information is valid."""
     parent_primary_keys = self._model.interleaved.primary_keys
@@ -141,10 +147,10 @@ class DropTable(SchemaUpdate):
       if model_.interleaved == existing_model:
         raise error.SpannerError('Table {} has interleaved table {}'.format(
             self._table, model_.table))
-      for index in model_.indexes.values():
-        if index.parent == self._table:
+      for index_ in model_.indexes.values():
+        if index_.parent == self._table:
           raise error.SpannerError('Table {} has interleaved index {}'.format(
-              self._table, index.name))
+              self._table, index_.name))
 
 
 class AddColumn(SchemaUpdate):
@@ -194,8 +200,9 @@ class DropColumn(SchemaUpdate):
 
     # Verify no indices exist on the column we're trying to drop
     num_indexed_columns = index_column.IndexColumnSchema.count(
-        None, condition.equal_to('column_name', self._column),
-        condition.equal_to('table_name', self._table))
+        condition.equal_to('column_name', self._column),
+        condition.equal_to('table_name', self._table),
+    )
     if num_indexed_columns > 0:
       raise error.SpannerError('Column {} is indexed'.format(self._column))
 
@@ -245,16 +252,25 @@ class CreateIndex(SchemaUpdate):
                index_name: str,
                columns: Iterable[str],
                interleaved: Optional[str] = None,
+               null_filtered: bool = False,
+               unique: bool = False,
                storing_columns: Optional[Iterable[str]] = None):
     self._table = table_name
     self._index = index_name
     self._columns = columns
     self._parent_table = interleaved
+    self._null_filtered = null_filtered
+    self._unique = unique
     self._storing_columns = storing_columns or []
 
   def ddl(self) -> str:
-    statement = 'CREATE INDEX {} ON {} ({})'.format(self._index, self._table,
-                                                    ', '.join(self._columns))
+    statement = 'CREATE'
+    if self._unique:
+      statement += ' UNIQUE'
+    if self._null_filtered:
+      statement += ' NULL_FILTERED'
+    statement += (f' INDEX {self._index} '
+                  f'ON {self._table} ({", ".join(self._columns)})')
     if self._storing_columns:
       statement += 'STORING ({})'.format(', '.join(self._storing_columns))
     if self._parent_table:

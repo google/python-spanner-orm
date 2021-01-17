@@ -88,9 +88,8 @@ class Relationship(object):
         raise error.ValidationError(
             'Destination column must be present in destination model')
 
-      # TODO(dbrandao): remove when pytype #234 is fixed
       constraints.append(
           RelationshipConstraint(self.destination, destination_column,
-                                 self.origin, origin_column))  # type: ignore
+                                 self.origin, origin_column))
 
     return constraints

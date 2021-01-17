@@ -165,8 +165,7 @@ class MigrationExecutor:
         'migrated': new_status,
         'update_time': datetime.datetime.utcnow(),
     })
-    migration_status.MigrationStatus.save_batch(
-        None, [new_model], force_write=True)
+    migration_status.MigrationStatus.save_batch([new_model], force_write=True)
     self._migration_status()[migration_id] = new_status
 
   def _validate_migrations(self) -> None:
