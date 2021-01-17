@@ -113,4 +113,4 @@ class UnittestModelWithoutSecondaryIndexes(model.Model):
   string_2 = field.Field(field.String, nullable=True)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
->>>>>>> foreign_key_data_class
+
