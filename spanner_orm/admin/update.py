@@ -318,7 +318,29 @@ class DropIndex(SchemaUpdate):
     if db_index.primary:
       raise error.SpannerError('Index {} is the primary index'.format(
           self._index))
-    
+
+class AddForeignKey(SchemaUpdate):
+  """..."""
+
+  def __init__(self,
+               table_name: str,
+               constraint_name: str,
+               foreign_key_relationship: foreign_key_relationship.ForeignKeyRelationship):
+    self._table = table_name
+    # self._constraint_name = constraint_name
+    self._foreign_key_relationship = foreign_key_relationship
+    self._foreign_key_relationship.name = constraint_name
+
+  def ddl(self) -> str:
+    return 'ALTER TABLE {} ADD {}'.format(
+      self._table,
+      self._foreign_key_relationship.ddl)
+
+  def validate(self) -> None:
+    model_ = metadata.SpannerMetadata.model(self._table)
+    if not model_:
+      raise error.SpannerError('Table {} does not exist'.format(self._table))
+    # TODO: add more validations
 
 class NoUpdate(SchemaUpdate):
   """Update that does nothing, for migrations that don't update db schemas."""

@@ -18,6 +18,7 @@ from unittest import mock
 
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import foreign_key_relationship
 from spanner_orm.admin import update
 from spanner_orm.tests import models
 
@@ -141,6 +142,30 @@ class UpdateTest(unittest.TestCase):
     test_update.validate()
     self.assertEqual(test_update.ddl(),
                      'CREATE INDEX foo ON {} (value_1)'.format(table_name))
+
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
+  def test_add_foreign_key(self, get_model):
+    table_name = models.SmallTestModel.table
+    get_model.return_value = models.SmallTestModel
+
+    # new_field = field.Field(field.String, nullable=True)
+    new_foreign_key = foreign_key_relationship.ForeignKeyRelationship(
+  'SmallTestModel', {'referencing_key_1': 'key'})
+    test_update = update.AddForeignKey(
+      table_name, 'constraint_name', new_foreign_key)
+    test_update.validate()
+    # ALTER TABLE Orders
+    #  ADD CONSTRAINT FK_ProductOrder FOREIGN KEY (ProductID) REFERENCES Products (ProductID);
+    self.assertEqual(
+        test_update.ddl(),
+        'ALTER TABLE {} ADD CONSTRAINT {} FOREIGN KEY ({}) '
+        'REFERENCES {} ({})'.format(
+          table_name,
+          'constraint_name',
+          'referencing_key_1',#referencing_column,
+          'SmallTestModel',#referenced_table_name,
+          'key',#referenced_column,
+        ))
 
 
 if __name__ == '__main__':
