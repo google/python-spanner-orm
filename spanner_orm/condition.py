@@ -513,23 +513,19 @@ class IncludesCondition(Condition):
 
   def _validate(self, model_class: Type[Any]) -> None:
     if self.foreign_key_relation:
-      if self.name not in model_class.foreign_key_relations:
-        raise error.ValidationError('{} is not a relation on {}'.format(
-            self.name, model_class.table))
-      if self.relation and self.relation != model_class.foreign_key_relations[
-          self.name]:
-        raise error.ValidationError('{} does not belong to {}'.format(
-            self.relation.name, model_class.table))
-      other_model_class = model_class.foreign_key_relations[
-          self.name].constraint.referenced_table
+      model_class_relations = model_class.foreign_key_relations
+      referenced_table_fn = lambda x: x.constraint.referenced_table
     else:
-      if self.name not in model_class.relations:
-        raise error.ValidationError('{} is not a relation on {}'.format(
-            self.name, model_class.table))
-      if self.relation and self.relation != model_class.relations[self.name]:
-        raise error.ValidationError('{} does not belong to {}'.format(
-            self.relation.name, model_class.table))
-      other_model_class = model_class.relations[self.name].destination
+      model_class_relations = model_class.relations
+      referenced_table_fn = lambda x: x.destination
+
+    if self.name not in model_class_relations:
+      raise error.ValidationError('{} is not a relation on {}'.format(
+        self.name, model_class.table))
+    if self.relation and self.relation != model_class_relations[self.name]:
+      raise error.ValidationError('{} does not belong to {}'.format(
+        self.relation.name, model_class.table))
+    other_model_class = referenced_table_fn(model_class_relations[self.name])
 
     for condition in self._conditions:
       condition._validate(other_model_class)  # pylint: disable=protected-access
