@@ -603,7 +603,6 @@ class Model(metaclass=ModelMetaclass):
     else:
       return cls.spanner_api().run_write(db_api, *args)
 
-
   def __setattr__(self, name: str, value: Any) -> None:
     if name in self._relations:
       raise AttributeError(name)
