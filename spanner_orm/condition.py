@@ -521,10 +521,10 @@ class IncludesCondition(Condition):
 
     if self.name not in model_class_relations:
       raise error.ValidationError('{} is not a relation on {}'.format(
-        self.name, model_class.table))
+          self.name, model_class.table))
     if self.relation and self.relation != model_class_relations[self.name]:
       raise error.ValidationError('{} does not belong to {}'.format(
-        self.relation.name, model_class.table))
+          self.relation.name, model_class.table))
     other_model_class = referenced_table_fn(model_class_relations[self.name])
 
     for condition in self._conditions:
@@ -931,7 +931,7 @@ def includes(relation: Union[relationship.Relationship,
       associated objects
     conditions: Conditions to apply on the subquery
     foreign_key_relation: True if the relation is a foreign key relation,
-      False if it is a legacy relation (eg not enforced in Spanner)
+      False if it is a legacy relation (ie not enforced in Spanner)
 
   Returns:
     A Condition subclass that will be used in the query
