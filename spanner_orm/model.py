@@ -187,6 +187,10 @@ class Model(metaclass=ModelMetaclass):
       if relation in values:
         self.__dict__[relation] = values[relation]
 
+    for foreign_key_relation in self._foreign_key_relations:
+      if foreign_key_relation in values:
+        self.__dict__[foreign_key_relation] = values[foreign_key_relation]
+
   def __eq__(self, other: Any) -> Union[bool, type(NotImplemented)]:
     """Compares objects by their type and attributes."""
     if type(self) != type(other):
