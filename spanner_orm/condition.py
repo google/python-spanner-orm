@@ -460,7 +460,14 @@ class IncludesCondition(Condition):
       raise error.SpannerError(
           'Condition must be bound before conditions is called')
     relation_conditions = []
-    if not self.foreign_key_relation:
+    if self.foreign_key_relation:
+      for pair in self.relation.constraint.columns.items():
+        referencing_column, referenced_column = pair
+        relation_conditions.append(
+          ColumnsEqualCondition(referenced_column, self.model_class,
+                                referencing_column))
+      
+    else:
       for constraint in self.relation.constraints:
         # This is backward from what you might imagine because the condition
         # will be processed from the context of the destination model.
@@ -468,12 +475,6 @@ class IncludesCondition(Condition):
             ColumnsEqualCondition(constraint.destination_column,
                                   constraint.origin_class,
                                   constraint.origin_column))
-    else:
-      for pair in self.relation.constraint.columns.items():
-        referencing_column, referenced_column = pair
-        relation_conditions.append(
-            ColumnsEqualCondition(referenced_column, self.model_class,
-                                  referencing_column))
     return relation_conditions + self._conditions
 
   @property

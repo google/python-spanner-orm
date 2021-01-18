@@ -334,7 +334,7 @@ class DropIndex(SchemaUpdate):
     if db_index.primary:
       raise error.SpannerError('Index {} is the primary index'.format(
           self._index))
-    
+
 
 class NoUpdate(SchemaUpdate):
   """Update that does nothing, for migrations that don't update db schemas."""

@@ -32,8 +32,7 @@ class ForeignKeyRelationship(object):
 
   def __init__(self,
                referenced_table_name: str,
-               columns: Mapping[str, str],
-               single: bool = False):
+               columns: Mapping[str, str]):
     """Creates a ForeignKeyRelationship.
 
     Args:
@@ -41,14 +40,11 @@ class ForeignKeyRelationship(object):
       columns: Dictionary where the keys are names of columns from the
         referencing table and the values are the names of the columns in the
         referenced table.
-      single: True if the referenced table should be treated as a single object
-        instead of a list of objects.
     """
     self.origin = None
     self.name = None
     self._referenced_table_name = referenced_table_name
     self._columns = columns
-    self._single = single
 
   @property
   def constraint(self) -> ForeignKeyRelationshipConstraint:

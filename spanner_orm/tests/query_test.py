@@ -317,17 +317,28 @@ class QueryTest(parameterized.TestCase):
       lambda x: x.fk_includes_result(related=1),
     ),
   )
-  def test_includes_single_related_object_result(self, includes_kwargs, x, y):
+  def test_includes_single_related_object_result(
+      self,
+      includes_kwargs,
+      referenced_table_fn,
+      includes_result_fn,
+  ):
     select_query = self.includes(**includes_kwargs)
-    child_values, parent_values, rows = y(self)
+    child_values, parent_values, rows = includes_result_fn(self)
     result = select_query.process_results(rows)[0]
 
-    self.assertIsInstance(x(result), models.SmallTestModel)
+    self.assertIsInstance(
+      referenced_table_fn(result),
+      models.SmallTestModel,
+    )
     for name, value in child_values.items():
       self.assertEqual(getattr(result, name), value)
 
     for name, value in parent_values.items():
-      self.assertEqual(getattr(x(result), name), value)
+      self.assertEqual(
+        getattr(referenced_table_fn(result), name),
+        value
+      )
 
   @parameterized.named_parameters(
     (
