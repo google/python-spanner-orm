@@ -413,6 +413,7 @@ class IncludesCondition(Condition):
                               foreign_key_relationship.ForeignKeyRelationship,
                               str],
       conditions: List[Condition] = None,
+      # Default argument is `False` for backwards-compatability.
       foreign_key_relation=False,
   ):
     """Initializer.

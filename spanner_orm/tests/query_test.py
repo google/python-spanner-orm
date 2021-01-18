@@ -218,6 +218,17 @@ class QueryTest(parameterized.TestCase):
       [include_condition],
     )
 
+  @parameterized.parameters(
+    (models.RelationshipTestModel.parent, True),
+    (models.ForeignKeyTestModel.foreign_key_1, False)
+  )
+  def test_bad_includes_args(self, relation_key, foreign_key_relation):
+    with self.assertRaisesRegex(ValueError, 'Must pass'):
+      self.includes(
+        relation_key,
+        foreign_key_relation=foreign_key_relation,
+      )
+
   @parameterized.named_parameters(
     (
       'legacy_relationship',
