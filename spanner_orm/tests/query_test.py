@@ -354,12 +354,17 @@ class QueryTest(parameterized.TestCase):
       lambda x: x.fk_includes_result(related=0),
     ),
   )
-  def test_includes_single_no_related_object_result(self, includes_kwargs, x, y):
+  def test_includes_single_no_related_object_result(
+      self,
+      includes_kwargs,
+      referenced_table_fn,
+      includes_result_fn
+  ):
     select_query = self.includes(**includes_kwargs)
-    child_values, _, rows = y(self)
+    child_values, _, rows = includes_result_fn(self)
     result = select_query.process_results(rows)[0]
 
-    self.assertIsNone(x(result))
+    self.assertIsNone(referenced_table_fn(result))
     for name, value in child_values.items():
       self.assertEqual(getattr(result, name), value)
 
@@ -389,9 +394,9 @@ class QueryTest(parameterized.TestCase):
     ),
   )
   def test_includes_error_on_multiple_results_for_single(
-      self, includes_kwargs, x):
+      self, includes_kwargs, includes_result_fn):
     select_query = self.includes(**includes_kwargs)
-    _, _, rows = x(self)
+    _, _, rows = includes_result_fn(self)
     with self.assertRaises(error.SpannerError):
       _ = select_query.process_results(rows)
 
