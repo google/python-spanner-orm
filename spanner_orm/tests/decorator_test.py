@@ -36,16 +36,16 @@ class DecoratorTest(parameterized.TestCase):
     mock_api_method.side_effect = mock_spanner_method(mock_tx)
 
     @decorator_in_test
-    def get_book(book_id, genre=None, transaction=None):
+    def get_book(book_id, method=None, transaction=None):
       self.assertEqual(mock_tx, transaction)
       self.assertEqual(123, book_id)
-      self.assertEqual('horror', genre)
+      self.assertEqual('library', method)
 
       return 200
 
-    result = get_book(123, genre='horror')
+    result = get_book(123, method='library')
     self.assertEqual(200, result)
-    mock_api_method.assert_called_once_with(mock.ANY, 123, genre='horror')
+    mock_api_method.assert_called_once()
 
   @parameterized.parameters(decorator.transactional_read,
                             decorator.transactional_write)
@@ -53,14 +53,14 @@ class DecoratorTest(parameterized.TestCase):
     mock_tx = mock.Mock()
 
     @decorator_in_test
-    def get_book(book_id, genre=None, transaction=None):
+    def get_book(book_id, method=None, transaction=None):
       self.assertEqual(mock_tx, transaction)
       self.assertEqual(123, book_id)
-      self.assertEqual('horror', genre)
+      self.assertEqual('library', method)
 
       return 200
 
-    result = get_book(123, genre='horror', transaction=mock_tx)
+    result = get_book(123, method='library', transaction=mock_tx)
 
     self.assertEqual(200, result)
 

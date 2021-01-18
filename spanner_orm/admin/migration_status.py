@@ -14,6 +14,9 @@
 # limitations under the License.
 """Indicates whether a migration has been applied to the current database."""
 
+import datetime
+import typing
+
 from spanner_orm import field
 from spanner_orm import model
 from spanner_orm.admin import api
@@ -26,6 +29,6 @@ class MigrationStatus(model.Model):
     return api.spanner_admin_api()
 
   __table__ = 'spanner_orm_migrations'
-  id = field.Field(field.String, primary_key=True)
-  migrated = field.Field(field.Boolean)
-  update_time = field.Field(field.Timestamp)
+  id = typing.cast(str, field.Field(field.String, primary_key=True))
+  migrated = typing.cast(bool, field.Field(field.Boolean))
+  update_time = typing.cast(datetime.datetime, field.Field(field.Timestamp))
