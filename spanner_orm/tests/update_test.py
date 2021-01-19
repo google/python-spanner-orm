@@ -89,6 +89,31 @@ class UpdateTest(parameterized.TestCase):
     self.assertEqual(test_update.ddl(), test_model_ddl)
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
+  def test_create_table_foreign_key(self, get_model):
+    self.maxDiff = 2000
+
+    get_model.return_value = None
+    new_model = models.ForeignKeyTestModel
+    test_update = update.CreateTable(new_model)
+    test_update.validate()
+
+    test_model_ddl = (
+        'CREATE TABLE ForeignKeyTestModel ('
+        'referencing_key_1 STRING(MAX) NOT NULL, '
+        'referencing_key_2 STRING(MAX) NOT NULL, '
+        'referencing_key_3 INT64 NOT NULL, '
+        'self_referencing_key STRING(MAX), '
+        'CONSTRAINT foreign_key_1 FOREIGN KEY (referencing_key_1) '
+        'REFERENCES SmallTestModel (key), '
+        'CONSTRAINT foreign_key_2 '
+        'FOREIGN KEY (referencing_key_2, referencing_key_3) '
+        'REFERENCES table (string, int_), '
+        'CONSTRAINT foreign_key_3 FOREIGN KEY (self_referencing_key) '
+        'REFERENCES ForeignKeyTestModel (referencing_key_1)) '
+        'PRIMARY KEY (referencing_key_1, referencing_key_2, referencing_key_3)')
+    self.assertEqual(test_update.ddl(), test_model_ddl)
+
+  @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_create_table_error_on_existing_table(self, get_model):
     get_model.return_value = models.SmallTestModel
     new_model = models.SmallTestModel
