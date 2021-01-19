@@ -62,7 +62,6 @@ class RelationshipTestModel(model.Model):
   parents = relationship.Relationship('spanner_orm.tests.models.SmallTestModel',
                                       {'parent_key': 'key'})
 
-
 class ForeignKeyTestModel(model.Model):
   """Model class for testing foreign keys."""
 
@@ -72,13 +71,13 @@ class ForeignKeyTestModel(model.Model):
   referencing_key_3 = field.Field(field.Integer, primary_key=True)
   self_referencing_key = field.Field(field.String, nullable=True)
   foreign_key_1 = foreign_key_relationship.ForeignKeyRelationship(
-    'SmallTestModel', {'referencing_key_1': 'key'})
+    'spanner_orm.tests.models.SmallTestModel', {'referencing_key_1': 'key'})
   foreign_key_2 = foreign_key_relationship.ForeignKeyRelationship(
-    'UnittestModel',
+    'spanner_orm.tests.models.UnittestModel',
     {'referencing_key_2': 'string', 'referencing_key_3': 'int_'},
   )
   foreign_key_3 = foreign_key_relationship.ForeignKeyRelationship(
-    'ForeignKeyTestModel', {'self_referencing_key': 'referencing_key_1'})
+    'spanner_orm.tests.models.ForeignKeyTestModel', {'self_referencing_key': 'referencing_key_1'})
 
 
 class InheritanceTestModel(SmallTestModel):
@@ -101,6 +100,7 @@ class UnittestModel(model.Model):
 
   test_index = index.Index(['string_2'])
 
+
 class UnittestModelWithoutSecondaryIndexes(model.Model):
   """Same as UnittestModel, but with no secondary indexes."""
 
@@ -113,3 +113,4 @@ class UnittestModelWithoutSecondaryIndexes(model.Model):
   string_2 = field.Field(field.String, nullable=True)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
+

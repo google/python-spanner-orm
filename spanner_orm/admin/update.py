@@ -20,6 +20,7 @@ from typing import Iterable, List, Optional, Type
 from spanner_orm import condition
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import model
 from spanner_orm.admin import api
@@ -56,16 +57,7 @@ class CreateTable(SchemaUpdate):
     ]
     key_fields_ddl = ', '.join(key_fields)
     for relation in self._model.foreign_key_relations.values():
-      referencing_columns_ddl = ', '.join(relation.constraint.columns.keys())
-      referenced_columns_ddl = ', '.join(relation.constraint.columns.values())
-      key_fields_ddl += (
-        ', CONSTRAINT {fk_name} FOREIGN KEY ({referencing_columns}) REFERENCES'
-        ' {referenced_table} ({referenced_columns})').format(
-          fk_name=relation.name,
-          referencing_columns=referencing_columns_ddl,
-          referenced_table=relation.constraint.referenced_table_name,
-          referenced_columns=referenced_columns_ddl,
-        )
+      key_fields_ddl += f', {relation.ddl}'
     index_ddl = 'PRIMARY KEY ({})'.format(', '.join(self._model.primary_keys))
     statement = 'CREATE TABLE {} ({}) {}'.format(self._model.table,
                                                  key_fields_ddl, index_ddl)

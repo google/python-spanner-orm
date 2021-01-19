@@ -25,6 +25,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Ty
 
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import relationship
 
@@ -406,11 +407,39 @@ class ForceIndexCondition(Condition):
 class IncludesCondition(Condition):
   """Used to include related model_classs via a relation in a Spanner query."""
 
-  def __init__(self,
-               relation_or_name: Union[relationship.Relationship, str],
-               conditions: List[Condition] = None):
+  def __init__(
+      self,
+      relation_or_name: Union[relationship.Relationship,
+                              foreign_key_relationship.ForeignKeyRelationship,
+                              str],
+      conditions: List[Condition] = None,
+      # Default argument is `False` for backwards-compatability.
+      foreign_key_relation=False,
+  ):
+    """Initializer.
+
+
+    Args:
+      relation: Name of the relationship on the origin model or the Relationship/
+        ForeignKeyRelationship on the origin model class used to retrieve
+        associated objects
+      conditions: Conditions to apply on the subquery
+      foreign_key_relation: True if the relation is a foreign key relation,
+       False if it is a legacy relation (eg not enforced in Spanner)
+    """
     super().__init__()
+    self.foreign_key_relation = foreign_key_relation
     if isinstance(relation_or_name, relationship.Relationship):
+      if foreign_key_relation:
+        raise ValueError(
+            'Must pass foreign key relation if ''`foreign_key_relation=True`.')
+      self.name = relation_or_name.name
+      self.relation = relation_or_name
+    elif isinstance(relation_or_name,
+                    foreign_key_relationship.ForeignKeyRelationship):
+      if not foreign_key_relation:
+        raise ValueError(
+            'Must pass legacy relation if `foreign_key_relation=False`.')
       self.name = relation_or_name.name
       self.relation = relation_or_name
     else:
@@ -420,7 +449,10 @@ class IncludesCondition(Condition):
 
   def bind(self, model_class: Type[Any]) -> None:
     super().bind(model_class)
-    self.relation = self.model_class.relations[self.name]
+    if self.foreign_key_relation:
+      self.relation = self.model_class.foreign_key_relations[self.name]
+    else:
+      self.relation = self.model_class.relations[self.name]
 
   @property
   def conditions(self) -> List[Condition]:
@@ -429,13 +461,21 @@ class IncludesCondition(Condition):
       raise error.SpannerError(
           'Condition must be bound before conditions is called')
     relation_conditions = []
-    for constraint in self.relation.constraints:
-      # This is backward from what you might imagine because the condition will
-      # be processed from the context of the destination model
-      relation_conditions.append(
-          ColumnsEqualCondition(constraint.destination_column,
-                                constraint.origin_class,
-                                constraint.origin_column))
+    if self.foreign_key_relation:
+      for pair in self.relation.constraint.columns.items():
+        referencing_column, referenced_column = pair
+        relation_conditions.append(
+          ColumnsEqualCondition(referenced_column, self.model_class,
+                                referencing_column))
+      
+    else:
+      for constraint in self.relation.constraints:
+        # This is backward from what you might imagine because the condition
+        # will be processed from the context of the destination model.
+        relation_conditions.append(
+            ColumnsEqualCondition(constraint.destination_column,
+                                  constraint.origin_class,
+                                  constraint.origin_column))
     return relation_conditions + self._conditions
 
   @property
@@ -443,7 +483,10 @@ class IncludesCondition(Condition):
     if not self.relation:
       raise error.SpannerError(
           'Condition must be bound before destination is called')
-    return self.relation.destination
+    if self.foreign_key_relation:
+      return self.relation.constraint.referenced_table
+    else:
+      return self.relation.destination
 
   @property
   def relation_name(self) -> str:
@@ -469,14 +512,21 @@ class IncludesCondition(Condition):
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
-    if self.name not in model_class.relations:
+    if self.foreign_key_relation:
+      model_class_relations = model_class.foreign_key_relations
+      referenced_table_fn = lambda x: x.constraint.referenced_table
+    else:
+      model_class_relations = model_class.relations
+      referenced_table_fn = lambda x: x.destination
+
+    if self.name not in model_class_relations:
       raise error.ValidationError('{} is not a relation on {}'.format(
           self.name, model_class.table))
-    if self.relation and self.relation != model_class.relations[self.name]:
+    if self.relation and self.relation != model_class_relations[self.name]:
       raise error.ValidationError('{} does not belong to {}'.format(
           self.relation.name, model_class.table))
+    other_model_class = referenced_table_fn(model_class_relations[self.name])
 
-    other_model_class = model_class.relations[self.name].destination
     for condition in self._conditions:
       condition._validate(other_model_class)  # pylint: disable=protected-access
 
@@ -863,8 +913,11 @@ def greater_than_or_equal_to(column: Union[field.Field, str],
   return ComparisonCondition('>=', column, value)
 
 
-def includes(relation: Union[relationship.Relationship, str],
-             conditions: List[Condition] = None) -> IncludesCondition:
+def includes(relation: Union[relationship.Relationship,
+                             foreign_key_relationship.ForeignKeyRelationship,
+                             str],
+             conditions: List[Condition] = None,
+             foreign_key_relation: bool = False) -> IncludesCondition:
   """Condition where the objects associated with a relationship are retrieved.
 
   Note that the query formed by this call is not a JOIN, but instead a
@@ -873,14 +926,18 @@ def includes(relation: Union[relationship.Relationship, str],
   subquery may be included, but not all conditions may apply
 
   Args:
-    relation: Name of the relationship on the origin model or the Relationship
-      on the origin model class used to retrievec associated objects
+    relation: Name of the relationship on the origin model or the Relationship/
+      ForeignKeyRelationship on the origin model class used to retrieve
+      associated objects
     conditions: Conditions to apply on the subquery
+    foreign_key_relation: True if the relation is a foreign key relation,
+      False if it is a legacy relation (ie not enforced in Spanner)
 
   Returns:
     A Condition subclass that will be used in the query
   """
-  return IncludesCondition(relation, conditions)
+  return IncludesCondition(
+      relation, conditions, foreign_key_relation)
 
 
 def in_list(column: Union[field.Field, str],

@@ -81,13 +81,19 @@ class ModelMetaclass(type):
 
   def __getattr__(
       cls,
-      name: str) -> Union[field.Field, relationship.Relationship, index.Index]:
+      name: str) -> Union[
+        field.Field,
+        relationship.Relationship,
+        foreign_key_relationship.ForeignKeyRelationship,
+        index.Index]:
     # Unclear why pylint doesn't like this
     # pylint: disable=unsupported-membership-test
     if name in cls.fields:
       return cls.fields[name]
     elif name in cls.relations:
       return cls.relations[name]
+    elif name in cls.foreign_key_relations:
+      return cls.foreign_key_relations[name]
     elif name in cls.indexes:
       return cls.indexes[name]
     # pylint: enable=unsupported-membership-test
@@ -180,6 +186,10 @@ class Model(metaclass=ModelMetaclass):
     for relation in self._relations:
       if relation in values:
         self.__dict__[relation] = values[relation]
+
+    for foreign_key_relation in self._foreign_key_relations:
+      if foreign_key_relation in values:
+        self.__dict__[foreign_key_relation] = values[foreign_key_relation]
 
   def __eq__(self, other: Any) -> Union[bool, type(NotImplemented)]:
     """Compares objects by their type and attributes."""
@@ -593,6 +603,7 @@ class Model(metaclass=ModelMetaclass):
     else:
       return cls.spanner_api().run_write(db_api, *args)
 
+
   def __setattr__(self, name: str, value: Any) -> None:
     if name in self._relations:
       raise AttributeError(name)
@@ -621,6 +632,11 @@ class Model(metaclass=ModelMetaclass):
   @property
   def _relations(self) -> Dict[str, relationship.Relationship]:
     return self._metaclass.relations
+
+  @property
+  def _foreign_key_relations(
+      self) -> Dict[str, foreign_key_relationship.ForeignKeyRelationship]:
+    return self._metaclass.foreign_key_relations
 
   @property
   def _table(self) -> str:
