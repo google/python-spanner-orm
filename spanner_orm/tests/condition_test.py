@@ -226,6 +226,80 @@ class ConditionTest(
     with self.assertRaisesRegex(error.ValidationError, error_regex):
       models.SmallTestModel.where(condition_)
 
+  @parameterized.named_parameters(
+      (
+          'empty_or',
+          condition.OrCondition(),
+          {},
+          {},
+          'FALSE',
+          '',
+      ),
+      (
+          'empty_and',
+          condition.OrCondition([]),
+          {},
+          {},
+          '(TRUE)',
+          'ab',
+      ),
+      (
+          'single',
+          condition.OrCondition(
+              [condition.equal_to(models.SmallTestModel.key, 'a')]),
+          dict(key0='a'),
+          dict(key0=type_pb2.Type(code=type_pb2.STRING)),
+          '((SmallTestModel.key = @key0))',
+          'a',
+      ),
+      (
+          'multiple',
+          condition.OrCondition(
+              [
+                  condition.equal_to(models.SmallTestModel.key, 'a'),
+                  condition.equal_to(models.SmallTestModel.value_1, 'a'),
+              ],
+              [
+                  condition.equal_to(models.SmallTestModel.key, 'b'),
+                  condition.equal_to(models.SmallTestModel.value_1, 'b'),
+              ],
+          ),
+          dict(
+              key0='a',
+              value_11='a',
+              key2='b',
+              value_13='b',
+          ),
+          dict(
+              key0=type_pb2.Type(code=type_pb2.STRING),
+              value_11=type_pb2.Type(code=type_pb2.STRING),
+              key2=type_pb2.Type(code=type_pb2.STRING),
+              value_13=type_pb2.Type(code=type_pb2.STRING),
+          ),
+          ('('
+           '(SmallTestModel.key = @key0 AND SmallTestModel.value_1 = @value_11)'
+           ' OR '
+           '(SmallTestModel.key = @key2 AND SmallTestModel.value_1 = @value_13)'
+           ')'),
+          'ab',
+      ),
+  )
+  def test_or_condition(
+      self,
+      condition_,
+      expected_params,
+      expected_types,
+      expected_sql,
+      expected_row_keys,
+  ):
+    models.SmallTestModel(dict(key='a', value_1='a', value_2='a')).save()
+    models.SmallTestModel(dict(key='b', value_1='b', value_2='b')).save()
+    rows = models.SmallTestModel.where(condition_)
+    self.assertEqual(expected_params, condition_.params())
+    self.assertEqual(expected_types, condition_.types())
+    self.assertEqual(expected_sql, condition_.sql())
+    self.assertCountEqual(expected_row_keys, tuple(row.key for row in rows))
+
   def test_contains(self):
     contains = spanner_orm.contains('some_column', r'a%b_c\d')
     self.assertEqual('some_column', contains.column)

@@ -583,9 +583,6 @@ class OrCondition(Condition):
 
   def __init__(self, *condition_lists: List[Condition]):
     super().__init__()
-    if len(condition_lists) < 2:
-      raise error.SpannerError(
-          'OrCondition requires at least two lists of conditions')
     self.condition_lists = condition_lists
     self.all_conditions = []
     for conditions in condition_lists:
@@ -612,9 +609,16 @@ class OrCondition(Condition):
       params += len(condition.params())
 
     for conditions in self.condition_lists:
-      new_segment = ' AND '.join([condition.sql() for condition in conditions])
-      segments.append('({new_segment})'.format(new_segment=new_segment))
-    return '({segments})'.format(segments=' OR '.join(segments))
+      if conditions:
+        new_segment = ' AND '.join(
+            [condition.sql() for condition in conditions])
+        segments.append('({new_segment})'.format(new_segment=new_segment))
+      else:
+        segments.append('TRUE')
+    if segments:
+      return '({segments})'.format(segments=' OR '.join(segments))
+    else:
+      return 'FALSE'
 
   def segment(self) -> Segment:
     return Segment.WHERE
