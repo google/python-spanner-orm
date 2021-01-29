@@ -832,30 +832,25 @@ def columns_equal(origin_column: str, dest_model_class: Type[Any],
 
 
 def contains(
-    column: Union[field.Field, str],
-    value: str,
-) -> ComparisonCondition:
-  """Condition where the specified column contains the given substring.
+    haystack: Substitution,
+    needle: Substitution,
+) -> Condition:
+  """Condition where the specified haystack contains the given needle.
 
   Args:
-    column: Name of the column on the origin model or the Field on the origin
-      model class to compare from
-    value: The value to compare against
+    haystack: String or bytes to search.
+    needle: String or bytes to search for. Must be the same type as haystack.
 
   Returns:
     A Condition subclass that will be used in the query
   """
-  value_escaped = value.translate(
-      str.maketrans({
-          # https://cloud.google.com/spanner/docs/functions-and-operators#comparison_operators
-          '%': r'\%',
-          '_': r'\_',
-          '\\': '\\\\',
-      }))
-  return ComparisonCondition(
-      operator='LIKE',
-      field_or_name=column,
-      value=f'%{value_escaped}%',
+  return ArbitraryCondition(
+      'STRPOS($haystack, $needle) > 0',
+      dict(
+          haystack=haystack,
+          needle=needle,
+      ),
+      segment=Segment.WHERE,
   )
 
 
