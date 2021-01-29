@@ -302,15 +302,24 @@ class ConditionTest(
 
   @parameterized.parameters(
       ('ABCD', 'BC', True),
+      ('ABCD', 'bc', False),
       ('ABCD', 'CB', False),
       (b'ABCD', b'BC', True),
+      (b'ABCD', b'bc', False),
       (b'ABCD', b'CB', False),
+      ('ABCD', 'BC', True, dict(case_sensitive=False)),
+      ('ABCD', 'bc', True, dict(case_sensitive=False)),
+      ('ABCD', 'CB', False, dict(case_sensitive=False)),
+      (b'ABCD', b'BC', True, dict(case_sensitive=False)),
+      (b'ABCD', b'bc', True, dict(case_sensitive=False)),
+      (b'ABCD', b'CB', False, dict(case_sensitive=False)),
   )
   def test_contains(
       self,
       haystack,
       needle,
       expect_results,
+      kwargs={},
   ):
     test_model = models.SmallTestModel(dict(key='a', value_1='a', value_2='a'))
     test_model.save()
@@ -320,6 +329,7 @@ class ConditionTest(
             spanner_orm.contains(
                 condition.Param.from_value(haystack),
                 condition.Param.from_value(needle),
+                **kwargs,
             )),
     )
 
