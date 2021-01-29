@@ -80,12 +80,9 @@ class ModelMetaclass(type):
     return cls
 
   def __getattr__(
-      cls,
-      name: str) -> Union[
-        field.Field,
-        relationship.Relationship,
-        foreign_key_relationship.ForeignKeyRelationship,
-        index.Index]:
+      cls, name: str
+  ) -> Union[field.Field, relationship.Relationship,
+             foreign_key_relationship.ForeignKeyRelationship, index.Index]:
     # Unclear why pylint doesn't like this
     # pylint: disable=unsupported-membership-test
     if name in cls.fields:
@@ -130,7 +127,6 @@ class ModelMetaclass(type):
   def foreign_key_relations(
       cls) -> Dict[str, foreign_key_relationship.ForeignKeyRelationship]:
     return cls.meta.foreign_key_relations
-
 
   @property
   def fields(cls) -> Dict[str, field.Field]:
@@ -602,7 +598,6 @@ class Model(metaclass=ModelMetaclass):
       return db_api(transaction, *args)
     else:
       return cls.spanner_api().run_write(db_api, *args)
-
 
   def __setattr__(self, name: str, value: Any) -> None:
     if name in self._relations:

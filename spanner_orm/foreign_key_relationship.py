@@ -30,9 +30,7 @@ class ForeignKeyRelationshipConstraint:
 class ForeignKeyRelationship(object):
   """Helps define a foreign key relationship between two models."""
 
-  def __init__(self,
-               referenced_table_name: str,
-               columns: Mapping[str, str]):
+  def __init__(self, referenced_table_name: str, columns: Mapping[str, str]):
     """Creates a ForeignKeyRelationship.
 
     Args:

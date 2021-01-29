@@ -26,7 +26,9 @@ from spanner_orm import error
 
 CallableReturn = TypeVar('CallableReturn')
 
+
 class SpannerRetryableApi(abc.ABC):
+
   def _ensure_session(self, api_method, *args, **kwargs):
     try:
       return api_method(*args, **kwargs)
@@ -69,6 +71,7 @@ class SpannerReadApi(SpannerRetryableApi):
     with self._connection.snapshot(multi_use=True) as snapshot:
       return method(snapshot, *args, **kwargs)
 
+
 class SpannerWriteApi(SpannerRetryableApi):
   """Handles sending write requests to Spanner."""
 
@@ -95,8 +98,8 @@ class SpannerWriteApi(SpannerRetryableApi):
     Returns:
       The return value from `method` will be returned from this method
     """
-    return self._ensure_session(
-        self._connection.run_in_transaction, method, *args, **kwargs)
+    return self._ensure_session(self._connection.run_in_transaction, method,
+                                *args, **kwargs)
 
 
 class SpannerConnection:
@@ -120,7 +123,8 @@ class SpannerConnection:
 
   def connect(self):
     """Establish a new connection to the specified Spanner database."""
-    client = spanner.Client(project=self._project, credentials=self._credentials)
+    client = spanner.Client(
+        project=self._project, credentials=self._credentials)
     instance = client.instance(self._instance)
     self.database = instance.database(
         self._database, pool=self._pool, ddl_statements=self._create_ddl or ())
@@ -140,12 +144,12 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 _api = None  # type: Optional[SpannerApi]
 
 
-def connect(instance: str,
-            database: str,
-            project: Optional[str] = None,
-            credentials: Optional[auth_credentials.Credentials] = None,
-            pool: Optional[spanner_pool.AbstractSessionPool] = None
-           ) -> SpannerApi:
+def connect(
+    instance: str,
+    database: str,
+    project: Optional[str] = None,
+    credentials: Optional[auth_credentials.Credentials] = None,
+    pool: Optional[spanner_pool.AbstractSessionPool] = None) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api."""
   connection = SpannerConnection(
       instance, database, project=project, credentials=credentials, pool=pool)

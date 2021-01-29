@@ -67,7 +67,8 @@ class QueryTest(parameterized.TestCase):
     self.assertEqual(expected_sql, sql)
 
   @parameterized.parameters(
-      condition.limit(1), condition.order_by(('int_', condition.OrderType.DESC)))
+      condition.limit(1), condition.order_by(
+          ('int_', condition.OrderType.DESC)))
   def test_count_only_allows_where_and_from_segment_conditions(self, condition):
     with self.assertRaises(error.SpannerError):
       query.CountQuery(models.UnittestModel, [condition])
@@ -208,60 +209,67 @@ class QueryTest(parameterized.TestCase):
     expected_sql = 'FROM table@{FORCE_INDEX=test_index}'
     self.assertEndsWith(select_query.sql(), expected_sql)
 
-  def includes(
-      self, relation, *conditions, foreign_key_relation=False):
-    include_condition = condition.includes(
-      relation, list(conditions), foreign_key_relation)
+  def includes(self, relation, *conditions, foreign_key_relation=False):
+    include_condition = condition.includes(relation, list(conditions),
+                                           foreign_key_relation)
     return query.SelectQuery(
-      models.ForeignKeyTestModel if foreign_key_relation
-      else models.RelationshipTestModel,
-      [include_condition],
+        models.ForeignKeyTestModel
+        if foreign_key_relation else models.RelationshipTestModel,
+        [include_condition],
     )
 
-  @parameterized.parameters(
-    (models.RelationshipTestModel.parent, True),
-    (models.ForeignKeyTestModel.foreign_key_1, False)
-  )
+  @parameterized.parameters((models.RelationshipTestModel.parent, True),
+                            (models.ForeignKeyTestModel.foreign_key_1, False))
   def test_bad_includes_args(self, relation_key, foreign_key_relation):
     with self.assertRaisesRegex(ValueError, 'Must pass'):
       self.includes(
-        relation_key,
-        foreign_key_relation=foreign_key_relation,
+          relation_key,
+          foreign_key_relation=foreign_key_relation,
       )
 
   @parameterized.named_parameters(
-    (
-      'legacy_relationship',
-      {'relation': 'parent'},
-      r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* '
-      r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
-      r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
-      r'RelationshipTestModel.parent_key\)',
-    ),
-    (
-      'legacy_relationship_with_object_arg',
-      {'relation': models.RelationshipTestModel.parent},
-      r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* '
-      r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
-      r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
-      r'RelationshipTestModel.parent_key\)',
-    ),
-    (
-      'foreign_key_relationship',
-      {'relation': 'foreign_key_1', 'foreign_key_relation': True},
-      r'SELECT ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* '
-      r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
-      r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
-      r'ForeignKeyTestModel.referencing_key_1\)',
-    ),
-    (
-      'foreign_key_relationship_with_object_arg',
-      {'relation': models.ForeignKeyTestModel.foreign_key_1, 'foreign_key_relation': True},
-      r'SELECT ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* '
-      r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
-      r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
-      r'ForeignKeyTestModel.referencing_key_1\)',
-    ),
+      (
+          'legacy_relationship',
+          {
+              'relation': 'parent'
+          },
+          r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* '
+          r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
+          r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
+          r'RelationshipTestModel.parent_key\)',
+      ),
+      (
+          'legacy_relationship_with_object_arg',
+          {
+              'relation': models.RelationshipTestModel.parent
+          },
+          r'SELECT RelationshipTestModel\S* RelationshipTestModel\S* '
+          r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
+          r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
+          r'RelationshipTestModel.parent_key\)',
+      ),
+      (
+          'foreign_key_relationship',
+          {
+              'relation': 'foreign_key_1',
+              'foreign_key_relation': True
+          },
+          r'SELECT ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* '
+          r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
+          r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
+          r'ForeignKeyTestModel.referencing_key_1\)',
+      ),
+      (
+          'foreign_key_relationship_with_object_arg',
+          {
+              'relation': models.ForeignKeyTestModel.foreign_key_1,
+              'foreign_key_relation': True
+          },
+          r'SELECT ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* ForeignKeyTestModel\S* '
+          r'ARRAY\(SELECT AS STRUCT SmallTestModel\S* SmallTestModel\S* '
+          r'SmallTestModel\S* FROM SmallTestModel WHERE SmallTestModel.key = '
+          r'ForeignKeyTestModel.referencing_key_1\)',
+      ),
   )
   def test_includes(self, includes_kwargs, expected_sql):
     select_query = self.includes(**includes_kwargs)
@@ -271,18 +279,17 @@ class QueryTest(parameterized.TestCase):
     self.assertEmpty(select_query.parameters())
     self.assertEmpty(select_query.types())
 
-  @parameterized.parameters(
-    (
-      {'relation': models.RelationshipTestModel.parent, 'foreign_key_relation': True},
-    ),
-    (
-      {'relation': models.ForeignKeyTestModel.foreign_key_1, 'foreign_key_relation': False},
-    )
-  )
+  @parameterized.parameters(({
+      'relation': models.RelationshipTestModel.parent,
+      'foreign_key_relation': True
+  },), ({
+      'relation': models.ForeignKeyTestModel.foreign_key_1,
+      'foreign_key_relation': False
+  },))
   def test_error_mismatched_params(self, includes_kwargs):
     with self.assertRaisesRegex(ValueError, 'Must pass'):
       self.includes(**includes_kwargs)
-    
+
   def test_includes_subconditions_query(self):
     select_query = self.includes('parents', condition.equal_to('key', 'value'))
     expected_sql = (
@@ -301,10 +308,12 @@ class QueryTest(parameterized.TestCase):
     return child, parent, [result]
 
   def fk_includes_result(self, related=1):
-    child = {'referencing_key_1': 'parent_key',
-             'referencing_key_2': 'child',
-             'referencing_key_3': 'child',
-             'self_referencing_key': 'child'}
+    child = {
+        'referencing_key_1': 'parent_key',
+        'referencing_key_2': 'child',
+        'referencing_key_3': 'child',
+        'self_referencing_key': 'child'
+    }
     result = [child[name] for name in models.ForeignKeyTestModel.columns]
     parent = {'key': 'key', 'value_1': 'value_1', 'value_2': None}
     parents = []
@@ -313,20 +322,24 @@ class QueryTest(parameterized.TestCase):
     result.append(parents)
     return child, parent, [result]
 
-
   @parameterized.named_parameters(
-    (
-      'legacy_relationship',
-      {'relation': 'parent'},
-      lambda x: x.parent,
-      lambda x: x.includes_result(related=1),
-    ),
-    (
-      'foreign_key_relationship',
-      {'relation': 'foreign_key_1', 'foreign_key_relation': True},
-      lambda x: x.foreign_key_1,
-      lambda x: x.fk_includes_result(related=1),
-    ),
+      (
+          'legacy_relationship',
+          {
+              'relation': 'parent'
+          },
+          lambda x: x.parent,
+          lambda x: x.includes_result(related=1),
+      ),
+      (
+          'foreign_key_relationship',
+          {
+              'relation': 'foreign_key_1',
+              'foreign_key_relation': True
+          },
+          lambda x: x.foreign_key_1,
+          lambda x: x.fk_includes_result(related=1),
+      ),
   )
   def test_includes_single_related_object_result(
       self,
@@ -339,38 +352,37 @@ class QueryTest(parameterized.TestCase):
     result = select_query.process_results(rows)[0]
 
     self.assertIsInstance(
-      referenced_table_fn(result),
-      models.SmallTestModel,
+        referenced_table_fn(result),
+        models.SmallTestModel,
     )
     for name, value in child_values.items():
       self.assertEqual(getattr(result, name), value)
 
     for name, value in parent_values.items():
-      self.assertEqual(
-        getattr(referenced_table_fn(result), name),
-        value
-      )
+      self.assertEqual(getattr(referenced_table_fn(result), name), value)
 
   @parameterized.named_parameters(
-    (
-      'legacy_relationship',
-      {'relation': 'parent'},
-      lambda x: x.parent,
-      lambda x: x.includes_result(related=0),
-    ),
-    (
-      'foreign_key_relationship',
-      {'relation': 'foreign_key_1', 'foreign_key_relation': True},
-      lambda x: x.foreign_key_1,
-      lambda x: x.fk_includes_result(related=0),
-    ),
+      (
+          'legacy_relationship',
+          {
+              'relation': 'parent'
+          },
+          lambda x: x.parent,
+          lambda x: x.includes_result(related=0),
+      ),
+      (
+          'foreign_key_relationship',
+          {
+              'relation': 'foreign_key_1',
+              'foreign_key_relation': True
+          },
+          lambda x: x.foreign_key_1,
+          lambda x: x.fk_includes_result(related=0),
+      ),
   )
-  def test_includes_single_no_related_object_result(
-      self,
-      includes_kwargs,
-      referenced_table_fn,
-      includes_result_fn
-  ):
+  def test_includes_single_no_related_object_result(self, includes_kwargs,
+                                                    referenced_table_fn,
+                                                    includes_result_fn):
     select_query = self.includes(**includes_kwargs)
     child_values, _, rows = includes_result_fn(self)
     result = select_query.process_results(rows)[0]
@@ -393,16 +405,21 @@ class QueryTest(parameterized.TestCase):
       self.assertEqual(getattr(result.parents[0], name), value)
 
   @parameterized.named_parameters(
-    (
-        'legacy_relationship',
-        {'relation': 'parent'},
-        lambda x: x.includes_result(related=2),
-    ),
-    (
-        'foreign_key_relationship',
-        {'relation': 'foreign_key_1', 'foreign_key_relation': True},
-        lambda x: x.fk_includes_result(related=2),
-    ),
+      (
+          'legacy_relationship',
+          {
+              'relation': 'parent'
+          },
+          lambda x: x.includes_result(related=2),
+      ),
+      (
+          'foreign_key_relationship',
+          {
+              'relation': 'foreign_key_1',
+              'foreign_key_relation': True
+          },
+          lambda x: x.fk_includes_result(related=2),
+      ),
   )
   def test_includes_error_on_multiple_results_for_single(
       self, includes_kwargs, includes_result_fn):
@@ -412,8 +429,7 @@ class QueryTest(parameterized.TestCase):
       _ = select_query.process_results(rows)
 
   @parameterized.parameters(True, False)
-  def test_includes_error_on_invalid_relation(
-      self, foreign_key_relation):
+  def test_includes_error_on_invalid_relation(self, foreign_key_relation):
     with self.assertRaises(error.ValidationError):
       self.includes('bad_relation', foreign_key_relation=foreign_key_relation)
 
@@ -425,13 +441,9 @@ class QueryTest(parameterized.TestCase):
       ('key', ['bad value'], 'parent', False),
       ('key', ['bad value'], 'foreign_key_1', False),
   )
-  def test_includes_error_on_invalid_subconditions(
-      self,
-      column,
-      value,
-      relation,
-      foreign_key_relation
-  ):
+  def test_includes_error_on_invalid_subconditions(self, column, value,
+                                                   relation,
+                                                   foreign_key_relation):
     with self.assertRaises(error.ValidationError):
       self.includes(
           relation,

@@ -431,8 +431,8 @@ class IncludesCondition(Condition):
     self.foreign_key_relation = foreign_key_relation
     if isinstance(relation_or_name, relationship.Relationship):
       if foreign_key_relation:
-        raise ValueError(
-            'Must pass foreign key relation if ''`foreign_key_relation=True`.')
+        raise ValueError('Must pass foreign key relation if '
+                         '`foreign_key_relation=True`.')
       self.name = relation_or_name.name
       self.relation = relation_or_name
     elif isinstance(relation_or_name,
@@ -465,9 +465,9 @@ class IncludesCondition(Condition):
       for pair in self.relation.constraint.columns.items():
         referencing_column, referenced_column = pair
         relation_conditions.append(
-          ColumnsEqualCondition(referenced_column, self.model_class,
-                                referencing_column))
-      
+            ColumnsEqualCondition(referenced_column, self.model_class,
+                                  referencing_column))
+
     else:
       for constraint in self.relation.constraints:
         # This is backward from what you might imagine because the condition
@@ -940,8 +940,7 @@ def includes(relation: Union[relationship.Relationship,
   Returns:
     A Condition subclass that will be used in the query
   """
-  return IncludesCondition(
-      relation, conditions, foreign_key_relation)
+  return IncludesCondition(relation, conditions, foreign_key_relation)
 
 
 def in_list(column: Union[field.Field, str],

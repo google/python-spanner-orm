@@ -45,11 +45,9 @@ class ModelMetadata(object):
                table: Optional[str] = None,
                fields: Optional[Dict[str, field.Field]] = None,
                relations: Optional[Dict[str, relationship.Relationship]] = None,
-               foreign_key_relations: Optional[
-                 Dict[
+               foreign_key_relations: Optional[Dict[
                    str,
-                   foreign_key_relationship.ForeignKeyRelationship]
-               ] = None,
+                   foreign_key_relationship.ForeignKeyRelationship]] = None,
                indexes: Optional[Dict[str, index.Index]] = None,
                interleaved: Optional[str] = None,
                model_class: Optional[Type[Any]] = None):

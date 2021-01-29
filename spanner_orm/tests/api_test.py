@@ -28,6 +28,7 @@ def _mock_run_in_transaction(method, *args, **kwargs):
 
 
 class MockSpannerApi(api.SpannerReadApi, api.SpannerWriteApi):
+
   def __init__(self):
     self.connection_mock = mock.MagicMock()
     self.connection_mock.run_in_transaction.side_effect = _mock_run_in_transaction
@@ -35,6 +36,7 @@ class MockSpannerApi(api.SpannerReadApi, api.SpannerWriteApi):
   @property
   def _connection(self):
     return self.connection_mock
+
 
 class ApiTest(parameterized.TestCase):
 
@@ -70,14 +72,13 @@ class ApiTest(parameterized.TestCase):
 
   @parameterized.parameters('run_read_only', 'run_write')
   @mock.patch('spanner_orm.api.spanner_api')
-  def test_reconnect_on_expected_error(self, api_method,
-                                       mock_spanner_api):
+  def test_reconnect_on_expected_error(self, api_method, mock_spanner_api):
     mock_api = MockSpannerApi()
 
     mock_method = mock.Mock()
     mock_method.side_effect = [
-      exceptions.NotFound('Session not found'),
-      'Anything other than an exception'
+        exceptions.NotFound('Session not found'),
+        'Anything other than an exception'
     ]
     mock_connect = mock_spanner_api.return_value.connect
 
@@ -88,8 +89,7 @@ class ApiTest(parameterized.TestCase):
 
   @parameterized.parameters('run_read_only', 'run_write')
   @mock.patch('spanner_orm.api.spanner_api')
-  def test_raise_on_expected_error(self, api_method,
-                                       mock_spanner_api):
+  def test_raise_on_expected_error(self, api_method, mock_spanner_api):
     mock_api = MockSpannerApi()
 
     mock_method = mock.Mock()
@@ -104,6 +104,7 @@ class ApiTest(parameterized.TestCase):
     connection = mock.Mock()
     client().instance().database.return_value = connection
     return connection
+
 
 if __name__ == '__main__':
   logging.basicConfig()
