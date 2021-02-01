@@ -834,18 +834,24 @@ def columns_equal(origin_column: str, dest_model_class: Type[Any],
 def contains(
     haystack: Substitution,
     needle: Substitution,
+    *,
+    case_sensitive: bool = True,
 ) -> Condition:
   """Condition where the specified haystack contains the given needle.
 
   Args:
     haystack: String or bytes to search.
     needle: String or bytes to search for. Must be the same type as haystack.
+    case_sensitive: Whether comparison should be case sensitive or not. See
+      https://cloud.google.com/spanner/docs/functions-and-operators#lower for
+      caveats on how the case conversion works.
 
   Returns:
     A Condition subclass that will be used in the query
   """
   return ArbitraryCondition(
-      'STRPOS($haystack, $needle) > 0',
+      ('STRPOS($haystack, $needle) > 0'
+       if case_sensitive else 'STRPOS(LOWER($haystack), LOWER($needle)) > 0'),
       dict(
           haystack=haystack,
           needle=needle,
