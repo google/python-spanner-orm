@@ -209,6 +209,13 @@ pip install pytype
 pytype -V 3.7 spanner_orm -d import-error
 ```
 
+To check formatting, run (change `--diff` to `--in-place` to fix formatting):
+
+```
+pip install yapf
+yapf --diff --recursive --parallel .
+```
+
 Then run tests with:
 
 ```

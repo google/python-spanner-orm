@@ -127,4 +127,3 @@ class TestCase(unittest.TestCase):
         _make_emulator_spanner_orm_connection(self.spanner_emulator_database,
                                               self.spanner_emulator_instance,
                                               self.spanner_emulator_client))
-

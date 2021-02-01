@@ -45,9 +45,7 @@ def main(as_module: bool = False) -> None:
   # 'subcommand' is actually required, but required subparsers are not supported
   # for Python < 3.7.
   subparsers = parser.add_subparsers(
-      dest='subcommand',
-      title='subcommands',
-      description='valid subcommands')
+      dest='subcommand', title='subcommands', description='valid subcommands')
 
   generate_parser = subparsers.add_parser(
       'generate', help='Generate a new migration')

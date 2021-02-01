@@ -24,7 +24,6 @@ from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_tes
 from google.api_core import exceptions as google_api_exceptions
 
 
-
 class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
   TEST_MIGRATIONS_DIR = os.path.join(
       os.path.dirname(os.path.abspath(__file__)),
@@ -52,26 +51,27 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
         'Cannot find referenced key',
     ):
       models.ForeignKeyTestModel({
-        'referencing_key_1': 'key',
-        'referencing_key_2': 'key',
-        'referencing_key_3': 42,
-        'value': 'value'
+          'referencing_key_1': 'key',
+          'referencing_key_2': 'key',
+          'referencing_key_3': 42,
+          'value': 'value'
       }).save()
 
   def test_key(self):
     models.SmallTestModel({'key': 'key', 'value_1': 'value'}).save()
-    models.UnittestModel(
-      {'string': 'string',
-       'int_': 42,
-       'float_': 4.2,
-       'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
-      }).save()
+    models.UnittestModel({
+        'string': 'string',
+        'int_': 42,
+        'float_': 4.2,
+        'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
+    }).save()
     models.ForeignKeyTestModel({
         'referencing_key_1': 'key',
         'referencing_key_2': 'string',
         'referencing_key_3': 42,
         'value': 'value'
-      }).save()
+    }).save()
+
 
 if __name__ == '__main__':
   logging.basicConfig()

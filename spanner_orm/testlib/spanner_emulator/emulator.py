@@ -95,9 +95,9 @@ class Emulator:
       emulator_binary_path = os.environ[_EMULATOR_BINARY_PATH_ENV_VAR]
     except KeyError as key_error:
       raise ValueError(
-        f'Please set the environment variable {_EMULATOR_BINARY_PATH_ENV_VAR} '
-        'to a binary with the Cloud Spanner Emulator. For more info, see '
-        'https://github.com/GoogleCloudPlatform/cloud-spanner-emulator.'
+          f'Please set the environment variable {_EMULATOR_BINARY_PATH_ENV_VAR} '
+          'to a binary with the Cloud Spanner Emulator. For more info, see '
+          'https://github.com/GoogleCloudPlatform/cloud-spanner-emulator.'
       ) from key_error
 
     self._process = subprocess.Popen([
