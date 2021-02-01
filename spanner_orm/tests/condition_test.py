@@ -300,11 +300,28 @@ class ConditionTest(
     self.assertEqual(expected_sql, condition_.sql())
     self.assertCountEqual(expected_row_keys, tuple(row.key for row in rows))
 
-  def test_contains(self):
-    contains = spanner_orm.contains('some_column', r'a%b_c\d')
-    self.assertEqual('some_column', contains.column)
-    self.assertEqual('LIKE', contains.operator)
-    self.assertEqual(r'%a\%b\_c\\d%', contains.value)
+  @parameterized.parameters(
+      ('ABCD', 'BC', True),
+      ('ABCD', 'CB', False),
+      (b'ABCD', b'BC', True),
+      (b'ABCD', b'CB', False),
+  )
+  def test_contains(
+      self,
+      haystack,
+      needle,
+      expect_results,
+  ):
+    test_model = models.SmallTestModel(dict(key='a', value_1='a', value_2='a'))
+    test_model.save()
+    self.assertCountEqual(
+        ((test_model,) if expect_results else ()),
+        models.SmallTestModel.where(
+            spanner_orm.contains(
+                condition.Param.from_value(haystack),
+                condition.Param.from_value(needle),
+            )),
+    )
 
 
 if __name__ == '__main__':
