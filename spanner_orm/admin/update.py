@@ -28,7 +28,23 @@ from spanner_orm.admin import index_column
 from spanner_orm.admin import metadata
 
 
-class SchemaUpdate(abc.ABC):
+class MigrationUpdate(abc.ABC):
+  """Base class for all updates that can happen in a migration."""
+
+  @abc.abstractmethod
+  def execute(self) -> None:
+    """Executes the update."""
+    raise NotImplementedError
+
+
+class NoUpdate(MigrationUpdate):
+  """Update that does nothing, for migrations that don't update db schemas."""
+
+  def execute(self) -> None:
+    """See base class."""
+
+
+class SchemaUpdate(MigrationUpdate, abc.ABC):
   """Base class for specifying schema updates."""
 
   @abc.abstractmethod
@@ -334,19 +350,6 @@ class DropIndex(SchemaUpdate):
     if db_index.primary:
       raise error.SpannerError('Index {} is the primary index'.format(
           self._index))
-
-
-class NoUpdate(SchemaUpdate):
-  """Update that does nothing, for migrations that don't update db schemas."""
-
-  def ddl(self) -> str:
-    return ''
-
-  def execute(self) -> None:
-    pass
-
-  def validate(self) -> None:
-    pass
 
 
 def model_creation_ddl(model_: Type[model.Model]) -> List[str]:

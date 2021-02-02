@@ -95,6 +95,8 @@ order_by = condition.order_by
 transactional_read = decorator.transactional_read
 transactional_write = decorator.transactional_write
 
+MigrationUpdate = update_module.MigrationUpdate
+NoUpdate = update_module.NoUpdate
 SchemaUpdate = update_module.SchemaUpdate
 CreateTable = update_module.CreateTable
 DropTable = update_module.DropTable
@@ -103,7 +105,6 @@ DropColumn = update_module.DropColumn
 AlterColumn = update_module.AlterColumn
 CreateIndex = update_module.CreateIndex
 DropIndex = update_module.DropIndex
-NoUpdate = update_module.NoUpdate
 model_creation_ddl = update_module.model_creation_ddl
 
 MigrationExecutor = migration_executor.MigrationExecutor
