@@ -44,6 +44,10 @@ class SpannerAdminApi(api.SpannerReadApi, api.SpannerWriteApi):
     operation = self._connection.update_ddl([change])
     operation.result()
 
+  def execute_partitioned_dml(self, dml: str) -> None:
+    """See spanner_database.Database.execute_partitioned_dml()."""
+    self._connection.execute_partitioned_dml(dml)
+
 
 _admin_api = None
 

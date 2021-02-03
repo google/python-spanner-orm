@@ -18,13 +18,30 @@ from unittest import mock
 
 from absl.testing import parameterized
 
+import spanner_orm
 from spanner_orm import error
 from spanner_orm import field
 from spanner_orm.admin import update
+from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
 from spanner_orm.tests import models
 
 
-class UpdateTest(parameterized.TestCase):
+class UpdateTest(
+    spanner_emulator_testlib.TestCase,
+    parameterized.TestCase,
+):
+
+  def setUp(self):
+    super().setUp()
+    _, project_id = self.spanner_emulator_client.project_name.split('/')
+    connection = spanner_orm.SpannerConnection(
+        instance=self.spanner_emulator_instance.instance_id,
+        database=self.spanner_emulator_database.database_id,
+        project=project_id,
+        credentials=self.spanner_emulator_client.credentials,
+    )
+    spanner_orm.from_connection(connection)
+    spanner_orm.from_admin_connection(connection)
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
   def test_add_column(self, get_model):
@@ -174,6 +191,29 @@ class UpdateTest(parameterized.TestCase):
 
     test_update.validate()
     self.assertEqual(test_update.ddl(), expected_ddl)
+
+  def test_execute_partitioned_dml(self):
+    update.CreateTable(models.SmallTestModelWithoutSecondaryIndexes).execute()
+    test_model = models.SmallTestModel(
+        dict(
+            key='some-key',
+            value_1='foo',
+            value_2='bar',
+        ))
+    test_model.save()
+    update.ExecutePartitionedDml(
+        "UPDATE SmallTestModel SET value_2 = value_1 WHERE value_2 = 'bar'",
+    ).execute()
+    test_model.reload()
+    self.assertEqual(
+        models.SmallTestModel(
+            dict(
+                key='some-key',
+                value_1='foo',
+                value_2='foo',
+            )),
+        test_model,
+    )
 
 
 if __name__ == '__main__':

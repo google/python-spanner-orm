@@ -352,6 +352,21 @@ class DropIndex(SchemaUpdate):
           self._index))
 
 
+class ExecutePartitionedDml(MigrationUpdate):
+  """Update for running arbitrary partitioned DML.
+
+  See https://cloud.google.com/spanner/docs/dml-partitioned for more
+  information.
+  """
+
+  def __init__(self, dml: str):
+    self._dml = dml
+
+  def execute(self) -> None:
+    """See base class."""
+    api.spanner_admin_api().execute_partitioned_dml(self._dml)
+
+
 def model_creation_ddl(model_: Type[model.Model]) -> List[str]:
   """Returns the list of ddl statements needed to create the model's table."""
   ddl_list = [CreateTable(model_).ddl()]

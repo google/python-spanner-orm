@@ -31,6 +31,14 @@ class SmallTestModel(model.Model):
   index_1 = index.Index(['value_1'])
 
 
+class SmallTestModelWithoutSecondaryIndexes(model.Model):
+  """Same as SmallTestModel, but with no secondary indexes."""
+  __table__ = 'SmallTestModel'
+  key = field.Field(field.String, primary_key=True)
+  value_1 = field.Field(field.String)
+  value_2 = field.Field(field.String, nullable=True)
+
+
 class ChildTestModel(model.Model):
   """Model class for testing interleaved tables."""
 
