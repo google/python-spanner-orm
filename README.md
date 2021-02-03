@@ -154,8 +154,8 @@ Running ```spanner-orm generate <migration name>``` will generate a new
 migration file to be filled out in the directory specified (or 'migrations' by
 default). The ```upgrade``` function is executed when migrating, and the
 ```downgrade``` function is executed when rolling back the migration. Each of
-these should return a single SchemaUpdate object (e.g., CreateTable, AddColumn,
-etc.), as Spanner cannot execute multiple schema updates atomically.
+these should return a single MigrationUpdate object (e.g., CreateTable,
+AddColumn, etc.), as Spanner cannot execute multiple schema updates atomically.
 
 ### Executing migrations
 Running ```spanner-orm migrate <Spanner instance> <Spanner database>``` will

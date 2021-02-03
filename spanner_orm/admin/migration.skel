@@ -10,11 +10,11 @@ migration_id = $migration_id
 prev_migration_id = $prev_migration_id
 
 
-def upgrade() -> spanner_orm.SchemaUpdate:
+def upgrade() -> spanner_orm.MigrationUpdate:
   """See spanner_orm migrations interface."""
   return spanner_orm.NoUpdate()
 
 
-def downgrade() -> spanner_orm.SchemaUpdate:
+def downgrade() -> spanner_orm.MigrationUpdate:
   """See spanner_orm migrations interface."""
   return spanner_orm.NoUpdate()

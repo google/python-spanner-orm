@@ -19,18 +19,20 @@ from typing import Callable, Optional
 from spanner_orm.admin import update
 
 
-def no_update_callable() -> update.SchemaUpdate:
+def no_update_callable() -> update.MigrationUpdate:
   return update.NoUpdate()
 
 
 class Migration:
   """Holds information about a specific migration."""
 
-  def __init__(self,
-               migration_id: str,
-               prev_migration_id: Optional[str],
-               upgrade: Optional[Callable[[], update.SchemaUpdate]] = None,
-               downgrade: Optional[Callable[[], update.SchemaUpdate]] = None):
+  def __init__(
+      self,
+      migration_id: str,
+      prev_migration_id: Optional[str],
+      upgrade: Optional[Callable[[], update.MigrationUpdate]] = None,
+      downgrade: Optional[Callable[[], update.MigrationUpdate]] = None,
+  ):
     self._id = migration_id
     self._prev = prev_migration_id
     self._upgrade = upgrade or no_update_callable
@@ -45,9 +47,9 @@ class Migration:
     return self._prev
 
   @property
-  def upgrade(self) -> Optional[Callable[[], update.SchemaUpdate]]:
+  def upgrade(self) -> Optional[Callable[[], update.MigrationUpdate]]:
     return self._upgrade
 
   @property
-  def downgrade(self) -> Optional[Callable[[], update.SchemaUpdate]]:
+  def downgrade(self) -> Optional[Callable[[], update.MigrationUpdate]]:
     return self._downgrade

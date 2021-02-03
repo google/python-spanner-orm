@@ -66,12 +66,12 @@ class MigrationExecutor:
                                          target_migration)
     for migration_ in migrations:
       _logger.info('Processing migration %s', migration_.migration_id)
-      schema_update = migration_.upgrade()
-      if not isinstance(schema_update, update.SchemaUpdate):
+      migration_update = migration_.upgrade()
+      if not isinstance(migration_update, update.MigrationUpdate):
         raise error.SpannerError(
-            'Migration {} did not return a SchemaUpdate'.format(
+            'Migration {} did not return a MigrationUpdate'.format(
                 migration_.migration_id))
-      schema_update.execute()
+      migration_update.execute()
 
       self._update_status(migration_.migration_id, True)
     self._hangup()
@@ -97,12 +97,12 @@ class MigrationExecutor:
         reversed(self.migrations()), True, target_migration)
     for migration_ in migrations:
       _logger.info('Processing migration %s', migration_.migration_id)
-      schema_update = migration_.downgrade()
-      if not isinstance(schema_update, update.SchemaUpdate):
+      migration_update = migration_.downgrade()
+      if not isinstance(migration_update, update.MigrationUpdate):
         raise error.SpannerError(
-            'Migration {} did not return a SchemaUpdate'.format(
+            'Migration {} did not return a MigrationUpdate'.format(
                 migration_.migration_id))
-      schema_update.execute()
+      migration_update.execute()
 
       self._update_status(migration_.migration_id, False)
     self._hangup()
