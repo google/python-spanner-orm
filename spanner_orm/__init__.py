@@ -105,6 +105,7 @@ DropColumn = update_module.DropColumn
 AlterColumn = update_module.AlterColumn
 CreateIndex = update_module.CreateIndex
 DropIndex = update_module.DropIndex
+ExecutePartitionedDml = update_module.ExecutePartitionedDml
 model_creation_ddl = update_module.model_creation_ddl
 
 MigrationExecutor = migration_executor.MigrationExecutor
