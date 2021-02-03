@@ -355,8 +355,9 @@ class DropIndex(SchemaUpdate):
 class ExecutePartitionedDml(MigrationUpdate):
   """Update for running arbitrary partitioned DML.
 
-  See https://cloud.google.com/spanner/docs/dml-partitioned for more
-  information.
+  NOTE: Partitioned DML queries should be idempotent. See
+  https://cloud.google.com/spanner/docs/dml-partitioned for details, and more
+  information about partitioned DML.
   """
 
   def __init__(self, dml: str):
