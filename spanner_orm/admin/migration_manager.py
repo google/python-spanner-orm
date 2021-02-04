@@ -41,7 +41,8 @@ class MigrationManager:
     """Creates a new migration that is the last migration to be executed."""
     migration_id = uuid.uuid4().hex[-12:]
     prev_id = self.migrations[-1].migration_id if self.migrations else None
-    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    now = datetime.datetime.now().astimezone().isoformat(
+        sep=' ', timespec='seconds')
 
     skeleton_directory = os.path.dirname(os.path.abspath(__file__))
     skeleton_file = os.path.join(skeleton_directory, 'migration.skel')
