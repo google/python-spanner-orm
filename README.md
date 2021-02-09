@@ -50,11 +50,10 @@ class TestModel(spanner_orm.Model):
   value_index = spanner_orm.Index(['value'])
 
   # To indicate that there is a foreign key relationship from this table to
-  # another one, use a Relationship. This has no impact on the representation
-  # of the table inside Spanner
-  fake_relationship = spanner_orm.Relationship(
+  # another one, use a ForeignKeyRelationship.
+  foreign_key = spanner_orm.ForeignKeyRelationship(
     'OtherModel',
-    {'value': 'other_model_column'})
+    {'referencing_key': 'referenced_key'})
 ```
 
 If the model does not refer to an existing table on Spanner, we can create
