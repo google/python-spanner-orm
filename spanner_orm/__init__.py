@@ -20,6 +20,7 @@ from spanner_orm import condition
 from spanner_orm import decorator
 from spanner_orm import error
 from spanner_orm import field
+from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import model
 from spanner_orm import relationship
@@ -61,6 +62,7 @@ Boolean = field.Boolean
 Field = field.Field
 Integer = field.Integer
 Float = field.Float
+ForeignKeyRelationship = foreign_key_relationship.ForeignKeyRelationship
 Index = index.Index
 Relationship = relationship.Relationship
 String = field.String
