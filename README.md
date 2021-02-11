@@ -191,7 +191,7 @@ See https://github.com/GoogleCloudPlatform/cloud-spanner-emulator for several
 options. If you're on Linux, we recommend:
 
 ```
-VERSION=1.0.0
+VERSION=1.2.0
 wget https://storage.googleapis.com/cloud-spanner-emulator/releases/${VERSION}/cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
 tar zxvf cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
 chmod u+x gateway_main emulator_main
