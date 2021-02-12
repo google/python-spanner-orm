@@ -12,4 +12,4 @@ __pycache__
 cloud-spanner-emulator*
 emulator_main
 gateway_main
-.spanner_emulator/
+.spanner_emulator/**
