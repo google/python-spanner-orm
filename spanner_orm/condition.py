@@ -29,9 +29,9 @@ from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import relationship
 
-import frozendict
 from google.api_core import datetime_helpers
 from google.cloud.spanner_v1.proto import type_pb2
+import immutabledict
 
 T = TypeVar('T')
 
@@ -254,7 +254,7 @@ class ArbitraryCondition(Condition):
   def __init__(
       self,
       sql_template: str,
-      substitutions: Mapping[str, Substitution] = frozendict.frozendict(),
+      substitutions: Mapping[str, Substitution] = immutabledict.immutabledict(),
       *,
       segment: Segment,
   ):
