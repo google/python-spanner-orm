@@ -15,8 +15,9 @@
 """Class that handles API calls to Spanner."""
 
 import abc
-from typing import Any, Callable, Iterable, Optional, TypeVar
+from typing import Any, Callable, Dict, Iterable, Optional, TypeVar, Union
 
+from google.api_core import client_options as api_client_options
 from google.api_core import exceptions
 from google.auth import credentials as auth_credentials
 from google.cloud import spanner
@@ -105,13 +106,18 @@ class SpannerWriteApi(SpannerRetryableApi):
 class SpannerConnection:
   """Class that handles connecting to a Spanner database."""
 
-  def __init__(self,
-               instance: str,
-               database: str,
-               project: Optional[str] = None,
-               credentials: Optional[auth_credentials.Credentials] = None,
-               pool: Optional[spanner_pool.AbstractSessionPool] = None,
-               create_ddl: Optional[Iterable[str]] = None):
+  def __init__(
+      self,
+      instance: str,
+      database: str,
+      project: Optional[str] = None,
+      credentials: Optional[auth_credentials.Credentials] = None,
+      pool: Optional[spanner_pool.AbstractSessionPool] = None,
+      create_ddl: Optional[Iterable[str]] = None,
+      *,
+      client_options: Union[api_client_options.ClientOptions, Dict[Any, Any],
+                            None] = None,
+  ):
     """Connects to the specified Spanner database."""
     self._instance = instance
     self._database = database
@@ -119,12 +125,16 @@ class SpannerConnection:
     self._credentials = credentials
     self._pool = pool
     self._create_ddl = create_ddl
+    self._client_options = client_options
     self.connect()
 
   def connect(self):
     """Establish a new connection to the specified Spanner database."""
     client = spanner.Client(
-        project=self._project, credentials=self._credentials)
+        project=self._project,
+        credentials=self._credentials,
+        client_options=self._client_options,
+    )
     instance = client.instance(self._instance)
     self.database = instance.database(
         self._database, pool=self._pool, ddl_statements=self._create_ddl or ())

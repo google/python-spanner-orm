@@ -18,6 +18,8 @@ from unittest import mock
 
 from absl.testing import parameterized
 from google.api_core import exceptions
+from google.cloud import spanner
+
 from spanner_orm import api
 from spanner_orm import error
 from spanner_orm.admin import api as admin_api
@@ -39,6 +41,37 @@ class MockSpannerApi(api.SpannerReadApi, api.SpannerWriteApi):
 
 
 class ApiTest(parameterized.TestCase):
+
+  @mock.patch.object(spanner, 'Client', autospec=True, spec_set=True)
+  def test_connection_args(self, client):
+    client.return_value.instance.return_value.database.return_value = (
+        'fake-database')
+    connection = api.SpannerConnection(
+        instance='some-instance',
+        database='some-database',
+        project='some-project',
+        credentials='fake-credentials',
+        pool='fake-pool',
+        create_ddl=('fake-ddl',),
+        client_options=dict(fake='options'),
+    )
+    self.assertEqual('fake-database', connection.database)
+    self.assertSequenceEqual(
+        (
+            mock.call(
+                project='some-project',
+                credentials='fake-credentials',
+                client_options=dict(fake='options'),
+            ),
+            mock.call().instance('some-instance'),
+            mock.call().instance().database(
+                'some-database',
+                pool='fake-pool',
+                ddl_statements=('fake-ddl',),
+            ),
+        ),
+        client.mock_calls,
+    )
 
   @mock.patch('google.cloud.spanner.Client')
   def test_api_connection(self, client):
