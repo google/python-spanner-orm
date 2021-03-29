@@ -140,7 +140,9 @@ class ModelMetaclass(type):
     try:
       cls.fields[field_name].validate(value)
     except error.ValidationError as ex:
-      raise error_type(*ex.args)
+      context = f'Validation error for field {field_name!r}'
+      raise error_type((f'{context}: {ex.args[0]}' if ex.args else context),
+                       *ex.args[1:])
 
 
 CallableReturn = TypeVar('CallableReturn')
