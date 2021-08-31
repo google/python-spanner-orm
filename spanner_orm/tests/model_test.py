@@ -15,6 +15,7 @@
 import datetime
 import logging
 import os
+import typing
 from typing import List
 import unittest
 from unittest import mock
@@ -352,7 +353,7 @@ class ModelTest(
     })
 
     # Make sure that changing an object on the model shows up in changes()
-    string_array = test_model.string_array  # type: List
+    string_array = typing.cast(List[str], test_model.string_array)
     string_array.append('bat')
     self.assertIn('string_array', test_model.changes())
 
