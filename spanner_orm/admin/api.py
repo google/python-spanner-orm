@@ -15,6 +15,8 @@
 """Class that handles API calls to Spanner that deal with table metadata."""
 
 from typing import Iterable, Optional
+import warnings
+
 from spanner_orm import api
 from spanner_orm import error
 
@@ -58,7 +60,13 @@ def connect(instance: str,
             credentials: Optional[auth_credentials.Credentials] = None,
             pool: Optional[spanner_pool.AbstractSessionPool] = None,
             create_ddl: Optional[Iterable[str]] = None) -> SpannerAdminApi:
-  """Connects the global Spanner admin API to a Spanner database."""
+  """Connects the global Spanner admin API to a Spanner database.
+
+  Deprecated in favor of from_connection().
+  """
+  warnings.warn(
+      DeprecationWarning('Please use spanner_orm.from_admin_connection('
+                         'spanner_orm.SpannerConnection(...))'))
   connection = api.SpannerConnection(
       instance,
       database,

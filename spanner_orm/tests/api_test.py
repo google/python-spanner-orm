@@ -15,6 +15,7 @@
 import logging
 import unittest
 from unittest import mock
+import warnings
 
 from absl.testing import parameterized
 from google.api_core import exceptions
@@ -76,8 +77,14 @@ class ApiTest(parameterized.TestCase):
   @mock.patch('google.cloud.spanner.Client')
   def test_api_connection(self, client):
     connection = self.mock_connection(client)
-    api.connect('', '', '')
+    with warnings.catch_warnings(record=True) as connect_warnings:
+      api.connect('', '', '')
     self.assertEqual(api.spanner_api()._connection, connection)
+    self.assertLen(connect_warnings, 1)
+    connect_warning, = connect_warnings
+    self.assertIn('spanner_orm.from_connection', str(connect_warning.message))
+    self.assertIs(DeprecationWarning, connect_warning.category)
+    self.assertEquals(api.__file__, connect_warning.filename)
 
     api.hangup()
     with self.assertRaises(error.SpannerError):
@@ -90,8 +97,15 @@ class ApiTest(parameterized.TestCase):
   @mock.patch('google.cloud.spanner.Client')
   def test_admin_api_connection(self, client):
     connection = self.mock_connection(client)
-    admin_api.connect('', '', '')
+    with warnings.catch_warnings(record=True) as connect_warnings:
+      admin_api.connect('', '', '')
     self.assertEqual(admin_api.spanner_admin_api()._connection, connection)
+    self.assertLen(connect_warnings, 1)
+    connect_warning, = connect_warnings
+    self.assertIn('spanner_orm.from_admin_connection',
+                  str(connect_warning.message))
+    self.assertIs(DeprecationWarning, connect_warning.category)
+    self.assertEquals(admin_api.__file__, connect_warning.filename)
 
     admin_api.hangup()
     with self.assertRaises(error.SpannerError):
