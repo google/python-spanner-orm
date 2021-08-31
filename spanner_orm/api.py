@@ -16,6 +16,7 @@
 
 import abc
 from typing import Any, Callable, Dict, Iterable, Optional, TypeVar, Union
+import warnings
 
 from google.api_core import client_options as api_client_options
 from google.api_core import exceptions
@@ -160,7 +161,14 @@ def connect(
     project: Optional[str] = None,
     credentials: Optional[auth_credentials.Credentials] = None,
     pool: Optional[spanner_pool.AbstractSessionPool] = None) -> SpannerApi:
-  """Connects to the Spanner database and sets the global spanner_api."""
+  """Connects to the Spanner database and sets the global spanner_api.
+
+  Deprecated in favor of from_connection().
+  """
+  warnings.warn(
+      DeprecationWarning(
+          'Please use '
+          'spanner_orm.from_connection(spanner_orm.SpannerConnection(...))'))
   connection = SpannerConnection(
       instance, database, project=project, credentials=credentials, pool=pool)
   return from_connection(connection)

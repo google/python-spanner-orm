@@ -15,7 +15,8 @@ then run:
 To connect the Spanner ORM to an existing Spanner database:
 ``` python
 import spanner_orm
-spanner_orm.connect(instance_name, database_name)
+spanner_orm.from_connection(
+    spanner_orm.SpannerConnection(instance_name, database_name))
 ```
 
 `project` and `credentials` are optional parameters, and the standard Spanner
