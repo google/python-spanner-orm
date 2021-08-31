@@ -127,7 +127,7 @@ class Float(FieldType):
   @staticmethod
   def validate_type(value: Any) -> None:
     if not isinstance(value, (int, float)):
-      raise error.ValidationError("{} is not of type float".format(value))
+      raise error.ValidationError('{} is not of type float'.format(value))
 
 
 class String(FieldType):
