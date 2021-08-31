@@ -1,0 +1,59 @@
+# Copyright 2021 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+on:
+  push: {}
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        python-version:
+        - '3.7'
+        - '3.8'
+        - '3.9'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install cloud-spanner-emulator
+      run: |
+        # https://github.com/GoogleCloudPlatform/cloud-spanner-emulator#via-pre-built-linux-binaries
+        VERSION=1.2.0
+        wget https://storage.googleapis.com/cloud-spanner-emulator/releases/${VERSION}/cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
+        tar zxvf cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
+        chmod u+x gateway_main emulator_main
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install python dependencies
+      run: |
+        pip install \
+          absl-py \
+          google-api-core \
+          'google-cloud-spanner >= 1.6, <2.0.0dev' \
+          immutabledict \
+          portpicker
+    - name: Check formatting
+      run: |
+        pip install yapf
+        yapf --diff --recursive --parallel .
+    - name: Check types
+      run: |
+        pip install pytype
+        pytype --jobs=auto --keep-going spanner_orm
+    - name: Test
+      env:
+        SPANNER_EMULATOR_BINARY_PATH: ${{ github.workspace }}/emulator_main
+      run: |
+        python setup.py test
