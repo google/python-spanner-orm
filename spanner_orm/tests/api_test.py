@@ -84,7 +84,7 @@ class ApiTest(parameterized.TestCase):
     connect_warning, = connect_warnings
     self.assertIn('spanner_orm.from_connection', str(connect_warning.message))
     self.assertIs(DeprecationWarning, connect_warning.category)
-    self.assertEquals(api.__file__, connect_warning.filename)
+    self.assertEqual(api.__file__, connect_warning.filename)
 
     api.hangup()
     with self.assertRaises(error.SpannerError):
@@ -105,7 +105,7 @@ class ApiTest(parameterized.TestCase):
     self.assertIn('spanner_orm.from_admin_connection',
                   str(connect_warning.message))
     self.assertIs(DeprecationWarning, connect_warning.category)
-    self.assertEquals(admin_api.__file__, connect_warning.filename)
+    self.assertEqual(admin_api.__file__, connect_warning.filename)
 
     admin_api.hangup()
     with self.assertRaises(error.SpannerError):
