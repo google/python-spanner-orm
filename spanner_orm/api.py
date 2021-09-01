@@ -40,7 +40,7 @@ class SpannerRetryableApi(abc.ABC):
       if not 'Session not found' in e.message:
         raise
 
-      spanner_api().connect()
+      spanner_api().spanner_connection.connect()
       return api_method(*args, **kwargs)
 
 
@@ -146,6 +146,11 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 
   def __init__(self, connection: SpannerConnection):
     self._spanner_connection = connection
+
+  @property
+  def spanner_connection(self) -> SpannerConnection:
+    """Connection to the database."""
+    return self._spanner_connection
 
   @property
   def _connection(self):

@@ -127,7 +127,7 @@ class ApiTest(parameterized.TestCase):
         exceptions.NotFound('Session not found'),
         'Anything other than an exception'
     ]
-    mock_connect = mock_spanner_api.return_value.connect
+    mock_connect = mock_spanner_api.return_value.spanner_connection.connect
 
     getattr(mock_api, api_method)(mock_method)
 
