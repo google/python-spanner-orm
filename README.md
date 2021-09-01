@@ -205,8 +205,7 @@ To check type annotations, run:
 
 ```
 pip install pytype
-# https://github.com/google/pytype/issues/80#issuecomment-385128856
-pytype -V 3.7 spanner_orm -d import-error
+pytype spanner_orm
 ```
 
 To check formatting, run (change `--diff` to `--in-place` to fix formatting):

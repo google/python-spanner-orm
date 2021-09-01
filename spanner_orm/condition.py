@@ -412,7 +412,7 @@ class IncludesCondition(Condition):
       relation_or_name: Union[relationship.Relationship,
                               foreign_key_relationship.ForeignKeyRelationship,
                               str],
-      conditions: List[Condition] = None,
+      conditions: Optional[List[Condition]] = None,
       # Default argument is `False` for backwards-compatability.
       foreign_key_relation=False,
   ):
@@ -921,7 +921,7 @@ def greater_than_or_equal_to(column: Union[field.Field, str],
 def includes(relation: Union[relationship.Relationship,
                              foreign_key_relationship.ForeignKeyRelationship,
                              str],
-             conditions: List[Condition] = None,
+             conditions: Optional[List[Condition]] = None,
              foreign_key_relation: bool = False) -> IncludesCondition:
   """Condition where the objects associated with a relationship are retrieved.
 
