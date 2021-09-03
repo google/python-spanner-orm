@@ -45,7 +45,8 @@ jobs:
           google-api-core \
           'google-cloud-spanner >= 1.6, <2.0.0dev' \
           immutabledict \
-          portpicker
+          portpicker \
+          pytest
     - name: Check formatting
       run: |
         pip install yapf
@@ -58,4 +59,4 @@ jobs:
       env:
         SPANNER_EMULATOR_BINARY_PATH: ${{ github.workspace }}/emulator_main
       run: |
-        python setup.py test
+        pytest
