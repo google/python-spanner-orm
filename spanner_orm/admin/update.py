@@ -55,9 +55,8 @@ class SchemaUpdate(MigrationUpdate, abc.ABC):
     self.validate()
     api.spanner_admin_api().update_schema(self.ddl())
 
-  @abc.abstractmethod
   def validate(self) -> None:
-    raise NotImplementedError
+    pass  # TODO(dseomn): Remove this method.
 
 
 class CreateTable(SchemaUpdate):
@@ -136,25 +135,6 @@ class DropTable(SchemaUpdate):
 
   def ddl(self) -> str:
     return 'DROP TABLE {}'.format(self._table)
-
-  def validate(self) -> None:
-    existing_model = metadata.SpannerMetadata.model(self._table)
-    if not existing_model:
-      raise error.SpannerError('Table {} does not exist'.format(self._table))
-
-    # Model indexes include the primary index
-    if len(existing_model.indexes) > 1:
-      raise error.SpannerError('Table {} has a secondary index'.format(
-          self._table))
-
-    self._validate_not_interleaved(existing_model)
-
-  def _validate_not_interleaved(self,
-                                existing_model: Type[model.Model]) -> None:
-    for model_ in metadata.SpannerMetadata.models().values():
-      if model_.interleaved == existing_model:
-        raise error.SpannerError('Table {} has interleaved table {}'.format(
-            self._table, model_.table))
 
 
 class AddColumn(SchemaUpdate):
