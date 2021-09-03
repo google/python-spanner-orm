@@ -116,14 +116,11 @@ class TestCase(unittest.TestCase):
 
   def run_orm_migrations(self, migrations_folder: str) -> None:
     """Runs ORM migrations in the given directory and connects the ORM."""
-    _migrate_database_at_connection(
-        _make_emulator_spanner_orm_connection(self.spanner_emulator_database,
-                                              self.spanner_emulator_instance,
-                                              self.spanner_emulator_client),
-        migrations_folder)
+    connection = _make_emulator_spanner_orm_connection(
+        self.spanner_emulator_database, self.spanner_emulator_instance,
+        self.spanner_emulator_client)
+    _migrate_database_at_connection(connection, migrations_folder)
     # spanner_orm closes the connection to Spanner after migrating so we need to
     # reconnect before making other Spanner calls.
-    spanner_orm.from_connection(
-        _make_emulator_spanner_orm_connection(self.spanner_emulator_database,
-                                              self.spanner_emulator_instance,
-                                              self.spanner_emulator_client))
+    spanner_orm.from_connection(connection)
+    spanner_orm.from_admin_connection(connection)
