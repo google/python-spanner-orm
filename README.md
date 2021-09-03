@@ -218,5 +218,5 @@ yapf --diff --recursive --parallel .
 Then run tests with:
 
 ```
-SPANNER_EMULATOR_BINARY_PATH=$(pwd)/emulator_main python3 setup.py test
+SPANNER_EMULATOR_BINARY_PATH=$(pwd)/emulator_main pytest
 ```
