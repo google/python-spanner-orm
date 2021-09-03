@@ -155,10 +155,6 @@ class DropTable(SchemaUpdate):
       if model_.interleaved == existing_model:
         raise error.SpannerError('Table {} has interleaved table {}'.format(
             self._table, model_.table))
-      for index_ in model_.indexes.values():
-        if index_.parent == self._table:
-          raise error.SpannerError('Table {} has interleaved index {}'.format(
-              self._table, index_.name))
 
 
 class AddColumn(SchemaUpdate):
