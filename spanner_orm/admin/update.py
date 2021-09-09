@@ -82,50 +82,6 @@ class CreateTable(SchemaUpdate):
           parent=self._model.interleaved.table)
     return statement
 
-  def validate(self) -> None:
-    if not self._model.table:
-      raise error.SpannerError('New table has no name')
-
-    existing_model = metadata.SpannerMetadata.model(self._model.table)
-    if existing_model:
-      raise error.SpannerError('Table {} already exists'.format(
-          self._model.table))
-
-    if self._model.interleaved:
-      self._validate_parent()
-
-    self._validate_primary_keys()
-
-    if self._model.indexes.keys() - {index.Index.PRIMARY_INDEX}:
-      raise error.SpannerError(
-          'Secondary indexes cannot be created by CreateTable; use CreateIndex '
-          'in a separate migration.')
-
-  def _validate_parent(self) -> None:
-    """Verifies that the parent table information is valid."""
-    parent_primary_keys = self._model.interleaved.primary_keys
-    primary_keys = self._model.primary_keys
-
-    message = 'Table {} is not a child of parent table {}'.format(
-        self._model.table, self._model.interleaved.table)
-    for parent_key, key in zip(parent_primary_keys, primary_keys):
-      if parent_key != key:
-        raise error.SpannerError(message)
-    if len(parent_primary_keys) > len(primary_keys):
-      raise error.SpannerError(message)
-
-  def _validate_primary_keys(self) -> None:
-    """Verifies that the primary key data is valid."""
-    if not self._model.primary_keys:
-      raise error.SpannerError('Table {} has no primary key'.format(
-          self._model.table))
-
-    for key in self._model.primary_keys:
-      if key not in self._model.fields:
-        raise error.SpannerError(
-            'Table {} column {} in primary key but not in schema'.format(
-                self._model.table, key))
-
 
 class DropTable(SchemaUpdate):
   """Update for dropping an existing table."""

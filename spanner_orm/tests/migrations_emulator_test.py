@@ -23,6 +23,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import spanner_orm
 from spanner_orm.admin import metadata
+from spanner_orm import error
 from spanner_orm.tests import models
 from spanner_orm.testlib.spanner_emulator import testlib as spanner_emulator_testlib
 
@@ -117,6 +118,108 @@ class SpecificMigrationsEmulatorTest(
               'def downgrade(): raise NotImplementedError()',
           )),
       )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='no_name',
+          create_table_migration="""
+              class _Foo(spanner_orm.Model):
+                key = spanner_orm.Field(spanner_orm.String, primary_key=True)
+
+              def upgrade():
+                return spanner_orm.CreateTable(_Foo)
+          """,
+          error_class=google_api_exceptions.InvalidArgument,
+      ),
+      dict(
+          testcase_name='no_primary_key',
+          create_table_migration="""
+              class _Foo(spanner_orm.Model):
+                __table__ = 'Foo'
+                value = spanner_orm.Field(spanner_orm.String)
+
+              def upgrade():
+                return spanner_orm.CreateTable(_Foo)
+          """,
+          error_class=error.ValidationError,
+          error_regex=r'An index must have at least one column',
+      ),
+      dict(
+          testcase_name='already_exists',
+          initial_migrations=("""
+              class _Foo(spanner_orm.Model):
+                __table__ = 'Foo'
+                key = spanner_orm.Field(spanner_orm.String, primary_key=True)
+
+              def upgrade():
+                return spanner_orm.CreateTable(_Foo)
+          """,),
+          create_table_migration="""
+              class _Foo(spanner_orm.Model):
+                __table__ = 'Foo'
+                key = spanner_orm.Field(spanner_orm.String, primary_key=True)
+
+              def upgrade():
+                return spanner_orm.CreateTable(_Foo)
+          """,
+          error_class=google_api_exceptions.FailedPrecondition,
+      ),
+      dict(
+          testcase_name='has_secondary_index',
+          create_table_migration="""
+              class _Foo(spanner_orm.Model):
+                __table__ = 'Foo'
+                key = spanner_orm.Field(spanner_orm.String, primary_key=True)
+                value = spanner_orm.Field(spanner_orm.String)
+                value_index = spanner_orm.Index(['value'])
+
+              def upgrade():
+                return spanner_orm.CreateTable(_Foo)
+          """,
+          error_class=RuntimeError,  # DO NOT MERGE
+      ),
+      dict(
+          testcase_name='mismatches_parent_primary_keys',
+          initial_migrations=("""
+              class _Parent(spanner_orm.Model):
+                __table__ = 'Parent'
+                parent_key = spanner_orm.Field(
+                    spanner_orm.String, primary_key=True)
+
+              def upgrade():
+                return spanner_orm.CreateTable(_Parent)
+          """,),
+          create_table_migration="""
+              class _Parent(spanner_orm.Model):
+                __table__ = 'Parent'
+                parent_key = spanner_orm.Field(
+                    spanner_orm.String, primary_key=True)
+
+              class _Child(spanner_orm.Model):
+                __table__ = 'Child'
+                __interleaved__ = _Parent
+                child_key = spanner_orm.Field(
+                    spanner_orm.String, primary_key=True)
+
+              def upgrade():
+                return spanner_orm.CreateTable(_Child)
+          """,
+          error_class=google_api_exceptions.FailedPrecondition,
+      ),
+  )
+  def test_create_table_error(
+      self,
+      *,
+      initial_migrations: Iterable[str] = (),
+      create_table_migration: str,
+      error_class: Type[Exception],
+      error_regex: str = '',
+  ):
+    self._append_migrations(*initial_migrations)
+    self.run_orm_migrations(self._migrations_dir)
+    self._append_migrations(create_table_migration)
+    with self.assertRaises(error_class):
+      self.run_orm_migrations(self._migrations_dir)
 
   def test_drop_interleaved_table(self):
     self._append_migrations(
