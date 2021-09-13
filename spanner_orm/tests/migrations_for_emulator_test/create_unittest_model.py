@@ -35,6 +35,8 @@ class OriginalUnittestModelTable(spanner_orm.model.Model):
   float_2 = field.Field(field.Float, nullable=True)
   string = field.Field(field.String, primary_key=True)
   string_2 = field.Field(field.String, nullable=True)
+  bytes_ = field.Field(field.Bytes, primary_key=True)
+  bytes_2 = field.Field(field.Bytes, nullable=True)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
 

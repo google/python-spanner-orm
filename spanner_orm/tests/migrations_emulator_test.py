@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import base64
 import datetime
 import logging
 import os
@@ -63,6 +64,7 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
         'string': 'string',
         'int_': 42,
         'float_': 4.2,
+        'bytes_': base64.b64encode(b'hello'),
         'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
     }).save()
     models.ForeignKeyTestModel({

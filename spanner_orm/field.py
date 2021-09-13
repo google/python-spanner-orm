@@ -18,9 +18,8 @@ import abc
 import datetime
 from typing import Any, Type
 
-from spanner_orm import error
-
 from google.cloud.spanner_v1.proto import type_pb2
+from spanner_orm import error
 
 
 class FieldType(abc.ABC):
@@ -118,7 +117,7 @@ class Float(FieldType):
 
   @staticmethod
   def ddl() -> str:
-    return "FLOAT64"
+    return 'FLOAT64'
 
   @staticmethod
   def grpc_type() -> type_pb2.Type:
@@ -184,4 +183,21 @@ class Timestamp(FieldType):
       raise error.ValidationError('{} is not of type datetime'.format(value))
 
 
-ALL_TYPES = [Boolean, Integer, Float, String, StringArray, Timestamp]
+class Bytes(FieldType):
+  """Represents a bytes type."""
+
+  @staticmethod
+  def ddl() -> str:
+    return 'BYTES(MAX)'
+
+  @staticmethod
+  def grpc_type() -> type_pb2.Type:
+    return type_pb2.Type(code=type_pb2.BYTES)
+
+  @staticmethod
+  def validate_type(value) -> None:
+    if not isinstance(value, bytes):
+      raise error.ValidationError('{} is not of type bytes'.format(value))
+
+
+ALL_TYPES = [Boolean, Integer, Float, String, StringArray, Timestamp, Bytes]

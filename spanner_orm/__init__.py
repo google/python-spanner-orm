@@ -68,6 +68,7 @@ Relationship = relationship.Relationship
 String = field.String
 StringArray = field.StringArray
 Timestamp = field.Timestamp
+Bytes = field.Bytes
 
 ArbitraryCondition = condition.ArbitraryCondition
 Column = condition.Column
