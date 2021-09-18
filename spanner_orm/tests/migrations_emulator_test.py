@@ -18,7 +18,6 @@ import os
 import textwrap
 from typing import Iterable, Type
 import unittest
-import base64
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -71,7 +70,7 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
         'string': 'string',
         'int_': 42,
         'float_': 4.2,
-        'bytes_': base64.b64encode(b'hello'),
+        'bytes_': b'A1A1',
         'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
     }).save()
     models.ForeignKeyTestModel({

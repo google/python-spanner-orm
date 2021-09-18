@@ -15,6 +15,8 @@
 """Helper to deal with field types in Spanner interactions."""
 
 import abc
+import base64
+import binascii
 import datetime
 from typing import Any, Type
 
@@ -184,7 +186,7 @@ class Timestamp(FieldType):
 
 
 class Bytes(FieldType):
-  """Represents a bytes type."""
+  """Represents a bytes type that must be base64 encoded."""
 
   @staticmethod
   def ddl() -> str:
@@ -198,6 +200,11 @@ class Bytes(FieldType):
   def validate_type(value) -> None:
     if not isinstance(value, bytes):
       raise error.ValidationError('{} is not of type bytes'.format(value))
-
+    # Rudimentary test to check for base64 encoding.
+    try:
+      base64.b64decode(value, altchars=None, validate=True)
+    except binascii.Error:
+      raise error.ValidationError(
+          '{} must be base64-encoded bytes.'.format(value))
 
 ALL_TYPES = [Boolean, Integer, Float, String, StringArray, Timestamp, Bytes]
