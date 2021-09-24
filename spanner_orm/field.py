@@ -185,7 +185,7 @@ class Timestamp(FieldType):
       raise error.ValidationError('{} is not of type datetime'.format(value))
 
 
-class Bytes(FieldType):
+class BytesBase64(FieldType):
   """Represents a bytes type that must be base64 encoded."""
 
   @staticmethod
@@ -207,4 +207,5 @@ class Bytes(FieldType):
       raise error.ValidationError(
           '{} must be base64-encoded bytes.'.format(value))
 
-ALL_TYPES = [Boolean, Integer, Float, String, StringArray, Timestamp, Bytes]
+ALL_TYPES = [Boolean, Integer, Float, String, StringArray, Timestamp,
+             BytesBase64]
