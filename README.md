@@ -1,3 +1,5 @@
+[![.github/workflows/test.yaml](https://github.com/google/python-spanner-orm/actions/workflows/test.yaml/badge.svg)](https://github.com/google/python-spanner-orm/actions/workflows/test.yaml)
+
 # Google Cloud Spanner ORM
 
 This is a lightweight ORM written in Python and built on top of Cloud Spanner.
