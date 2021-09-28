@@ -14,6 +14,7 @@
 # limitations under the License.
 """spanner_orm setup file."""
 from setuptools import setup
+
 setup(
     name='spanner-orm',
     version='0.1.10',
