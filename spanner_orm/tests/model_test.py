@@ -51,6 +51,7 @@ class ModelTest(
         string='string',
         int_=1,
         float_=2.3,
+        bytes_=b'A1A1',
         transaction=mock_transaction,
     )
 
@@ -59,7 +60,7 @@ class ModelTest(
     self.assertEqual(transaction, mock_transaction)
     self.assertEqual(table, models.UnittestModel.table)
     self.assertEqual(columns, models.UnittestModel.columns)
-    self.assertEqual(keyset.keys, [[1, 2.3, 'string']])
+    self.assertEqual(keyset.keys, [[1, 2.3, 'string', b'A1A1']])
 
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_result(self, find):
@@ -98,6 +99,7 @@ class ModelTest(
     models.UnittestModel.find_multi(
         [{
             'string': 'string',
+            'bytes_': b'bytes',
             'int_': 1,
             'float_': 2.3
         }],
@@ -109,7 +111,7 @@ class ModelTest(
     self.assertEqual(transaction, mock_transaction)
     self.assertEqual(table, models.UnittestModel.table)
     self.assertEqual(columns, models.UnittestModel.columns)
-    self.assertEqual(keyset.keys, [[1, 2.3, 'string']])
+    self.assertEqual(keyset.keys, [[1, 2.3, 'string', b'bytes']])
 
   @mock.patch('spanner_orm.table_apis.find')
   def test_find_multi_result(self, find):
@@ -226,8 +228,8 @@ class ModelTest(
       test_model.key = 'error'
 
   @parameterized.parameters(('int_2', 'foo'), ('float_2', 'bar'),
-                            ('string_2', 5), ('string_array', 'foo'),
-                            ('timestamp', 5))
+                            ('string_2', 5), ('bytes_2', 'string'),
+                            ('string_array', 'foo'), ('timestamp', 5))
   def test_set_error_on_invalid_type(self, attribute, value):
     string_array = ['foo', 'bar']
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -235,6 +237,7 @@ class ModelTest(
         'int_': 0,
         'float_': 0,
         'string': '',
+        'bytes_': b'',
         'string_array': string_array,
         'timestamp': timestamp
     })
@@ -273,6 +276,7 @@ class ModelTest(
         'int_': 0,
         'float_': 0,
         'string': '',
+        'bytes_': b'',
         'string_array': ['foo', 'bar'],
         'timestamp': timestamp,
     })
@@ -280,6 +284,7 @@ class ModelTest(
         'int_': 0,
         'float_': 0.0,
         'string': '',
+        'bytes_': b'',
         'string_array': ['foo', 'bar'],
         'timestamp': timestamp,
     })
@@ -290,18 +295,21 @@ class ModelTest(
           'int_': 0,
           'float_': 0,
           'string': '1',
+          'bytes_': b'1111',
           'timestamp': _TIMESTAMP,
       }),
        models.UnittestModel({
            'int_': 0,
            'float_': 0,
            'string': 'a',
+           'bytes_': b'A1A1',
            'timestamp': _TIMESTAMP,
        })),
       (models.UnittestModel({
           'int_': 0,
           'float_': 0,
           'string': '',
+          'bytes_': b'A1A1',
           'string_array': ['foo', 'bar'],
           'timestamp': _TIMESTAMP,
       }),
@@ -309,6 +317,7 @@ class ModelTest(
            'int_': 0,
            'float_': 0,
            'string': '',
+           'bytes_': b'A1A1',
            'string_array': ['bar', 'foo'],
            'timestamp': _TIMESTAMP,
        })),
@@ -324,7 +333,7 @@ class ModelTest(
     self.assertNotEqual(test_model1, test_model2)
 
   def test_id(self):
-    primary_key = {'string': 'foo', 'int_': 5, 'float_': 2.3}
+    primary_key = {'string': 'foo', 'int_': 5, 'float_': 2.3, 'bytes_': b'A1A1'}
     all_data = primary_key.copy()
     all_data.update({
         'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
@@ -348,6 +357,7 @@ class ModelTest(
         'int_': 0,
         'float_': 0,
         'string': '',
+        'bytes_': b'',
         'string_array': array,
         'timestamp': timestamp
     })

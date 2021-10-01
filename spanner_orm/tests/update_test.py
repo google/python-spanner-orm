@@ -1,3 +1,4 @@
+
 # python3
 # Copyright 2019 Google LLC
 #
@@ -87,8 +88,10 @@ class UpdateTest(
     test_model_ddl = ('CREATE TABLE table (int_ INT64 NOT NULL, int_2 INT64,'
                       ' float_ FLOAT64 NOT NULL, float_2 FLOAT64,'
                       ' string STRING(MAX) NOT NULL, string_2 STRING(MAX),'
+                      ' bytes_ BYTES(MAX) NOT NULL, bytes_2 BYTES(MAX),'
                       ' timestamp TIMESTAMP NOT NULL, string_array'
-                      ' ARRAY<STRING(MAX)>) PRIMARY KEY (int_, float_, string)')
+                      ' ARRAY<STRING(MAX)>) PRIMARY KEY '
+                      '(int_, float_, string, bytes_)')
     self.assertEqual(test_update.ddl(), test_model_ddl)
 
   @mock.patch('spanner_orm.admin.metadata.SpannerMetadata.model')
