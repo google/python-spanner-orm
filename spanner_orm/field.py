@@ -207,5 +207,7 @@ class BytesBase64(FieldType):
       raise error.ValidationError(
           '{} must be base64-encoded bytes.'.format(value))
 
-ALL_TYPES = [Boolean, Integer, Float, String, StringArray, Timestamp,
-             BytesBase64]
+
+ALL_TYPES = [
+    Boolean, Integer, Float, String, StringArray, Timestamp, BytesBase64
+]
