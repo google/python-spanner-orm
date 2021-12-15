@@ -21,7 +21,8 @@ import warnings
 from google.api_core import client_options as api_client_options
 from google.api_core import exceptions
 from google.auth import credentials as auth_credentials
-from google.cloud import spanner
+# TODO(https://github.com/google/pytype/issues/1081): Remove pytype disable.
+from google.cloud import spanner  # pytype: disable=import-error
 from google.cloud.spanner_v1 import database as spanner_database
 from google.cloud.spanner_v1 import pool as spanner_pool
 from spanner_orm import error
