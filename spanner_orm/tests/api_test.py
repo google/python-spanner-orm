@@ -19,7 +19,8 @@ import warnings
 
 from absl.testing import parameterized
 from google.api_core import exceptions
-from google.cloud import spanner
+# TODO(https://github.com/google/pytype/issues/1081): Remove pytype disable.
+from google.cloud import spanner  # pytype: disable=import-error
 
 from spanner_orm import api
 from spanner_orm import error
