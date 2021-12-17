@@ -19,8 +19,8 @@ from typing import Any, Dict, Iterable, List, Sequence
 
 # TODO(https://github.com/google/pytype/issues/1081): Remove pytype disable.
 from google.cloud import spanner  # pytype: disable=import-error
+from google.cloud import spanner_v1
 from google.cloud.spanner_v1 import transaction as spanner_transaction
-from google.cloud.spanner_v1.proto import type_pb2
 
 _logger = logging.getLogger(__name__)
 
@@ -50,9 +50,10 @@ def find(transaction: spanner_transaction.Transaction, table_name: str,
   return list(stream_results)
 
 
-def sql_query(transaction: spanner_transaction.Transaction, query: str,
-              parameters: Dict[str, Any],
-              parameter_types: Dict[str, type_pb2.Type]) -> List[Sequence[Any]]:
+def sql_query(
+    transaction: spanner_transaction.Transaction, query: str,
+    parameters: Dict[str, Any],
+    parameter_types: Dict[str, spanner_v1.Type]) -> List[Sequence[Any]]:
   """Executes a given SQL query against the Spanner database.
 
   This isn't technically read-only, but it's necessary to implement the read-
