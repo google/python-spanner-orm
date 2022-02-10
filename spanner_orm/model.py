@@ -196,6 +196,9 @@ class Model(metaclass=ModelMetaclass):
       return NotImplemented
     return self.values == other.values
 
+  def __repr__(self) -> str:
+    return f'{self.__class__.__qualname__}({self.values!r})'
+
   @classmethod
   def spanner_api(cls) -> api.SpannerApi:
     if not cls.table:
