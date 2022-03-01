@@ -21,7 +21,7 @@ import datetime
 import decimal
 import enum
 import string
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 from spanner_orm import error
 from spanner_orm import field
@@ -364,10 +364,10 @@ class ColumnsEqualCondition(Condition):
           origin.name, dest.name))
 
 
-class ForceIndexCondition(Condition):
-  """Used to indicate which index should be used in a Spanner query."""
+class _IndexCondition(Condition):
+  """Base class for conditions based on an Index."""
 
-  def __init__(self, index_or_name: Union[Type[index.Index], str]):
+  def __init__(self, index_or_name: Union[index.Index, str]):
     super().__init__()
     if isinstance(index_or_name, index.Index):
       self.name = index_or_name.name
@@ -380,18 +380,6 @@ class ForceIndexCondition(Condition):
     super().bind(model_class)
     self.index = self.model_class.indexes[self.name]
 
-  def _params(self) -> Dict[str, Any]:
-    return {}
-
-  def segment(self) -> Segment:
-    return Segment.FROM
-
-  def _sql(self) -> str:
-    return '@{{FORCE_INDEX={}}}'.format(self.name)
-
-  def _types(self) -> Dict[str, type_pb2.Type]:
-    return {}
-
   def _validate(self, model_class: Type[Any]) -> None:
     if self.name not in model_class.indexes:
       raise error.ValidationError('{} is not an index on {}'.format(
@@ -400,8 +388,53 @@ class ForceIndexCondition(Condition):
       raise error.ValidationError('{} does not belong to {}'.format(
           self.index.name, model_class.table))
 
+
+class ForceIndexCondition(_IndexCondition):
+  """Used to indicate which index should be used in a Spanner query."""
+
+  def __init__(
+      self,
+      index_or_name: Union[index.Index, str],
+      *,
+      extra_hints: Sequence[str] = (),
+  ):
+    super().__init__(index_or_name)
+    self._extra_hints = extra_hints
+
+  def _params(self) -> Dict[str, Any]:
+    return {}
+
+  def segment(self) -> Segment:
+    return Segment.FROM
+
+  def _sql(self) -> str:
+    hints = (f'FORCE_INDEX={self.name}', *self._extra_hints)
+    return f'@{{{",".join(hints)}}}'
+
+  def _types(self) -> Dict[str, type_pb2.Type]:
+    return {}
+
+  def _validate(self, model_class: Type[Any]) -> None:
+    super()._validate(model_class)
     if model_class.indexes[self.name].primary:
       raise error.ValidationError('Cannot force query using primary index')
+
+
+class _IndexIgnoreNullsCondition(_IndexCondition):
+  """Condition to filter NULL values in any column of an index."""
+
+  def _params(self) -> Dict[str, Any]:
+    return {}
+
+  def segment(self) -> Segment:
+    return Segment.WHERE
+
+  def _sql(self) -> str:
+    return '({})'.format(' AND '.join(
+        f'{column} IS NOT NULL' for column in self.index.columns))
+
+  def _types(self) -> Dict[str, type_pb2.Type]:
+    return {}
 
 
 class IncludesCondition(Condition):
@@ -886,6 +919,35 @@ def force_index(forced_index: Union[index.Index, str]) -> ForceIndexCondition:
     A Condition subclass that will be used in the query
   """
   return ForceIndexCondition(forced_index)
+
+
+def force_null_filtered_index(
+    forced_index: Union[index.Index, str]) -> Sequence[Condition]:
+  """Returns conditions to force the query to use the given NULL_FILTERED index.
+
+  In Cloud Spanner, a query against a NULL_FILTERED index is tested to see if it
+  can use safely use that index. If using the index would result in incorrect
+  results (e.g., by ignoring NULL values that would be in the same query without
+  using the index), it's an error. However, the Cloud Spanner Emulator
+  doesn't support that check:
+  https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/blob/e887ff5569684e6e45ce7c90d0fdfb7b1faa1491/common/errors.cc#L1790-L1800
+
+  For queries that can safely ignore any  NULL values covered by the index, this
+  function returns conditions that both filter out all relevant NULLs (avoiding
+  the potential error in Cloud Spanner) and disable the check in Cloud Spanner
+  Emulator.
+
+  Args:
+    forced_index: NULL_FILTERED index to use.
+  """
+  return (
+      ForceIndexCondition(
+          forced_index,
+          extra_hints=(
+              'spanner_emulator.disable_query_null_filtered_index_check=true',
+          )),
+      _IndexIgnoreNullsCondition(forced_index),
+  )
 
 
 def greater_than(column: Union[field.Field, str],
