@@ -333,6 +333,16 @@ class ConditionTest(
             )),
     )
 
+  def test_force_null_filtered_index(self):
+    non_null_model = models.NullFilteredIndexModel(
+        dict(key='a', value_1='a', value_2=1))
+    non_null_model.save()
+    models.NullFilteredIndexModel(dict(key='b', value_1=None, value_2=2)).save()
+    self.assertCountEqual((non_null_model,),
+                          models.NullFilteredIndexModel.where(
+                              *spanner_orm.force_null_filtered_index(
+                                  models.NullFilteredIndexModel.value_index)))
+
 
 if __name__ == '__main__':
   logging.basicConfig()

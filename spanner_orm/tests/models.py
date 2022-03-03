@@ -130,3 +130,13 @@ class UnittestModelWithoutSecondaryIndexes(model.Model):
   bytes_2 = field.Field(field.BytesBase64, nullable=True)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
+
+
+class NullFilteredIndexModel(model.Model):
+  """Model class for testing NULL_FILTERED indexes."""
+
+  __table__ = 'NullFilteredIndexModel'
+  key = field.Field(field.String, primary_key=True)
+  value_1 = field.Field(field.String, nullable=True)
+  value_2 = field.Field(field.Integer)
+  value_index = index.Index(['value_1', 'value_2'], null_filtered=True)
