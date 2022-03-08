@@ -43,7 +43,7 @@ jobs:
         pip install \
           absl-py \
           google-api-core \
-          'google-cloud-spanner >= 1.6, <2.0.0dev' \
+          'google-cloud-spanner >= 2, <4' \
           immutabledict \
           portpicker \
           pytest
