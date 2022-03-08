@@ -192,11 +192,8 @@ def _spanner_type_of_python_object(
         _spanner_type_of_python_object(item)
         for item in value
         if item is not None)
-    unique_element_type_count = len({
-        # Protos aren't hashable, so serialize them.
-        str(element_type) for element_type in element_types
-    })
-    if unique_element_type_count == 1:
+    if element_types and all(
+        a == b for a, b in zip(element_types, element_types[1:])):
       return spanner_v1.Type(
           code=spanner_v1.TypeCode.ARRAY,
           array_element_type=element_types[0],
