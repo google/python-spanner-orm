@@ -81,6 +81,7 @@ columns_equal = condition.columns_equal
 contains = condition.contains
 equal_to = condition.equal_to
 force_index = condition.force_index
+force_null_filtered_index = condition.force_null_filtered_index
 greater_than = condition.greater_than
 greater_than_or_equal_to = condition.greater_than_or_equal_to
 in_list = condition.in_list
