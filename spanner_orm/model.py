@@ -31,8 +31,7 @@ from spanner_orm import relationship
 from spanner_orm import table_apis
 
 from google.api_core import exceptions
-# TODO(https://github.com/google/pytype/issues/1081): Remove pytype disable.
-from google.cloud import spanner  # pytype: disable=import-error
+from google.cloud import spanner
 from google.cloud.spanner_v1 import transaction as spanner_transaction
 
 T = TypeVar('T')
