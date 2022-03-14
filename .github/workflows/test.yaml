@@ -53,7 +53,7 @@ jobs:
         yapf --diff --recursive --parallel .
     - name: Check types
       run: |
-        pip install pytype
+        pip install pytype==2021.11.29
         pytype --jobs=auto --keep-going spanner_orm
     - name: Test
       env:
