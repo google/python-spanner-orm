@@ -24,7 +24,7 @@ from spanner_orm import field
 from spanner_orm import query
 from spanner_orm.tests import models
 
-from google.cloud.spanner_v1.proto import type_pb2
+from google.cloud import spanner_v1
 
 
 def now():
@@ -178,8 +178,8 @@ class QueryTest(parameterized.TestCase):
       column_key = '{}0'.format(column)
       expected_sql = ' WHERE table.{} {} UNNEST(@{})'.format(
           column, current_condition.operator, column_key)
-      list_type = type_pb2.Type(
-          code=type_pb2.ARRAY, array_element_type=grpc_type)
+      list_type = spanner_v1.Type(
+          code=spanner_v1.TypeCode.ARRAY, array_element_type=grpc_type)
       self.assertEndsWith(select_query.sql(), expected_sql)
       self.assertEqual(select_query.parameters(), {column_key: values})
       self.assertEqual(select_query.types(), {column_key: list_type})

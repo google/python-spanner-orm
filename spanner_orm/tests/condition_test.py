@@ -22,7 +22,8 @@ import unittest
 
 from absl.testing import parameterized
 from google.api_core import datetime_helpers
-from google.cloud.spanner_v1.proto import type_pb2
+from google.cloud import spanner
+from google.cloud import spanner_v1
 
 import spanner_orm
 from spanner_orm import condition
@@ -45,30 +46,30 @@ class ConditionTest(
         ))
 
   @parameterized.parameters(
-      (True, type_pb2.Type(code=type_pb2.BOOL)),
-      (0, type_pb2.Type(code=type_pb2.INT64)),
-      (0.0, type_pb2.Type(code=type_pb2.FLOAT64)),
+      (True, spanner_v1.param_types.BOOL),
+      (0, spanner_v1.param_types.INT64),
+      (0.0, spanner_v1.param_types.FLOAT64),
       (
           datetime_helpers.DatetimeWithNanoseconds(2021, 1, 5),
-          type_pb2.Type(code=type_pb2.TIMESTAMP),
+          spanner_v1.param_types.TIMESTAMP,
       ),
-      (datetime.datetime(2021, 1, 5), type_pb2.Type(code=type_pb2.TIMESTAMP)),
-      (datetime.date(2021, 1, 5), type_pb2.Type(code=type_pb2.DATE)),
-      (b'\x01', type_pb2.Type(code=type_pb2.BYTES)),
-      ('foo', type_pb2.Type(code=type_pb2.STRING)),
-      (decimal.Decimal('1.23'), type_pb2.Type(code=type_pb2.NUMERIC)),
+      (datetime.datetime(2021, 1, 5), spanner_v1.param_types.TIMESTAMP),
+      (datetime.date(2021, 1, 5), spanner_v1.param_types.DATE),
+      (b'\x01', spanner_v1.param_types.BYTES),
+      ('foo', spanner_v1.param_types.STRING),
+      (decimal.Decimal('1.23'), spanner_v1.param_types.NUMERIC),
       (
           (0, 1),
-          type_pb2.Type(
-              code=type_pb2.ARRAY,
-              array_element_type=type_pb2.Type(code=type_pb2.INT64),
+          spanner_v1.Type(
+              code=spanner_v1.TypeCode.ARRAY,
+              array_element_type=spanner_v1.param_types.INT64,
           ),
       ),
       (
           ['a', None, 'b'],
-          type_pb2.Type(
-              code=type_pb2.ARRAY,
-              array_element_type=type_pb2.Type(code=type_pb2.STRING),
+          spanner_v1.Type(
+              code=spanner_v1.TypeCode.ARRAY,
+              array_element_type=spanner_v1.param_types.STRING,
           ),
       ),
   )
@@ -160,8 +161,8 @@ class ConditionTest(
               key_param0='some-key',
           ),
           dict(
-              true_param0=type_pb2.Type(code=type_pb2.BOOL),
-              key_param0=type_pb2.Type(code=type_pb2.STRING),
+              true_param0=spanner_v1.param_types.BOOL,
+              key_param0=spanner_v1.param_types.STRING,
           ),
           ('SmallTestModel.key = '
            'IF(@true_param0, @key_param0, SmallTestModel.value_1)'),
@@ -248,7 +249,7 @@ class ConditionTest(
           condition.OrCondition(
               [condition.equal_to(models.SmallTestModel.key, 'a')]),
           dict(key0='a'),
-          dict(key0=type_pb2.Type(code=type_pb2.STRING)),
+          dict(key0=spanner_v1.param_types.STRING),
           '((SmallTestModel.key = @key0))',
           'a',
       ),
@@ -271,10 +272,10 @@ class ConditionTest(
               value_13='b',
           ),
           dict(
-              key0=type_pb2.Type(code=type_pb2.STRING),
-              value_11=type_pb2.Type(code=type_pb2.STRING),
-              key2=type_pb2.Type(code=type_pb2.STRING),
-              value_13=type_pb2.Type(code=type_pb2.STRING),
+              key0=spanner_v1.param_types.STRING,
+              value_11=spanner_v1.param_types.STRING,
+              key2=spanner_v1.param_types.STRING,
+              value_13=spanner_v1.param_types.STRING,
           ),
           ('('
            '(SmallTestModel.key = @key0 AND SmallTestModel.value_1 = @value_11)'

@@ -55,9 +55,9 @@ def _get_instance(spanner_client: client.Client) -> instance.Instance:
   Args:
     spanner_client: An initialized spanner client.
   """
-  existing_instances = list(spanner_client.list_instances())
-  if existing_instances:
-    return existing_instances[0]
+  existing_instances_pb = list(spanner_client.list_instances())
+  if existing_instances_pb:
+    return instance.Instance.from_pb(existing_instances_pb[0], spanner_client)
 
   # The emulator has one default config.
   config = list(spanner_client.list_instance_configs())[0]

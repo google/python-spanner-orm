@@ -20,7 +20,8 @@ import binascii
 import datetime
 from typing import Any, Type
 
-from google.cloud.spanner_v1.proto import type_pb2
+from google.cloud import spanner
+from google.cloud import spanner_v1
 from spanner_orm import error
 
 
@@ -34,7 +35,7 @@ class FieldType(abc.ABC):
 
   @staticmethod
   @abc.abstractmethod
-  def grpc_type() -> type_pb2.Type:
+  def grpc_type() -> spanner_v1.Type:
     raise NotImplementedError
 
   @staticmethod
@@ -88,8 +89,8 @@ class Boolean(FieldType):
     return 'BOOL'
 
   @staticmethod
-  def grpc_type() -> type_pb2.Type:
-    return type_pb2.Type(code=type_pb2.BOOL)
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.BOOL
 
   @staticmethod
   def validate_type(value: Any) -> None:
@@ -105,8 +106,8 @@ class Integer(FieldType):
     return 'INT64'
 
   @staticmethod
-  def grpc_type() -> type_pb2.Type:
-    return type_pb2.Type(code=type_pb2.INT64)
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.INT64
 
   @staticmethod
   def validate_type(value: Any) -> None:
@@ -122,8 +123,8 @@ class Float(FieldType):
     return 'FLOAT64'
 
   @staticmethod
-  def grpc_type() -> type_pb2.Type:
-    return type_pb2.Type(code=type_pb2.FLOAT64)
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.FLOAT64
 
   @staticmethod
   def validate_type(value: Any) -> None:
@@ -139,8 +140,8 @@ class String(FieldType):
     return 'STRING(MAX)'
 
   @staticmethod
-  def grpc_type() -> type_pb2.Type:
-    return type_pb2.Type(code=type_pb2.STRING)
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.STRING
 
   @staticmethod
   def validate_type(value) -> None:
@@ -156,8 +157,8 @@ class StringArray(FieldType):
     return 'ARRAY<STRING(MAX)>'
 
   @staticmethod
-  def grpc_type() -> type_pb2.Type:
-    return type_pb2.Type(code=type_pb2.ARRAY)
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.Array(spanner.param_types.STRING)
 
   @staticmethod
   def validate_type(value: Any) -> None:
@@ -176,8 +177,8 @@ class Timestamp(FieldType):
     return 'TIMESTAMP'
 
   @staticmethod
-  def grpc_type() -> type_pb2.Type:
-    return type_pb2.Type(code=type_pb2.TIMESTAMP)
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.TIMESTAMP
 
   @staticmethod
   def validate_type(value: Any) -> None:
@@ -193,8 +194,8 @@ class BytesBase64(FieldType):
     return 'BYTES(MAX)'
 
   @staticmethod
-  def grpc_type() -> type_pb2.Type:
-    return type_pb2.Type(code=type_pb2.BYTES)
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.BYTES
 
   @staticmethod
   def validate_type(value) -> None:

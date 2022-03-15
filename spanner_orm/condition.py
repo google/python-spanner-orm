@@ -30,7 +30,8 @@ from spanner_orm import index
 from spanner_orm import relationship
 
 from google.api_core import datetime_helpers
-from google.cloud.spanner_v1.proto import type_pb2
+from google.cloud import spanner
+from google.cloud import spanner_v1
 import immutabledict
 
 T = TypeVar('T')
@@ -105,7 +106,7 @@ class Condition(abc.ABC):
   def _sql(self) -> str:
     pass
 
-  def types(self) -> Dict[str, type_pb2.Type]:
+  def types(self) -> Dict[str, spanner_v1.Type]:
     """Returns parameter types to be used in the SQL query.
 
     Returns:
@@ -117,7 +118,7 @@ class Condition(abc.ABC):
     return self._types()
 
   @abc.abstractmethod
-  def _types(self) -> Dict[str, type_pb2.Type]:
+  def _types(self) -> Dict[str, spanner_v1.Type]:
     raise NotImplementedError
 
   @abc.abstractmethod
@@ -158,7 +159,8 @@ GuessableParamType = Union[
 ]
 
 
-def _spanner_type_of_python_object(value: GuessableParamType) -> type_pb2.Type:
+def _spanner_type_of_python_object(
+    value: GuessableParamType) -> spanner_v1.Type:
   """Returns the Cloud Spanner type of the given object.
 
   Args:
@@ -173,31 +175,27 @@ def _spanner_type_of_python_object(value: GuessableParamType) -> type_pb2.Type:
     raise TypeError(
         'Cannot infer type of None, because any SQL type can be NULL.')
   simple_type_code = {
-      bool: type_pb2.BOOL,
-      int: type_pb2.INT64,
-      float: type_pb2.FLOAT64,
-      datetime_helpers.DatetimeWithNanoseconds: type_pb2.TIMESTAMP,
-      datetime.datetime: type_pb2.TIMESTAMP,
-      datetime.date: type_pb2.DATE,
-      bytes: type_pb2.BYTES,
-      str: type_pb2.STRING,
-      decimal.Decimal: type_pb2.NUMERIC,
+      bool: spanner_v1.TypeCode.BOOL,
+      int: spanner_v1.TypeCode.INT64,
+      float: spanner_v1.TypeCode.FLOAT64,
+      datetime_helpers.DatetimeWithNanoseconds: spanner_v1.TypeCode.TIMESTAMP,
+      datetime.datetime: spanner_v1.TypeCode.TIMESTAMP,
+      datetime.date: spanner_v1.TypeCode.DATE,
+      bytes: spanner_v1.TypeCode.BYTES,
+      str: spanner_v1.TypeCode.STRING,
+      decimal.Decimal: spanner_v1.TypeCode.NUMERIC,
   }.get(type(value))
   if simple_type_code is not None:
-    return type_pb2.Type(code=simple_type_code)
+    return spanner_v1.Type(code=simple_type_code)
   elif isinstance(value, (list, tuple)):
     element_types = tuple(
         _spanner_type_of_python_object(item)
         for item in value
         if item is not None)
-    unique_element_type_count = len({
-        # Protos aren't hashable, so use their serializations.
-        element_type.SerializeToString(deterministic=True)
-        for element_type in element_types
-    })
-    if unique_element_type_count == 1:
-      return type_pb2.Type(
-          code=type_pb2.ARRAY,
+    if element_types and all(
+        a == b for a, b in zip(element_types, element_types[1:])):
+      return spanner_v1.Type(
+          code=spanner_v1.TypeCode.ARRAY,
           array_element_type=element_types[0],
       )
     else:
@@ -211,7 +209,7 @@ def _spanner_type_of_python_object(value: GuessableParamType) -> type_pb2.Type:
 class Param:
   """Parameter for substitution into a SQL query."""
   value: Any
-  type: type_pb2.Type
+  type: spanner_v1.Type
 
   @classmethod
   def from_value(cls: Type[T], value: GuessableParamType) -> T:
@@ -220,14 +218,13 @@ class Param:
 
     # BYTES must be base64-encoded, see
     # https://github.com/googleapis/python-spanner/blob/87789c939990794bfd91f5300bedc449fd74bd7e/google/cloud/spanner_v1/proto/type.proto#L108-L110
-    if (isinstance(value, bytes) and
-        guessed_type == type_pb2.Type(code=type_pb2.BYTES)):
+    if (isinstance(value, bytes) and guessed_type == spanner.param_types.BYTES):
       encoded_value = base64.b64encode(value).decode()
     elif (isinstance(value, (list, tuple)) and
           all(isinstance(x, bytes) for x in value if x is not None) and
-          guessed_type == type_pb2.Type(
-              code=type_pb2.ARRAY,
-              array_element_type=type_pb2.Type(code=type_pb2.BYTES),
+          guessed_type == spanner_v1.Type(
+              code=spanner_v1.TypeCode.ARRAY,
+              array_element_type=spanner.param_types.BYTES,
           )):
       encoded_value = tuple(
           None if item is None else base64.b64encode(item).decode()
@@ -299,7 +296,7 @@ class ArbitraryCondition(Condition):
         if isinstance(v, Param)
     }
 
-  def _types(self) -> Dict[str, type_pb2.Type]:
+  def _types(self) -> Dict[str, spanner_v1.Type]:
     """See base class."""
     return {
         self.key(k): v.type
@@ -345,7 +342,7 @@ class ColumnsEqualCondition(Condition):
         other_table=self.destination_model_class.table,
         other_column=self.destination_column)
 
-  def _types(self) -> Dict[str, type_pb2.Type]:
+  def _types(self) -> Dict[str, spanner_v1.Type]:
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
@@ -411,7 +408,7 @@ class ForceIndexCondition(_IndexCondition):
     hints = (f'FORCE_INDEX={self.name}', *self._extra_hints)
     return f'@{{{",".join(hints)}}}'
 
-  def _types(self) -> Dict[str, type_pb2.Type]:
+  def _types(self) -> Dict[str, spanner_v1.Type]:
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
@@ -433,7 +430,7 @@ class _IndexIgnoreNullsCondition(_IndexCondition):
     return '({})'.format(' AND '.join(
         f'{column} IS NOT NULL' for column in self.index.columns))
 
-  def _types(self) -> Dict[str, type_pb2.Type]:
+  def _types(self) -> Dict[str, spanner_v1.Type]:
     return {}
 
 
@@ -542,7 +539,7 @@ class IncludesCondition(Condition):
   def _sql(self) -> str:
     return ''
 
-  def _types(self) -> Dict[str, type_pb2.Type]:
+  def _types(self) -> Dict[str, spanner_v1.Type]:
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
@@ -601,10 +598,10 @@ class LimitCondition(Condition):
           limit_key=self._limit_key, offset_key=self._offset_key)
     return 'LIMIT @{limit_key}'.format(limit_key=self._limit_key)
 
-  def _types(self) -> Dict[str, type_pb2.Type]:
-    types = {self._limit_key: type_pb2.Type(code=type_pb2.INT64)}
+  def _types(self) -> Dict[str, spanner_v1.Type]:
+    types = {self._limit_key: spanner.param_types.INT64}
     if self.offset:
-      types[self._offset_key] = type_pb2.Type(code=type_pb2.INT64)
+      types[self._offset_key] = spanner.param_types.INT64
     return types
 
   def _validate(self, model_class: Type[Any]) -> None:
@@ -657,7 +654,7 @@ class OrCondition(Condition):
   def segment(self) -> Segment:
     return Segment.WHERE
 
-  def _types(self) -> type_pb2.Type:
+  def _types(self) -> spanner_v1.Type:
     result = {}
     for condition in self.all_conditions:
       condition.suffix = str(int(self.suffix or 0) + len(result))
@@ -702,7 +699,7 @@ class OrderByCondition(Condition):
   def segment(self) -> Segment:
     return Segment.ORDER_BY
 
-  def _types(self) -> type_pb2.Type:
+  def _types(self) -> spanner_v1.Type:
     return {}
 
   def _validate(self, model_class: Type[Any]) -> None:
@@ -747,7 +744,7 @@ class ComparisonCondition(Condition):
         operator=self.operator,
         column_key=self._column_key)
 
-  def _types(self) -> type_pb2.Type:
+  def _types(self) -> spanner_v1.Type:
     return {self._column_key: self.model_class.fields[self.column].grpc_type()}
 
   def _validate(self, model_class: Type[Any]) -> None:
@@ -773,9 +770,10 @@ class ListComparisonCondition(ComparisonCondition):
         operator=self.operator,
         column_key=self._column_key)
 
-  def _types(self) -> type_pb2.Type:
+  def _types(self) -> spanner_v1.Type:
     grpc_type = self.model_class.fields[self.column].grpc_type()
-    list_type = type_pb2.Type(code=type_pb2.ARRAY, array_element_type=grpc_type)
+    list_type = spanner_v1.Type(
+        code=spanner_v1.TypeCode.ARRAY, array_element_type=grpc_type)
     return {self._column_key: list_type}
 
   def _validate(self, model_class: Type[Any]) -> None:
@@ -815,7 +813,7 @@ class NullableComparisonCondition(ComparisonCondition):
           operator=self.nullable_operator)
     return super()._sql()
 
-  def _types(self) -> type_pb2.Type:
+  def _types(self) -> spanner_v1.Type:
     if self.is_null():
       return {}
     return super()._types()
