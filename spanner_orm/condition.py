@@ -377,18 +377,6 @@ class _IndexCondition(Condition):
     super().bind(model_class)
     self.index = self.model_class.indexes[self.name]
 
-  def _params(self) -> Dict[str, Any]:
-    return {}
-
-  def segment(self) -> Segment:
-    return Segment.FROM
-
-  def _sql(self) -> str:
-    return '@{{FORCE_INDEX={}}}'.format(self.name)
-
-  def _types(self) -> Dict[str, spanner_v1.Type]:
-    return {}
-
   def _validate(self, model_class: Type[Any]) -> None:
     if self.name not in model_class.indexes:
       raise error.ValidationError('{} is not an index on {}'.format(
