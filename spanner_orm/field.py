@@ -150,7 +150,7 @@ class String(FieldType):
 
   @staticmethod
   def ddl() -> str:
-      return 'STRING(MAX)'
+    return 'STRING(MAX)'
 
   @staticmethod
   def grpc_type() -> spanner_v1.Type:
