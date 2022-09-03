@@ -39,8 +39,26 @@ class ColumnSchema(schema.InformationSchema):
 
   def field_type(self) -> Type[field.FieldType]:
     for field_type in field.ALL_TYPES:
-      if self.spanner_type == field_type.ddl():
+      len = _get_type_len(self.spanner_type)
+      actual_type = field_type.ddl()
+      if len:
+        actual_type = actual_type.replace('(MAX)', f'({len})')
+      if self.spanner_type == actual_type:
         return field_type
 
     raise error.SpannerError('No corresponding Type for {}'.format(
         self.spanner_type))
+
+
+def _get_type_len(spanner_type: str):
+  """Retrieves length for existing STRING, BYTES or ARRAY<STRING> field."""
+  bytes_len = spanner_type[6:-1]
+  str_len = spanner_type[7:-1]
+  array_str_len = spanner_type[13:-2]
+  if bytes_len.isnumeric():
+    return int(bytes_len)
+  elif str_len.isnumeric():
+    return int(str_len)
+  elif array_str_len.isnumeric():
+    return int(array_str_len)
+  return 0

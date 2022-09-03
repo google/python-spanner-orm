@@ -50,16 +50,29 @@ class Field(object):
   def __init__(self,
                field_type: Type[FieldType],
                nullable: bool = False,
-               primary_key: bool = False):
+               primary_key: bool = False,
+               length: int = 0):
     self.name = None
     self._type = field_type
     self._nullable = nullable
     self._primary_key = primary_key
+    self._length = length
+
+    if self._length < 0:
+      raise error.ValidationError('length can not be less than zero')
+
+    length_support = ["STRING(MAX)", "ARRAY<STRING(MAX)>", "BYTES(MAX)"]
+
+    if self._type.ddl() not in length_support and self._length:
+      raise error.ValidationError('length can not be set on field {}'.format(self._type))
 
   def ddl(self) -> str:
+    base_ddl = self._type.ddl()
+    if self._length:
+      base_ddl = base_ddl.replace('(MAX)', f'({self._length})')
     if self._nullable:
-      return self._type.ddl()
-    return '{field_type} NOT NULL'.format(field_type=self._type.ddl())
+      return base_ddl
+    return '{field_type} NOT NULL'.format(field_type=base_ddl)
 
   def field_type(self) -> Type[FieldType]:
     return self._type
@@ -137,7 +150,7 @@ class String(FieldType):
 
   @staticmethod
   def ddl() -> str:
-    return 'STRING(MAX)'
+      return 'STRING(MAX)'
 
   @staticmethod
   def grpc_type() -> spanner_v1.Type:
@@ -147,7 +160,6 @@ class String(FieldType):
   def validate_type(value) -> None:
     if not isinstance(value, str):
       raise error.ValidationError('{} is not of type str'.format(value))
-
 
 class StringArray(FieldType):
   """Represents an array of strings type."""
@@ -167,6 +179,26 @@ class StringArray(FieldType):
     for item in value:
       if not isinstance(item, str):
         raise error.ValidationError('{} is not of type str'.format(item))
+
+
+class IntArray(FieldType):
+  """Represents an array of strings type."""
+
+  @staticmethod
+  def ddl() -> str:
+    return 'ARRAY<INT64>'
+
+  @staticmethod
+  def grpc_type() -> spanner_v1.Type:
+    return spanner.param_types.Array(spanner.param_types.INT64)
+
+  @staticmethod
+  def validate_type(value: Any) -> None:
+    if not isinstance(value, list):
+      raise error.ValidationError('{} is not of type list'.format(value))
+    for item in value:
+      if not isinstance(item, int):
+        raise error.ValidationError('{} is not of type int'.format(item))
 
 
 class Timestamp(FieldType):
@@ -210,5 +242,5 @@ class BytesBase64(FieldType):
 
 
 ALL_TYPES = [
-    Boolean, Integer, Float, String, StringArray, Timestamp, BytesBase64
+    Boolean, Integer, IntArray, Float, String, StringArray, Timestamp, BytesBase64,
 ]
