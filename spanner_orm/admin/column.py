@@ -41,36 +41,8 @@ class ColumnSchema(schema.InformationSchema):
 
   def field_type(self) -> Type[field.FieldType]:
     for field_type in field.ALL_TYPES:
-      len = _get_type_len(self.spanner_type)
-      contain_commit_timestamp_option = _get_commit_timestamp_option(
-          self.spanner_type)
-      actual_type = field_type.ddl()
-      if len:
-        actual_type = actual_type.replace('(MAX)', f'({len})')
-      if contain_commit_timestamp_option:
-        actual_type = f'{actual_type}{allow_commit_timestamp_option}'
-      if self.spanner_type == actual_type:
+      if field_type.matches(self.spanner_type):
         return field_type
 
     raise error.SpannerError('No corresponding Type for {}'.format(
         self.spanner_type))
-
-
-def _get_type_len(spanner_type: str) -> int:
-  """Retrieve length for existing STRING, BYTES or ARRAY<STRING> field."""
-  bytes_len = spanner_type[6:-1]
-  str_len = spanner_type[7:-1]
-  array_str_len = spanner_type[13:-2]
-  if bytes_len.isnumeric():
-    return int(bytes_len)
-  elif str_len.isnumeric():
-    return int(str_len)
-  elif array_str_len.isnumeric():
-    return int(array_str_len)
-  return 0
-
-
-def _get_commit_timestamp_option(spanner_type: str) -> bool:
-  """Retrive commit timestamp option if any."""
-  return spanner_type.startswith('TIMESTAMP') and spanner_type.endswith(
-      allow_commit_timestamp_option)

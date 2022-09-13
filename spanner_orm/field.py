@@ -43,6 +43,18 @@ class FieldType(abc.ABC):
   def validate_type(value: Any) -> None:
     raise NotImplementedError
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    raise NotImplementedError
+
+  @staticmethod
+  def support_length() -> bool:
+    raise NotImplementedError
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    raise NotImplementedError
+
 
 class Field(object):
   """Represents a column in a table as a field in a model."""
@@ -63,13 +75,12 @@ class Field(object):
     if self._length < 0:
       raise error.ValidationError('length can not be less than zero')
 
-    length_support = ["STRING(MAX)", "ARRAY<STRING(MAX)>", "BYTES(MAX)"]
-
-    if self._type.ddl() not in length_support and self._length:
+    if not self._type.support_length() and self._length:
       raise error.ValidationError('length can not be set on field {}'.format(
           self._type))
 
-    if self._type.ddl() != "TIMESTAMP" and self._allow_commit_timestamp:
+    if not self._type.support_commit_timestamp(
+    ) and self._allow_commit_timestamp:
       raise error.ValidationError(
           'allow_commit_timestamp can not be set on field {}'.format(
               self._type))
@@ -121,6 +132,18 @@ class Boolean(FieldType):
     if not isinstance(value, bool):
       raise error.ValidationError('{} is not of type bool'.format(value))
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'BOOL'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return False
+
 
 class Integer(FieldType):
   """Represents an integer type."""
@@ -137,6 +160,18 @@ class Integer(FieldType):
   def validate_type(value: Any) -> None:
     if not isinstance(value, int):
       raise error.ValidationError('{} is not of type int'.format(value))
+
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'INT64'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return False
 
 
 class Float(FieldType):
@@ -155,6 +190,18 @@ class Float(FieldType):
     if not isinstance(value, (int, float)):
       raise error.ValidationError('{} is not of type float'.format(value))
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'FLOAT64'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return False
+
 
 class String(FieldType):
   """Represents a string type."""
@@ -171,6 +218,18 @@ class String(FieldType):
   def validate_type(value) -> None:
     if not isinstance(value, str):
       raise error.ValidationError('{} is not of type str'.format(value))
+
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type[0:7] == 'STRING(' and type[-1] == ')'
+
+  @staticmethod
+  def support_length() -> bool:
+    return True
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return False
 
 
 class StringArray(FieldType):
@@ -192,6 +251,18 @@ class StringArray(FieldType):
       if not isinstance(item, str):
         raise error.ValidationError('{} is not of type str'.format(item))
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type[0:13] == 'ARRAY<STRING(' and type[-2:] == ')>'
+
+  @staticmethod
+  def support_length() -> bool:
+    return True
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return False
+
 
 class IntArray(FieldType):
   """Represents an array of strings type."""
@@ -212,6 +283,18 @@ class IntArray(FieldType):
       if not isinstance(item, int):
         raise error.ValidationError('{} is not of type int'.format(item))
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'ARRAY<INT64>'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return False
+
 
 class Timestamp(FieldType):
   """Represents a timestamp type."""
@@ -228,6 +311,18 @@ class Timestamp(FieldType):
   def validate_type(value: Any) -> None:
     if not isinstance(value, datetime.datetime):
       raise error.ValidationError('{} is not of type datetime'.format(value))
+
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type.startswith('TIMESTAMP')
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return True
 
 
 class BytesBase64(FieldType):
@@ -251,6 +346,18 @@ class BytesBase64(FieldType):
     except binascii.Error:
       raise error.ValidationError(
           '{} must be base64-encoded bytes.'.format(value))
+
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type[0:6] == 'BYTES(' and type[-1] == ')'
+
+  @staticmethod
+  def support_length() -> bool:
+    return True
+
+  @staticmethod
+  def support_commit_timestamp() -> bool:
+    return False
 
 
 ALL_TYPES = [
