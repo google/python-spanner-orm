@@ -71,6 +71,7 @@ class MigrationsEmulatorTest(spanner_emulator_testlib.TestCase):
         'int_': 42,
         'float_': 4.2,
         'bytes_': b'A1A1',
+        'int_array': [1, 2],
         'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
     }).save()
     models.ForeignKeyTestModel({

@@ -229,7 +229,8 @@ class ModelTest(
 
   @parameterized.parameters(('int_2', 'foo'), ('float_2', 'bar'),
                             ('string_2', 5), ('bytes_2', 'string'),
-                            ('string_array', 'foo'), ('timestamp', 5))
+                            ('string_array', 'foo'), ('timestamp', 5),
+                            ('int_array', 12))
   def test_set_error_on_invalid_type(self, attribute, value):
     string_array = ['foo', 'bar']
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -321,6 +322,22 @@ class ModelTest(
            'string_array': ['bar', 'foo'],
            'timestamp': _TIMESTAMP,
        })),
+      (models.UnittestModel({
+          'int_': 0,
+          'float_': 0,
+          'string': '',
+          'bytes_': b'A1A1',
+          'int_array': [1, 2],
+          'timestamp': _TIMESTAMP,
+      }),
+       models.UnittestModel({
+           'int_': 0,
+           'float_': 0,
+           'string': '',
+           'bytes_': b'A1A1',
+           'int_array': [2, 1],
+           'timestamp': _TIMESTAMP,
+       })),
       (models.SmallTestModel({
           'key': 'key',
           'value_1': 'value'
@@ -342,7 +359,8 @@ class ModelTest(
     all_data = primary_key.copy()
     all_data.update({
         'timestamp': datetime.datetime.now(tz=datetime.timezone.utc),
-        'string_array': ['foo', 'bar']
+        'string_array': ['foo', 'bar'],
+        'int_array': [1, 2],
     })
     test_model = models.UnittestModel(all_data)
     self.assertEqual(test_model.id(), primary_key)
@@ -357,6 +375,7 @@ class ModelTest(
 
   def test_object_changes(self):
     array = ['foo', 'bar']
+    int_array = [1, 2]
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     test_model = models.UnittestModel({
         'int_': 0,
@@ -364,6 +383,7 @@ class ModelTest(
         'string': '',
         'bytes_': b'',
         'string_array': array,
+        'int_array': int_array,
         'timestamp': timestamp
     })
 

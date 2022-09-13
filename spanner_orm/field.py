@@ -64,7 +64,8 @@ class Field(object):
     length_support = ["STRING(MAX)", "ARRAY<STRING(MAX)>", "BYTES(MAX)"]
 
     if self._type.ddl() not in length_support and self._length:
-      raise error.ValidationError('length can not be set on field {}'.format(self._type))
+      raise error.ValidationError('length can not be set on field {}'.format(
+          self._type))
 
   def ddl(self) -> str:
     base_ddl = self._type.ddl()
@@ -161,6 +162,7 @@ class String(FieldType):
     if not isinstance(value, str):
       raise error.ValidationError('{} is not of type str'.format(value))
 
+
 class StringArray(FieldType):
   """Represents an array of strings type."""
 
@@ -182,7 +184,7 @@ class StringArray(FieldType):
 
 
 class IntArray(FieldType):
-  """Represents an array of strings type."""
+  """Represents an array of int64 type."""
 
   @staticmethod
   def ddl() -> str:
@@ -242,5 +244,12 @@ class BytesBase64(FieldType):
 
 
 ALL_TYPES = [
-    Boolean, Integer, IntArray, Float, String, StringArray, Timestamp, BytesBase64,
+    Boolean,
+    Integer,
+    IntArray,
+    Float,
+    String,
+    StringArray,
+    Timestamp,
+    BytesBase64,
 ]
