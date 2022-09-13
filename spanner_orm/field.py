@@ -85,12 +85,12 @@ class Field:
     self._primary_key = primary_key
     self._length = length
 
-    if self._length < 0:
-      raise error.ValidationError('length can not be less than zero')
-
     if not self._type.support_length() and self._length:
       raise error.ValidationError('length can not be set on field {}'.format(
           self._type))
+    
+    if self._length < 0:
+      raise error.ValidationError('length can not be less than zero')
 
   def ddl(self) -> str:
     """Returns DDL for the column."""
@@ -289,7 +289,7 @@ class BytesBase64(FieldType):
 
   @staticmethod
   def matches(type: str) -> bool:
-    return type[0:6] == 'BYTES(' and type[-1] == ')'
+    return type.startswith('BYTES(') and type.endswith(')')
 
   @staticmethod
   def support_length() -> bool:
