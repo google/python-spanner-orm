@@ -51,12 +51,14 @@ class Field(object):
                field_type: Type[FieldType],
                nullable: bool = False,
                primary_key: bool = False,
-               length: int = 0):
+               length: int = 0,
+               allow_commit_timestamp: bool = False):
     self.name = None
     self._type = field_type
     self._nullable = nullable
     self._primary_key = primary_key
     self._length = length
+    self._allow_commit_timestamp = allow_commit_timestamp
 
     if self._length < 0:
       raise error.ValidationError('length can not be less than zero')
@@ -67,13 +69,21 @@ class Field(object):
       raise error.ValidationError('length can not be set on field {}'.format(
           self._type))
 
+    if self._type.ddl() != "TIMESTAMP" and self._allow_commit_timestamp:
+      raise error.ValidationError(
+          'allow_commit_timestamp can not be set on field {}'.format(
+              self._type))
+
   def ddl(self) -> str:
     base_ddl = self._type.ddl()
+    options = ''
     if self._length:
       base_ddl = base_ddl.replace('(MAX)', f'({self._length})')
+    if self._allow_commit_timestamp:
+      options = ' OPTIONS (allow_commit_timestamp=true)'
     if self._nullable:
-      return base_ddl
-    return '{field_type} NOT NULL'.format(field_type=base_ddl)
+      return f'{base_ddl}{options}'
+    return f'{base_ddl} NOT NULL{options}'
 
   def field_type(self) -> Type[FieldType]:
     return self._type
@@ -184,7 +194,7 @@ class StringArray(FieldType):
 
 
 class IntArray(FieldType):
-  """Represents an array of int64 type."""
+  """Represents an array of strings type."""
 
   @staticmethod
   def ddl() -> str:

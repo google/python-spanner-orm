@@ -132,6 +132,8 @@ class UnittestModelWithoutSecondaryIndexes(model.Model):
   bytes_2 = field.Field(field.BytesBase64, nullable=True)
   bytes_3 = field.Field(field.BytesBase64, nullable=True, length=20)
   timestamp = field.Field(field.Timestamp)
+  timestamp_2 = field.Field(
+      field.Timestamp, nullable=True, allow_commit_timestamp=True)
   string_array = field.Field(field.StringArray, nullable=True)
   string_array_2 = field.Field(field.StringArray, nullable=True, length=20)
   int_array = field.Field(field.IntArray, nullable=True)

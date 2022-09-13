@@ -90,8 +90,10 @@ class UpdateTest(
                       ' string_3 STRING(20),'
                       ' bytes_ BYTES(MAX) NOT NULL, bytes_2 BYTES(MAX),'
                       ' bytes_3 BYTES(20),'
-                      ' timestamp TIMESTAMP NOT NULL, string_array'
-                      ' ARRAY<STRING(MAX)>,'
+                      ' timestamp TIMESTAMP NOT NULL,'
+                      ' timestamp_2 TIMESTAMP OPTIONS'
+                      ' (allow_commit_timestamp=true),'
+                      ' string_array ARRAY<STRING(MAX)>,'
                       ' string_array_2 ARRAY<STRING(20)>,'
                       ' int_array ARRAY<INT64>) PRIMARY KEY'
                       ' (int_, float_, string, bytes_)')
