@@ -83,6 +83,14 @@ class Field:
       self._type = field_type()
     self._nullable = nullable
     self._primary_key = primary_key
+    self._length = length
+
+    if self._length < 0:
+      raise error.ValidationError('length can not be less than zero')
+
+    if not self._type.support_length() and self._length:
+      raise error.ValidationError('length can not be set on field {}'.format(
+          self._type))
 
   def ddl(self) -> str:
     """Returns DDL for the column."""
@@ -134,6 +142,14 @@ class Boolean(FieldType):
     if not isinstance(value, bool):
       raise error.ValidationError(f'{value!r} is not of type bool')
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'BOOL'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
+
 
 class Integer(FieldType):
   """Represents an integer type."""
@@ -153,6 +169,14 @@ class Integer(FieldType):
     del self  # Unused.
     if not isinstance(value, int):
       raise error.ValidationError(f'{value!r} is not of type int')
+
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'INT64'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
 
 
 class Float(FieldType):
@@ -174,6 +198,14 @@ class Float(FieldType):
     if not isinstance(value, (int, float)):
       raise error.ValidationError(f'{value!r} is not of type float')
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'FLOAT64'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
+
 
 class String(FieldType):
   """Represents a string type."""
@@ -194,6 +226,14 @@ class String(FieldType):
     if not isinstance(value, str):
       raise error.ValidationError(f'{value!r} is not of type str')
 
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type.startswith('ARRAY<STRING(') and type.endswith(')>')
+
+  @staticmethod
+  def support_length() -> bool:
+    return True
+
 
 class Timestamp(FieldType):
   """Represents a timestamp type."""
@@ -213,6 +253,14 @@ class Timestamp(FieldType):
     del self  # Unused.
     if not isinstance(value, datetime.datetime):
       raise error.ValidationError(f'{value!r} is not of type datetime')
+
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type == 'TIMESTAMP'
+
+  @staticmethod
+  def support_length() -> bool:
+    return False
 
 
 class BytesBase64(FieldType):
@@ -238,6 +286,14 @@ class BytesBase64(FieldType):
       base64.b64decode(value, altchars=None, validate=True)
     except binascii.Error:
       raise error.ValidationError(f'{value!r} must be base64-encoded bytes.')
+
+  @staticmethod
+  def matches(type: str) -> bool:
+    return type[0:6] == 'BYTES(' and type[-1] == ')'
+
+  @staticmethod
+  def support_length() -> bool:
+    return True
 
 
 class Array(FieldType):
