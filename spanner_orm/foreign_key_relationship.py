@@ -1,4 +1,3 @@
-# python3
 # Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +26,7 @@ class ForeignKeyRelationshipConstraint:
   referenced_table: Type[Any]
 
 
-class ForeignKeyRelationship(object):
+class ForeignKeyRelationship:
   """Helps define a foreign key relationship between two models."""
 
   def __init__(self, referenced_table_name: str, columns: Mapping[str, str]):

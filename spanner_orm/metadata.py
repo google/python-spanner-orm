@@ -1,4 +1,3 @@
-# python3
 # Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +37,7 @@ from spanner_orm import registry
 from spanner_orm import relationship
 
 
-class ModelMetadata(object):
+class ModelMetadata:
   """Hold information about a Model extracted from the class attributes."""
 
   def __init__(self,
