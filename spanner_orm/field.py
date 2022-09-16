@@ -85,12 +85,12 @@ class Field:
     self._primary_key = primary_key
     self._length = length
 
-    if not self._type.support_length() and self._length:
-      raise error.ValidationError('length can not be set on field {}'.format(
-          self._type))
-    
-    if self._length < 0:
+    if self._length and self._length < 0:
       raise error.ValidationError('length can not be less than zero')
+
+    if not self._type.supports_length() and self._length:
+      raise error.ValidationError(
+          f'length can not be set on field {self._type}')
 
   def ddl(self) -> str:
     """Returns DDL for the column."""
@@ -146,10 +146,6 @@ class Boolean(FieldType):
   def matches(type: str) -> bool:
     return type == 'BOOL'
 
-  @staticmethod
-  def support_length() -> bool:
-    return False
-
 
 class Integer(FieldType):
   """Represents an integer type."""
@@ -173,10 +169,6 @@ class Integer(FieldType):
   @staticmethod
   def matches(type: str) -> bool:
     return type == 'INT64'
-
-  @staticmethod
-  def support_length() -> bool:
-    return False
 
 
 class Float(FieldType):
@@ -202,10 +194,6 @@ class Float(FieldType):
   def matches(type: str) -> bool:
     return type == 'FLOAT64'
 
-  @staticmethod
-  def support_length() -> bool:
-    return False
-
 
 class String(FieldType):
   """Represents a string type."""
@@ -228,10 +216,14 @@ class String(FieldType):
 
   @staticmethod
   def matches(type: str) -> bool:
-    return type.startswith('ARRAY<STRING(') and type.endswith(')>')
+    val = re.findall('ARRAY<(.*)>', type)
+    # We expect exact one matching result if type matches ARRAY.
+    if not val or len(val) != 1:
+      return False
+    return String.matches(val[0])
 
   @staticmethod
-  def support_length() -> bool:
+  def supports_length() -> bool:
     return True
 
 
@@ -257,10 +249,6 @@ class Timestamp(FieldType):
   @staticmethod
   def matches(type: str) -> bool:
     return type == 'TIMESTAMP'
-
-  @staticmethod
-  def support_length() -> bool:
-    return False
 
 
 class BytesBase64(FieldType):
@@ -289,10 +277,14 @@ class BytesBase64(FieldType):
 
   @staticmethod
   def matches(type: str) -> bool:
-    return type.startswith('BYTES(') and type.endswith(')')
+    val = re.findall('BYTES\((.*)\)', type)
+    # We expect exact one matching result if type matches BYTE.
+    if not val or len(val) != 1:
+      return False
+    return val[0] == 'MAX' or val[0].isnumeric()
 
   @staticmethod
-  def support_length() -> bool:
+  def supports_length() -> bool:
     return True
 
 

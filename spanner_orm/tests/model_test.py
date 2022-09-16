@@ -226,9 +226,10 @@ class ModelTest(
     with self.assertRaises(AttributeError):
       test_model.key = 'error'
 
-  @parameterized.parameters(('int_2', 'foo'), ('float_2', 'bar'),
-                            ('string_2', 5), ('bytes_2', 'string'),
-                            ('string_array', 'foo'), ('timestamp', 5))
+  @parameterized.parameters(
+      ('int_2', 'foo'), ('float_2', 'bar'), ('string_2', 5), ('string_3', 5),
+      ('bytes_2', 'string'), ('bytes_2', 'string2'), ('string_array', 'foo'),
+      ('timestamp', 5))
   def test_set_error_on_invalid_type(self, attribute, value):
     string_array = ['foo', 'bar']
     timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
