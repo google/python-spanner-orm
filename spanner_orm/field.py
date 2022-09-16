@@ -85,12 +85,12 @@ class Field:
     self._primary_key = primary_key
     self._length = length
 
-    if self._length and self._length < 0:
-      raise error.ValidationError('length can not be less than zero')
-
-    if not self._type.supports_length() and self._length:
-      raise error.ValidationError(
-          f'length can not be set on field {self._type}')
+    if self._length is not None:
+      if self._length < 0:
+        raise error.ValidationError('length can not be less than zero')
+      if not self._type.supports_length():
+        raise error.ValidationError(
+            f'length can not be set on field {self._type}')
 
   def ddl(self) -> str:
     """Returns DDL for the column."""
@@ -216,11 +216,7 @@ class String(FieldType):
 
   @staticmethod
   def matches(type: str) -> bool:
-    val = re.findall('ARRAY<(.*)>', type)
-    # We expect exact one matching result if type matches ARRAY.
-    if not val or len(val) != 1:
-      return False
-    return String.matches(val[0])
+    return re.fullmatch('ARRAY<STRING\((?:[0-9]+|MAX)\)>', type) is not None
 
   @staticmethod
   def supports_length() -> bool:
@@ -277,11 +273,7 @@ class BytesBase64(FieldType):
 
   @staticmethod
   def matches(type: str) -> bool:
-    val = re.findall('BYTES\((.*)\)', type)
-    # We expect exact one matching result if type matches BYTE.
-    if not val or len(val) != 1:
-      return False
-    return val[0] == 'MAX' or val[0].isnumeric()
+    return re.fullmatch('BYTES\((?:[0-9]+|MAX)\)', type) is not None
 
   @staticmethod
   def supports_length() -> bool:
