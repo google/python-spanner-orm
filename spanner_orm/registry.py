@@ -1,4 +1,3 @@
-# python3
 # Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +27,7 @@ class RegistryComponent:
     self.references.append(reference)
 
 
-class Registry(object):
+class Registry:
 
   def __init__(self):
     self._registered = {}  # type: Dict[str, RegistryComponent]

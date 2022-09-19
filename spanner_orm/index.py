@@ -1,4 +1,3 @@
-# python3
 # Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +18,7 @@ from typing import List, Optional
 from spanner_orm import error
 
 
-class Index(object):
+class Index:
   """Represents an index on a Model."""
   PRIMARY_INDEX = 'PRIMARY_KEY'
 

@@ -1,4 +1,3 @@
-# python3
 # Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +27,7 @@ from spanner_orm.admin import index_column
 from spanner_orm.admin import table
 
 
-class SpannerMetadata(object):
+class SpannerMetadata:
   """Gathers information about a table from Spanner."""
 
   @classmethod

@@ -1,4 +1,3 @@
-# python3
 # Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +43,7 @@ class FieldType(abc.ABC):
     raise NotImplementedError
 
 
-class Field(object):
+class Field:
   """Represents a column in a table as a field in a model."""
 
   def __init__(self,
