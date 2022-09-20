@@ -77,7 +77,7 @@ class Field:
     """Returns DDL for the column."""
     if self._nullable:
       return self._type.ddl()
-    return '{field_type} NOT NULL'.format(field_type=self._type.ddl())
+    return f'{self._type.ddl()} NOT NULL'
 
   def field_type(self) -> Type[FieldType]:
     """Returns the type of the field."""
@@ -121,7 +121,7 @@ class Boolean(FieldType):
   def validate_type(value: Any) -> None:
     """See base class."""
     if not isinstance(value, bool):
-      raise error.ValidationError('{} is not of type bool'.format(value))
+      raise error.ValidationError(f'{value!r} is not of type bool')
 
 
 class Integer(FieldType):
@@ -141,7 +141,7 @@ class Integer(FieldType):
   def validate_type(value: Any) -> None:
     """See base class."""
     if not isinstance(value, int):
-      raise error.ValidationError('{} is not of type int'.format(value))
+      raise error.ValidationError(f'{value!r} is not of type int')
 
 
 class Float(FieldType):
@@ -161,7 +161,7 @@ class Float(FieldType):
   def validate_type(value: Any) -> None:
     """See base class."""
     if not isinstance(value, (int, float)):
-      raise error.ValidationError('{} is not of type float'.format(value))
+      raise error.ValidationError(f'{value!r} is not of type float')
 
 
 class String(FieldType):
@@ -181,7 +181,7 @@ class String(FieldType):
   def validate_type(value: Any) -> None:
     """See base class."""
     if not isinstance(value, str):
-      raise error.ValidationError('{} is not of type str'.format(value))
+      raise error.ValidationError(f'{value!r} is not of type str')
 
 
 class StringArray(FieldType):
@@ -201,10 +201,10 @@ class StringArray(FieldType):
   def validate_type(value: Any) -> None:
     """See base class."""
     if not isinstance(value, list):
-      raise error.ValidationError('{} is not of type list'.format(value))
+      raise error.ValidationError(f'{value!r} is not of type list')
     for item in value:
       if not isinstance(item, str):
-        raise error.ValidationError('{} is not of type str'.format(item))
+        raise error.ValidationError(f'{item!r} is not of type str')
 
 
 class Timestamp(FieldType):
@@ -224,7 +224,7 @@ class Timestamp(FieldType):
   def validate_type(value: Any) -> None:
     """See base class."""
     if not isinstance(value, datetime.datetime):
-      raise error.ValidationError('{} is not of type datetime'.format(value))
+      raise error.ValidationError(f'{value!r} is not of type datetime')
 
 
 class BytesBase64(FieldType):
@@ -244,13 +244,12 @@ class BytesBase64(FieldType):
   def validate_type(value: Any) -> None:
     """See base class."""
     if not isinstance(value, bytes):
-      raise error.ValidationError('{} is not of type bytes'.format(value))
+      raise error.ValidationError(f'{value!r} is not of type bytes')
     # Rudimentary test to check for base64 encoding.
     try:
       base64.b64decode(value, altchars=None, validate=True)
     except binascii.Error:
-      raise error.ValidationError(
-          '{} must be base64-encoded bytes.'.format(value))
+      raise error.ValidationError(f'{value!r} must be base64-encoded bytes.')
 
 
 ALL_TYPES = (
