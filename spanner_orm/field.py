@@ -54,10 +54,13 @@ class Field:
   """
   name: Optional[str]
 
-  def __init__(self,
-               field_type: Type[FieldType],
-               nullable: bool = False,
-               primary_key: bool = False):
+  def __init__(
+      self,
+      field_type: Type[FieldType],
+      *,
+      nullable: bool = False,
+      primary_key: bool = False,
+  ):
     """Initializer.
 
     Args:
@@ -250,6 +253,12 @@ class BytesBase64(FieldType):
           '{} must be base64-encoded bytes.'.format(value))
 
 
-ALL_TYPES = [
-    Boolean, Integer, Float, String, StringArray, Timestamp, BytesBase64
-]
+ALL_TYPES = (
+    Boolean,
+    Integer,
+    Float,
+    String,
+    StringArray,
+    Timestamp,
+    BytesBase64,
+)
