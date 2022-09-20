@@ -17,7 +17,8 @@ import abc
 import base64
 import binascii
 import datetime
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, Union
+import warnings
 
 # TODO(https://github.com/google/pytype/issues/1081): Re-enable import-error.
 from google.cloud import spanner  # pytype: disable=import-error
@@ -28,23 +29,25 @@ from spanner_orm import error
 class FieldType(abc.ABC):
   """Base class for column types for Spanner interactions."""
 
-  @staticmethod
   @abc.abstractmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """Returns the DDL for this type."""
     raise NotImplementedError
 
-  @staticmethod
   @abc.abstractmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """Returns the type as used in Cloud Spanner's gRPC API."""
     raise NotImplementedError
 
-  @staticmethod
   @abc.abstractmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """Raises error.ValidationError if value doesn't match the type."""
     raise NotImplementedError
+
+  def comparable_with(self, other: 'FieldType') -> bool:
+    """Returns whether two types are comparable."""
+    # https://cloud.google.com/spanner/docs/reference/standard-sql/data-types#comparable_data_types
+    return type(self) == type(other)
 
 
 class Field:
@@ -57,7 +60,7 @@ class Field:
 
   def __init__(
       self,
-      field_type: Type[FieldType],
+      field_type: Union[FieldType, Type[FieldType]],
       *,
       nullable: bool = False,
       primary_key: bool = False,
@@ -65,12 +68,19 @@ class Field:
     """Initializer.
 
     Args:
-      field_type: Type of the field.
+      field_type: Type of the field. Passing a class instead of an instance of
+        that class is deprecated.
       nullable: Whether the field can be NULL.
       primary_key: Whether the field is part of the table's primary key.
     """
     self.name = None
-    self._type = field_type
+    if isinstance(field_type, FieldType):
+      self._type = field_type
+    else:
+      warnings.warn(
+          DeprecationWarning(
+              'Pass an instance of FieldType instead of a class.'))
+      self._type = field_type()
     self._nullable = nullable
     self._primary_key = primary_key
 
@@ -80,7 +90,7 @@ class Field:
       return self._type.ddl()
     return f'{self._type.ddl()} NOT NULL'
 
-  def field_type(self) -> Type[FieldType]:
+  def field_type(self) -> FieldType:
     """Returns the type of the field."""
     return self._type
 
@@ -108,19 +118,19 @@ class Field:
 class Boolean(FieldType):
   """Represents a boolean type."""
 
-  @staticmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """See base class."""
+    del self  # Unused.
     return 'BOOL'
 
-  @staticmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """See base class."""
+    del self  # Unused.
     return spanner.param_types.BOOL
 
-  @staticmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """See base class."""
+    del self  # Unused.
     if not isinstance(value, bool):
       raise error.ValidationError(f'{value!r} is not of type bool')
 
@@ -128,19 +138,19 @@ class Boolean(FieldType):
 class Integer(FieldType):
   """Represents an integer type."""
 
-  @staticmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """See base class."""
+    del self  # Unused.
     return 'INT64'
 
-  @staticmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """See base class."""
+    del self  # Unused.
     return spanner.param_types.INT64
 
-  @staticmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """See base class."""
+    del self  # Unused.
     if not isinstance(value, int):
       raise error.ValidationError(f'{value!r} is not of type int')
 
@@ -148,19 +158,19 @@ class Integer(FieldType):
 class Float(FieldType):
   """Represents a float type."""
 
-  @staticmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """See base class."""
+    del self  # Unused.
     return 'FLOAT64'
 
-  @staticmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """See base class."""
+    del self  # Unused.
     return spanner.param_types.FLOAT64
 
-  @staticmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """See base class."""
+    del self  # Unused.
     if not isinstance(value, (int, float)):
       raise error.ValidationError(f'{value!r} is not of type float')
 
@@ -168,19 +178,19 @@ class Float(FieldType):
 class String(FieldType):
   """Represents a string type."""
 
-  @staticmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """See base class."""
+    del self  # Unused.
     return 'STRING(MAX)'
 
-  @staticmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """See base class."""
+    del self  # Unused.
     return spanner.param_types.STRING
 
-  @staticmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """See base class."""
+    del self  # Unused.
     if not isinstance(value, str):
       raise error.ValidationError(f'{value!r} is not of type str')
 
@@ -188,19 +198,19 @@ class String(FieldType):
 class StringArray(FieldType):
   """Represents an array of strings type."""
 
-  @staticmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """See base class."""
+    del self  # Unused.
     return 'ARRAY<STRING(MAX)>'
 
-  @staticmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """See base class."""
+    del self  # Unused.
     return spanner.param_types.Array(spanner.param_types.STRING)
 
-  @staticmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """See base class."""
+    del self  # Unused.
     if not isinstance(value, list):
       raise error.ValidationError(f'{value!r} is not of type list')
     for item in value:
@@ -211,19 +221,19 @@ class StringArray(FieldType):
 class Timestamp(FieldType):
   """Represents a timestamp type."""
 
-  @staticmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """See base class."""
+    del self  # Unused.
     return 'TIMESTAMP'
 
-  @staticmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """See base class."""
+    del self  # Unused.
     return spanner.param_types.TIMESTAMP
 
-  @staticmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """See base class."""
+    del self  # Unused.
     if not isinstance(value, datetime.datetime):
       raise error.ValidationError(f'{value!r} is not of type datetime')
 
@@ -231,19 +241,19 @@ class Timestamp(FieldType):
 class BytesBase64(FieldType):
   """Represents a bytes type that must be base64 encoded."""
 
-  @staticmethod
-  def ddl() -> str:
+  def ddl(self) -> str:
     """See base class."""
+    del self  # Unused.
     return 'BYTES(MAX)'
 
-  @staticmethod
-  def grpc_type() -> spanner_v1.Type:
+  def grpc_type(self) -> spanner_v1.Type:
     """See base class."""
+    del self  # Unused.
     return spanner.param_types.BYTES
 
-  @staticmethod
-  def validate_type(value: Any) -> None:
+  def validate_type(self, value: Any) -> None:
     """See base class."""
+    del self  # Unused.
     if not isinstance(value, bytes):
       raise error.ValidationError(f'{value!r} is not of type bytes')
     # Rudimentary test to check for base64 encoding.
@@ -253,12 +263,21 @@ class BytesBase64(FieldType):
       raise error.ValidationError(f'{value!r} must be base64-encoded bytes.')
 
 
-ALL_TYPES = (
-    Boolean,
-    Integer,
-    Float,
-    String,
-    StringArray,
-    Timestamp,
-    BytesBase64,
-)
+def field_type_from_ddl(ddl: str) -> FieldType:
+  """Returns the the field type for the given DDL expression."""
+  if ddl == 'BOOL':
+    return Boolean()
+  elif ddl == 'INT64':
+    return Integer()
+  elif ddl == 'FLOAT64':
+    return Float()
+  elif ddl == 'STRING(MAX)':
+    return String()
+  elif ddl == 'ARRAY<STRING(MAX)>':
+    return StringArray()
+  elif ddl == 'TIMESTAMP':
+    return Timestamp()
+  elif ddl == 'BYTES(MAX)':
+    return BytesBase64()
+  else:
+    raise error.SpannerError(f'Invalid or unimplemented DDL type: {ddl!r}')

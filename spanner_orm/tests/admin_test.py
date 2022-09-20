@@ -108,8 +108,8 @@ class AdminTest(unittest.TestCase):
     self.assertEqual(meta.table, model.table)
     self.assertEqual(meta.columns, model.columns)
     for row in model.columns:
-      self.assertEqual(meta.fields[row].field_type(),
-                       model.fields[row].field_type())
+      self.assertEqual(meta.fields[row].field_type().ddl(),
+                       model.fields[row].field_type().ddl())
       self.assertEqual(meta.fields[row].nullable(),
                        model.fields[row].nullable())
     self.assertEqual(meta.primary_keys, model.primary_keys)

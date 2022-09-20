@@ -36,10 +36,5 @@ class ColumnSchema(schema.InformationSchema):
   def nullable(self) -> bool:
     return self.is_nullable == 'YES'
 
-  def field_type(self) -> Type[field.FieldType]:
-    for field_type in field.ALL_TYPES:
-      if self.spanner_type == field_type.ddl():
-        return field_type
-
-    raise error.SpannerError('No corresponding Type for {}'.format(
-        self.spanner_type))
+  def field_type(self) -> field.FieldType:
+    return field.field_type_from_ddl(self.spanner_type)

@@ -45,9 +45,9 @@ class TestModel(spanner_orm.Model):
   # is the type of field. The primary key is constructed by the fields labeled
   # with primary_key=True in the order they appear in the class.
   # The name of the column is the same as the name of the class attribute
-  id = spanner_orm.Field(spanner_orm.String, primary_key=True)
-  value = spanner_orm.Field(spanner_orm.Integer, nullable=True)
-  number = spanner_orm.Field(spanner_orm.Float, nullable=True)
+  id = spanner_orm.Field(spanner_orm.String(), primary_key=True)
+  value = spanner_orm.Field(spanner_orm.Integer(), nullable=True)
+  number = spanner_orm.Field(spanner_orm.Float(), nullable=True)
 
   # Secondary indexes are specified in a similar manner to fields:
   value_index = spanner_orm.Index(['value'])
