@@ -264,7 +264,7 @@ class BytesBase64(FieldType):
 
 
 def field_type_from_ddl(ddl: str) -> FieldType:
-  """Returns the the field type for the given DDL expression."""
+  """Returns the field type for the given DDL expression."""
   if ddl == 'BOOL':
     return Boolean()
   elif ddl == 'INT64':
