@@ -28,9 +28,10 @@ from spanner_orm import foreign_key_relationship
 from spanner_orm import index
 from spanner_orm import relationship
 
+# TODO(https://github.com/google/pytype/issues/1081): Re-enable import-error.
 from google.api_core import datetime_helpers
-from google.cloud import spanner
-from google.cloud import spanner_v1
+from google.cloud import spanner  # pytype: disable=import-error
+from google.cloud import spanner_v1  # pytype: disable=import-error
 import immutabledict
 
 T = TypeVar('T')
