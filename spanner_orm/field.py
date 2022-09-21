@@ -94,7 +94,7 @@ class Field:
     """Returns the type of the field."""
     return self._type
 
-  def grpc_type(self) -> str:
+  def grpc_type(self) -> spanner_v1.Type:
     """Returns the type as used in Cloud Spanner's gRPC API."""
     return self._type.grpc_type()
 
