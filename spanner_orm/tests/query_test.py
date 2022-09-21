@@ -42,7 +42,7 @@ class QueryTest(parameterized.TestCase):
     expected_sql = 'SELECT .* FROM table WHERE table.int_ = @int_0'
     self.assertRegex(sql, expected_sql)
     self.assertEqual(parameters, {'int_0': 3})
-    self.assertEqual(types, {'int_0': field.Integer.grpc_type()})
+    self.assertEqual(types, {'int_0': field.Integer().grpc_type()})
 
   @mock.patch('spanner_orm.table_apis.sql_query')
   def test_count(self, sql_query):
@@ -56,7 +56,7 @@ class QueryTest(parameterized.TestCase):
         column, column_key)
     self.assertRegex(sql, expected_sql)
     self.assertEqual({column_key: value}, parameters)
-    self.assertEqual(types, {column_key: field.Integer.grpc_type()})
+    self.assertEqual(types, {column_key: field.Integer().grpc_type()})
 
   def test_count_allows_force_index(self):
     force_index = condition.force_index('test_index')
@@ -81,7 +81,7 @@ class QueryTest(parameterized.TestCase):
 
     self.assertEndsWith(select_query.sql(), ' LIMIT @{}'.format(key))
     self.assertEqual(select_query.parameters(), {key: value})
-    self.assertEqual(select_query.types(), {key: field.Integer.grpc_type()})
+    self.assertEqual(select_query.types(), {key: field.Integer().grpc_type()})
 
     select_query = self.select()
     self.assertNotRegex(select_query.sql(), 'LIMIT')
@@ -97,10 +97,11 @@ class QueryTest(parameterized.TestCase):
         limit_key: limit,
         offset_key: offset
     })
-    self.assertEqual(select_query.types(), {
-        limit_key: field.Integer.grpc_type(),
-        offset_key: field.Integer.grpc_type()
-    })
+    self.assertEqual(
+        select_query.types(), {
+            limit_key: field.Integer().grpc_type(),
+            offset_key: field.Integer().grpc_type()
+        })
 
   def test_query_order_by(self):
     order = ('int_', condition.OrderType.DESC)
@@ -124,9 +125,9 @@ class QueryTest(parameterized.TestCase):
     select_query = self.select()
     self.assertNotRegex(select_query.sql(), 'ORDER BY')
 
-  @parameterized.parameters(('int_', 5, field.Integer.grpc_type()),
-                            ('string', 'foo', field.String.grpc_type()),
-                            ('timestamp', now(), field.Timestamp.grpc_type()))
+  @parameterized.parameters(('int_', 5, field.Integer().grpc_type()),
+                            ('string', 'foo', field.String().grpc_type()),
+                            ('timestamp', now(), field.Timestamp().grpc_type()))
   def test_query_where_comparison(self, column, value, grpc_type):
     condition_generators = [
         condition.greater_than, condition.not_less_than, condition.less_than,
@@ -144,9 +145,9 @@ class QueryTest(parameterized.TestCase):
       self.assertEqual(select_query.types(), {column_key: grpc_type})
 
   @parameterized.parameters(
-      (models.UnittestModel.int_, 5, field.Integer.grpc_type()),
-      (models.UnittestModel.string, 'foo', field.String.grpc_type()),
-      (models.UnittestModel.timestamp, now(), field.Timestamp.grpc_type()))
+      (models.UnittestModel.int_, 5, field.Integer().grpc_type()),
+      (models.UnittestModel.string, 'foo', field.String().grpc_type()),
+      (models.UnittestModel.timestamp, now(), field.Timestamp().grpc_type()))
   def test_query_where_comparison_with_object(self, column, value, grpc_type):
     condition_generators = [
         condition.greater_than, condition.not_less_than, condition.less_than,
@@ -164,10 +165,10 @@ class QueryTest(parameterized.TestCase):
       self.assertEqual(select_query.types(), {column_key: grpc_type})
 
   @parameterized.parameters(
-      ('int_', [1, 2, 3], field.Integer.grpc_type()),
-      ('int_', (4, 5, 6), field.Integer.grpc_type()),
-      ('string', ['a', 'b', 'c'], field.String.grpc_type()),
-      ('timestamp', [now()], field.Timestamp.grpc_type()))
+      ('int_', [1, 2, 3], field.Integer().grpc_type()),
+      ('int_', (4, 5, 6), field.Integer().grpc_type()),
+      ('string', ['a', 'b', 'c'], field.String().grpc_type()),
+      ('timestamp', [now()], field.Timestamp().grpc_type()))
   def test_query_where_list_comparison(self, column, values, grpc_type):
     condition_generators = [condition.in_list, condition.not_in_list]
     for condition_generator in condition_generators:
@@ -461,8 +462,8 @@ class QueryTest(parameterized.TestCase):
     self.assertEndsWith(select_query.sql(), expected_sql)
     self.assertEqual(select_query.parameters(), {'int_0': 1, 'int_1': 2})
     self.assertEqual(select_query.types(), {
-        'int_0': field.Integer.grpc_type(),
-        'int_1': field.Integer.grpc_type()
+        'int_0': field.Integer().grpc_type(),
+        'int_1': field.Integer().grpc_type()
     })
 
 

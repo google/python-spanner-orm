@@ -220,7 +220,7 @@ class AlterColumn(SchemaUpdate):
 
     old_field = model_.fields[self._column]
     # Validate that the only alteration is to change column nullability
-    if self._field.field_type() != old_field.field_type():
+    if self._field.field_type().ddl() != old_field.field_type().ddl():
       raise error.SpannerError('Column {} is changing type'.format(
           self._column))
     if self._field.nullable() == old_field.nullable():
