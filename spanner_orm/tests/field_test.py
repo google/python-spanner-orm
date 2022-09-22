@@ -13,15 +13,84 @@
 # limitations under the License.
 """Tests for field."""
 
+import base64
+import datetime
+from typing import Any
 import warnings
 
-from spanner_orm import error
-from spanner_orm import field
+# TODO(https://github.com/google/pytype/issues/1081): Re-enable import-error.
 from absl.testing import absltest
 from absl.testing import parameterized
+from google.cloud import spanner  # pytype: disable=import-error
+from google.cloud import spanner_v1  # pytype: disable=import-error
+from spanner_orm import error
+from spanner_orm import field
 
 
 class FieldTest(parameterized.TestCase):
+
+  @parameterized.parameters(
+      (field.Boolean(), 'BOOL'),
+      (field.Integer(), 'INT64'),
+      (field.Float(), 'FLOAT64'),
+      (field.String(), 'STRING(MAX)'),
+      (field.Timestamp(), 'TIMESTAMP'),
+      (field.BytesBase64(), 'BYTES(MAX)'),
+  )
+  def test_field_type_ddl(
+      self,
+      field_type: field.FieldType,
+      ddl: str,
+  ):
+    self.assertEqual(field_type.ddl(), ddl)
+
+  @parameterized.parameters(
+      (field.Boolean(), spanner.param_types.BOOL),
+      (field.Integer(), spanner.param_types.INT64),
+      (field.Float(), spanner.param_types.FLOAT64),
+      (field.String(), spanner.param_types.STRING),
+      (field.Timestamp(), spanner.param_types.TIMESTAMP),
+      (field.BytesBase64(), spanner.param_types.BYTES),
+  )
+  def test_field_type_grpc_type(
+      self,
+      field_type: field.FieldType,
+      grpc_type: spanner_v1.Type,
+  ):
+    self.assertEqual(field_type.grpc_type(), grpc_type)
+
+  @parameterized.parameters(
+      (field.Boolean(), True),
+      (field.Integer(), 1),
+      (field.Float(), 1),
+      (field.Float(), 1.0),
+      (field.String(), 'foo'),
+      (field.Timestamp(), datetime.datetime(2022, 9, 21)),
+      (field.BytesBase64(), base64.b64encode(b'\x00')),
+  )
+  def test_field_type_validate_type_ok(
+      self,
+      field_type: field.FieldType,
+      value: Any,
+  ):
+    field_type.validate_type(value)
+
+  @parameterized.parameters(
+      (field.Boolean(), 1),
+      (field.Integer(), 1.0),
+      (field.Float(), '1.0'),
+      (field.String(), b'foo'),
+      (field.Timestamp(), datetime.date(2022, 9, 21)),
+      (field.BytesBase64(), base64.b64encode(b'\x00').decode('utf-8')),
+      (field.BytesBase64(), b'!'),
+  )
+  def test_field_type_validate_type_error(
+      self,
+      field_type: field.FieldType,
+      value: Any,
+  ):
+    with self.assertRaises(error.ValidationError):
+      field_type.validate_type(value)
 
   @parameterized.parameters(
       (field.Boolean(), field.Boolean(), True),
