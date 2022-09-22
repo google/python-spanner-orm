@@ -36,6 +36,8 @@ class FieldTest(parameterized.TestCase):
       (field.String(), 'STRING(MAX)'),
       (field.Timestamp(), 'TIMESTAMP'),
       (field.BytesBase64(), 'BYTES(MAX)'),
+      (field.Array(field.Boolean()), 'ARRAY<BOOL>'),
+      (field.Array(field.String()), 'ARRAY<STRING(MAX)>'),
   )
   def test_field_type_ddl(
       self,
@@ -51,6 +53,10 @@ class FieldTest(parameterized.TestCase):
       (field.String(), spanner.param_types.STRING),
       (field.Timestamp(), spanner.param_types.TIMESTAMP),
       (field.BytesBase64(), spanner.param_types.BYTES),
+      (field.Array(field.Boolean()),
+       spanner.param_types.Array(spanner.param_types.BOOL)),
+      (field.Array(field.String()),
+       spanner.param_types.Array(spanner.param_types.STRING)),
   )
   def test_field_type_grpc_type(
       self,
@@ -67,6 +73,7 @@ class FieldTest(parameterized.TestCase):
       (field.String(), 'foo'),
       (field.Timestamp(), datetime.datetime(2022, 9, 21)),
       (field.BytesBase64(), base64.b64encode(b'\x00')),
+      (field.Array(field.Boolean()), [True]),
   )
   def test_field_type_validate_type_ok(
       self,
@@ -83,6 +90,8 @@ class FieldTest(parameterized.TestCase):
       (field.Timestamp(), datetime.date(2022, 9, 21)),
       (field.BytesBase64(), base64.b64encode(b'\x00').decode('utf-8')),
       (field.BytesBase64(), b'!'),
+      (field.Array(field.Boolean()), {True}),
+      (field.Array(field.Boolean()), [1]),
   )
   def test_field_type_validate_type_error(
       self,
@@ -95,6 +104,8 @@ class FieldTest(parameterized.TestCase):
   @parameterized.parameters(
       (field.Boolean(), field.Boolean(), True),
       (field.Boolean(), field.String(), False),
+      (field.Array(field.Integer()), field.Array(field.Integer()), False),
+      (field.Array(field.Integer()), field.Integer(), False),
   )
   def test_field_type_comparable_with(
       self,
@@ -115,14 +126,30 @@ class FieldTest(parameterized.TestCase):
     self.assertIn('instance of FieldType', str(actual_warnings[0].message))
     self.assertIs(actual_warnings[0].category, DeprecationWarning)
 
+  def test_array_of_array_is_invalid(self):
+    with self.assertRaisesRegex(error.SpannerError, 'arrays of arrays'):
+      field.Array(field.Array(field.String()))
+
+  def test_string_array_is_deprecated_and_equivalent_to_array_of_string(self):
+    with warnings.catch_warnings(record=True) as actual_warnings:
+      string_array = field.StringArray()
+    array_of_string = field.Array(field.String())
+    self.assertLen(actual_warnings, 1)
+    self.assertIn('Use Array(String()) instead',
+                  str(actual_warnings[0].message))
+    self.assertIs(actual_warnings[0].category, DeprecationWarning)
+    self.assertEqual(string_array.ddl(), array_of_string.ddl())
+    self.assertEqual(string_array.grpc_type(), array_of_string.grpc_type())
+
   @parameterized.parameters(
       'BOOL',
       'INT64',
       'FLOAT64',
       'STRING(MAX)',
-      'ARRAY<STRING(MAX)>',
       'TIMESTAMP',
       'BYTES(MAX)',
+      'ARRAY<INT64>',
+      'ARRAY<STRING(MAX)>',
   )
   def test_ddl_to_field_type_to_ddl(self, ddl: str):
     self.assertEqual(field.field_type_from_ddl(ddl).ddl(), ddl)

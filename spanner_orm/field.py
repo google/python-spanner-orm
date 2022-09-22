@@ -17,6 +17,7 @@ import abc
 import base64
 import binascii
 import datetime
+import re
 from typing import Any, Optional, Type, Union
 import warnings
 
@@ -195,29 +196,6 @@ class String(FieldType):
       raise error.ValidationError(f'{value!r} is not of type str')
 
 
-class StringArray(FieldType):
-  """Represents an array of strings type."""
-
-  def ddl(self) -> str:
-    """See base class."""
-    del self  # Unused.
-    return 'ARRAY<STRING(MAX)>'
-
-  def grpc_type(self) -> spanner_v1.Type:
-    """See base class."""
-    del self  # Unused.
-    return spanner.param_types.Array(spanner.param_types.STRING)
-
-  def validate_type(self, value: Any) -> None:
-    """See base class."""
-    del self  # Unused.
-    if not isinstance(value, list):
-      raise error.ValidationError(f'{value!r} is not of type list')
-    for item in value:
-      if not isinstance(item, str):
-        raise error.ValidationError(f'{item!r} is not of type str')
-
-
 class Timestamp(FieldType):
   """Represents a timestamp type."""
 
@@ -263,6 +241,54 @@ class BytesBase64(FieldType):
       raise error.ValidationError(f'{value!r} must be base64-encoded bytes.')
 
 
+class Array(FieldType):
+  """Represents an array type."""
+
+  def __init__(self, element_type: FieldType):
+    """Initializer.
+
+    Args:
+      element_type: Type of the values in the array. Can't be an Array type
+        itself.
+    """
+    if isinstance(element_type, Array):
+      # https://cloud.google.com/spanner/docs/reference/standard-sql/data-types#array_type
+      raise error.SpannerError(
+          'Cloud Spanner does not support arrays of arrays.')
+    self._element_type = element_type
+
+  def ddl(self) -> str:
+    """See base class."""
+    return f'ARRAY<{self._element_type.ddl()}>'
+
+  def grpc_type(self) -> spanner_v1.Type:
+    """See base class."""
+    return spanner.param_types.Array(self._element_type.grpc_type())
+
+  def validate_type(self, value: Any) -> None:
+    """See base class."""
+    if not isinstance(value, list):
+      raise error.ValidationError(f'{value!r} is not of type list')
+    for element in value:
+      self._element_type.validate_type(element)
+
+  def comparable_with(self, other: FieldType) -> bool:
+    """See base class."""
+    # Running `select [1, 2] = [1, 2];` in Cloud Spanner gives this error: Query
+    # failed: Equality is not defined for arguments of type ARRAY<INT64> at line
+    # 3, column 8
+    return False
+
+
+class StringArray(Array):
+  """Deprecated way to represent an array of strings type."""
+
+  def __init__(self):
+    super().__init__(String())
+    warnings.warn(
+        DeprecationWarning('Use Array(String()) instead of StringArray().'))
+
+
 def field_type_from_ddl(ddl: str) -> FieldType:
   """Returns the field type for the given DDL expression."""
   if ddl == 'BOOL':
@@ -273,11 +299,11 @@ def field_type_from_ddl(ddl: str) -> FieldType:
     return Float()
   elif ddl == 'STRING(MAX)':
     return String()
-  elif ddl == 'ARRAY<STRING(MAX)>':
-    return StringArray()
   elif ddl == 'TIMESTAMP':
     return Timestamp()
   elif ddl == 'BYTES(MAX)':
     return BytesBase64()
+  elif (match := re.fullmatch(r'ARRAY<(.*)>', ddl)) is not None:
+    return Array(field_type_from_ddl(match.group(1)))
   else:
     raise error.SpannerError(f'Invalid or unimplemented DDL type: {ddl!r}')

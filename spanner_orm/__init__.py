@@ -68,6 +68,7 @@ String = field.String
 StringArray = field.StringArray
 Timestamp = field.Timestamp
 BytesBase64 = field.BytesBase64
+Array = field.Array
 
 ArbitraryCondition = condition.ArbitraryCondition
 Column = condition.Column
