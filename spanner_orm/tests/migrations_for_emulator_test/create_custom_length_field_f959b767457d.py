@@ -17,9 +17,7 @@ class OriginalTeeTable(spanner_orm.model.Model):
 
   __table__ = 'Tee'
   id = spanner_orm.Field(spanner_orm.String, primary_key=True)
-  cus_str = spanner_orm.Field(spanner_orm.String, length=555)
-  cus_bytes = spanner_orm.Field(spanner_orm.BytesBase64, length=12)
-  cus_strarr = spanner_orm.Field(spanner_orm.StringArray, length=24)
+  cus_str = spanner_orm.Field(spanner_orm.String(20))
 
 
 def upgrade() -> spanner_orm.CreateTable:

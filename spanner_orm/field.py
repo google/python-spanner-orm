@@ -83,14 +83,6 @@ class Field:
       self._type = field_type()
     self._nullable = nullable
     self._primary_key = primary_key
-    self._length = length
-
-    if self._length is not None:
-      if self._length < 0:
-        raise error.ValidationError('length can not be less than zero')
-      if not self._type.supports_length():
-        raise error.ValidationError(
-            f'length can not be set on field {self._type}')
 
   def ddl(self) -> str:
     """Returns DDL for the column."""
@@ -142,10 +134,6 @@ class Boolean(FieldType):
     if not isinstance(value, bool):
       raise error.ValidationError(f'{value!r} is not of type bool')
 
-  @staticmethod
-  def matches(type: str) -> bool:
-    return type == 'BOOL'
-
 
 class Integer(FieldType):
   """Represents an integer type."""
@@ -165,10 +153,6 @@ class Integer(FieldType):
     del self  # Unused.
     if not isinstance(value, int):
       raise error.ValidationError(f'{value!r} is not of type int')
-
-  @staticmethod
-  def matches(type: str) -> bool:
-    return type == 'INT64'
 
 
 class Float(FieldType):
@@ -190,17 +174,17 @@ class Float(FieldType):
     if not isinstance(value, (int, float)):
       raise error.ValidationError(f'{value!r} is not of type float')
 
-  @staticmethod
-  def matches(type: str) -> bool:
-    return type == 'FLOAT64'
-
 
 class String(FieldType):
   """Represents a string type."""
 
+  def __init__(self, size: Optional[int] = None):
+    self._size = size
+
   def ddl(self) -> str:
     """See base class."""
-    del self  # Unused.
+    if self._size is not None:
+      return f'STRING({self._size})'
     return 'STRING(MAX)'
 
   def grpc_type(self) -> spanner_v1.Type:
@@ -213,14 +197,6 @@ class String(FieldType):
     del self  # Unused.
     if not isinstance(value, str):
       raise error.ValidationError(f'{value!r} is not of type str')
-
-  @staticmethod
-  def matches(type: str) -> bool:
-    return re.fullmatch('ARRAY<STRING\((?:[0-9]+|MAX)\)>', type) is not None
-
-  @staticmethod
-  def supports_length() -> bool:
-    return True
 
 
 class Timestamp(FieldType):
@@ -241,10 +217,6 @@ class Timestamp(FieldType):
     del self  # Unused.
     if not isinstance(value, datetime.datetime):
       raise error.ValidationError(f'{value!r} is not of type datetime')
-
-  @staticmethod
-  def matches(type: str) -> bool:
-    return type == 'TIMESTAMP'
 
 
 class BytesBase64(FieldType):
@@ -270,14 +242,6 @@ class BytesBase64(FieldType):
       base64.b64decode(value, altchars=None, validate=True)
     except binascii.Error:
       raise error.ValidationError(f'{value!r} must be base64-encoded bytes.')
-
-  @staticmethod
-  def matches(type: str) -> bool:
-    return re.fullmatch('BYTES\((?:[0-9]+|MAX)\)', type) is not None
-
-  @staticmethod
-  def supports_length() -> bool:
-    return True
 
 
 class Array(FieldType):
@@ -336,7 +300,7 @@ def field_type_from_ddl(ddl: str) -> FieldType:
     return Integer()
   elif ddl == 'FLOAT64':
     return Float()
-  elif ddl == 'STRING(MAX)':
+  elif re.fullmatch(r'STRING\((?:[0-9]+|MAX)\)', ddl) is not None:
     return String()
   elif ddl == 'TIMESTAMP':
     return Timestamp()

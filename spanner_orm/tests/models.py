@@ -107,13 +107,12 @@ class UnittestModel(model.Model):
   float_2 = field.Field(field.Float, nullable=True)
   string = field.Field(field.String, primary_key=True)
   string_2 = field.Field(field.String, nullable=True)
-  string_3 = field.Field(field.String, nullable=True, length=20)
+  string_3 = field.Field(field.String(20), nullable=True)
   bytes_ = field.Field(field.BytesBase64, primary_key=True)
   bytes_2 = field.Field(field.BytesBase64, nullable=True)
-  bytes_3 = field.Field(field.BytesBase64, nullable=True, length=20)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
-  string_array_2 = field.Field(field.StringArray, nullable=True, length=20)
+  string_array_2 = field.Field(field.Array(field.String(20)), nullable=True)
 
   test_index = index.Index(['string_2'])
 
@@ -128,13 +127,12 @@ class UnittestModelWithoutSecondaryIndexes(model.Model):
   float_2 = field.Field(field.Float, nullable=True)
   string = field.Field(field.String, primary_key=True)
   string_2 = field.Field(field.String, nullable=True)
-  string_3 = field.Field(field.String, nullable=True, length=20)
+  string_3 = field.Field(field.String(20), nullable=True)
   bytes_ = field.Field(field.BytesBase64, primary_key=True)
   bytes_2 = field.Field(field.BytesBase64, nullable=True)
-  bytes_3 = field.Field(field.BytesBase64, nullable=True, length=20)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
-  string_array_2 = field.Field(field.StringArray, nullable=True, length=20)
+  string_array_2 = field.Field(field.Array(field.String(20)), nullable=True)
 
 
 class NullFilteredIndexModel(model.Model):
