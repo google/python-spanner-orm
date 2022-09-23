@@ -9,7 +9,7 @@ This is not an officially supported Google product.
 
 ### How to install
 
-Make sure that Python 3.9 or higher is the default version of python for your
+Make sure that Python 3.8 or higher is the default version of python for your
 environment, then run:
 ```pip install git+https://github.com/google/python-spanner-orm#egg=spanner_orm```
 
@@ -183,7 +183,7 @@ or the corresponding ```MigrationExecutor``` method should be used.
 
 ## Tests
 
-Note: we suggest using a Python 3.9
+Note: we suggest using a Python 3.8
 [virtualenv](https://docs.python.org/3/library/venv.html)
 for running tests and type checking.
 
