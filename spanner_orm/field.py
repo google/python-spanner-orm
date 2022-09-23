@@ -179,6 +179,13 @@ class String(FieldType):
   """Represents a string type."""
 
   def __init__(self, size: Optional[int] = None):
+    """Initializer.
+
+    Args:
+      size: Size of the String. MAX is used if not specified.
+    """
+    if size < 0:
+      raise error.ValidationError('string size can not be negative')
     self._size = size
 
   def ddl(self) -> str:
