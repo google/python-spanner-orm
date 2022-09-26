@@ -184,8 +184,8 @@ class String(FieldType):
     Args:
       size: Size of the String. MAX is used if not specified.
     """
-    if size < 0:
-      raise error.ValidationError('string size can not be negative')
+    if size is not None and size <= 0:
+      raise error.ValidationError('string size must be positive')
     self._size = size
 
   def ddl(self) -> str:
@@ -229,9 +229,20 @@ class Timestamp(FieldType):
 class BytesBase64(FieldType):
   """Represents a bytes type that must be base64 encoded."""
 
+  def __init__(self, size: Optional[int] = None):
+    """Initializer.
+
+    Args:
+      size: Size of the Byte64. MAX is used if not specified.
+    """
+    if size is not None and size <= 0:
+      raise error.ValidationError('Byte64 size must be positive')
+    self._size = size
+
   def ddl(self) -> str:
     """See base class."""
-    del self  # Unused.
+    if self._size is not None:
+      return f'BYTES({self._size})'
     return 'BYTES(MAX)'
 
   def grpc_type(self) -> spanner_v1.Type:
@@ -311,7 +322,7 @@ def field_type_from_ddl(ddl: str) -> FieldType:
     return String()
   elif ddl == 'TIMESTAMP':
     return Timestamp()
-  elif ddl == 'BYTES(MAX)':
+  elif re.fullmatch(r'BYTES\((?:[0-9]+|MAX)\)', ddl) is not None:
     return BytesBase64()
   elif (match := re.fullmatch(r'ARRAY<(.*)>', ddl)) is not None:
     return Array(field_type_from_ddl(match.group(1)))

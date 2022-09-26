@@ -88,6 +88,7 @@ class UpdateTest(
                       ' string STRING(MAX) NOT NULL, string_2 STRING(MAX),'
                       ' string_3 STRING(20),'
                       ' bytes_ BYTES(MAX) NOT NULL, bytes_2 BYTES(MAX),'
+                      ' bytes_3 BYTES(20),'
                       ' timestamp TIMESTAMP NOT NULL,'
                       ' string_array ARRAY<STRING(MAX)>,'
                       ' string_array_2 ARRAY<STRING(20)>)'
