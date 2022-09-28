@@ -19,10 +19,9 @@ import logging
 import os
 import unittest
 
-# TODO(https://github.com/google/pytype/issues/1081): Re-enable import-error.
 from absl.testing import parameterized
 from google.api_core import datetime_helpers
-from google.cloud import spanner  # pytype: disable=import-error
+from google.cloud import spanner
 from google.cloud import spanner_v1
 
 import spanner_orm
@@ -46,9 +45,6 @@ class ConditionTest(
         ))
 
   @parameterized.parameters(
-      # TODO(https://github.com/google/pytype/issues/1287): Re-enable
-      # module-attr.
-      # pytype: disable=module-attr
       (True, spanner_v1.param_types.BOOL),
       (0, spanner_v1.param_types.INT64),
       (0.0, spanner_v1.param_types.FLOAT64),
@@ -75,7 +71,6 @@ class ConditionTest(
               array_element_type=spanner_v1.param_types.STRING,
           ),
       ),
-      # pytype: enable=module-attr
   )
   def test_param_from_value(self, value, expected_type):
     param = condition.Param.from_value(value)
@@ -137,9 +132,6 @@ class ConditionTest(
     self.assertCountEqual((test_model,), models.SmallTestModel.where(tautology))
 
   @parameterized.named_parameters(
-      # TODO(https://github.com/google/pytype/issues/1287): Re-enable
-      # module-attr.
-      # pytype: disable=module-attr
       (
           'minimal',
           condition.ArbitraryCondition(
@@ -175,7 +167,6 @@ class ConditionTest(
            'IF(@true_param0, @key_param0, SmallTestModel.value_1)'),
           ('some-key',),
       ),
-      # pytype: enable=module-attr
   )
   def test_arbitrary_condition(
       self,
@@ -236,9 +227,6 @@ class ConditionTest(
       models.SmallTestModel.where(condition_)
 
   @parameterized.named_parameters(
-      # TODO(https://github.com/google/pytype/issues/1287): Re-enable
-      # module-attr.
-      # pytype: disable=module-attr
       (
           'empty_or',
           condition.OrCondition(),
@@ -295,7 +283,6 @@ class ConditionTest(
            ')'),
           'ab',
       ),
-      # pytype: enable=module-attr
   )
   def test_or_condition(
       self,

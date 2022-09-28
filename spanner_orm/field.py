@@ -21,9 +21,8 @@ import re
 from typing import Any, Optional, Type, Union
 import warnings
 
-# TODO(https://github.com/google/pytype/issues/1081): Re-enable import-error.
-from google.cloud import spanner  # pytype: disable=import-error
-from google.cloud import spanner_v1  # pytype: disable=import-error
+from google.cloud import spanner
+from google.cloud import spanner_v1
 from spanner_orm import error
 
 

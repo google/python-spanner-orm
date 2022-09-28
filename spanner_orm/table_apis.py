@@ -16,8 +16,7 @@
 import logging
 from typing import Any, Dict, Iterable, List, Sequence
 
-# TODO(https://github.com/google/pytype/issues/1081): Re-enable import-error.
-from google.cloud import spanner  # pytype: disable=import-error
+from google.cloud import spanner
 from google.cloud import spanner_v1
 from google.cloud.spanner_v1 import transaction as spanner_transaction
 
@@ -53,8 +52,7 @@ def sql_query(
     transaction: spanner_transaction.Transaction,
     query: str,
     parameters: Dict[str, Any],
-    # TODO(https://github.com/google/pytype/issues/1287): Re-enable module-attr.
-    parameter_types: Dict[str, spanner_v1.Type],  # pytype: disable=module-attr
+    parameter_types: Dict[str, spanner_v1.Type],
 ) -> List[Sequence[Any]]:
   """Executes a given SQL query against the Spanner database.
 

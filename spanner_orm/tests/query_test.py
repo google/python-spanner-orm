@@ -178,10 +178,8 @@ class QueryTest(parameterized.TestCase):
       column_key = '{}0'.format(column)
       expected_sql = ' WHERE table.{} {} UNNEST(@{})'.format(
           column, current_condition.operator, column_key)
-      # TODO(https://github.com/google/pytype/issues/1287): Re-enable module-attr.
-      list_type = spanner_v1.Type(  # pytype: disable=module-attr
-          code=spanner_v1.TypeCode.ARRAY,  # pytype: disable=module-attr
-          array_element_type=grpc_type)
+      list_type = spanner_v1.Type(
+          code=spanner_v1.TypeCode.ARRAY, array_element_type=grpc_type)
       self.assertEndsWith(select_query.sql(), expected_sql)
       self.assertEqual(select_query.parameters(), {column_key: values})
       self.assertEqual(select_query.types(), {column_key: list_type})
