@@ -74,8 +74,7 @@ class MigrationManager:
     path = os.path.join(self.basedir, filename)
     module = importlib.util.module_from_spec(
         importlib.util.spec_from_file_location(module_name, path))
-    # TODO(https://github.com/google/pytype/issues/1289): Re-enable pyi-error.
-    importlib.machinery.SourceFileLoader(module_name, path).exec_module(module)  # pytype: disable=pyi-error
+    importlib.machinery.SourceFileLoader(module_name, path).exec_module(module)
     try:
       result = migration.Migration(module.migration_id,
                                    module.prev_migration_id,
