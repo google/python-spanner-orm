@@ -33,10 +33,15 @@ class FieldTest(parameterized.TestCase):
       (field.Integer(), 'INT64'),
       (field.Float(), 'FLOAT64'),
       (field.String(), 'STRING(MAX)'),
+      (field.String(10), 'STRING(10)'),
       (field.Timestamp(), 'TIMESTAMP'),
       (field.BytesBase64(), 'BYTES(MAX)'),
+      (field.BytesBase64(10), 'BYTES(10)'),
       (field.Array(field.Boolean()), 'ARRAY<BOOL>'),
       (field.Array(field.String()), 'ARRAY<STRING(MAX)>'),
+      (field.Array(field.String(10)), 'ARRAY<STRING(10)>'),
+      (field.Array(field.BytesBase64()), 'ARRAY<BYTES(MAX)>'),
+      (field.Array(field.BytesBase64(10)), 'ARRAY<BYTES(10)>'),
   )
   def test_field_type_ddl(
       self,
@@ -50,11 +55,15 @@ class FieldTest(parameterized.TestCase):
       (field.Integer(), spanner.param_types.INT64),
       (field.Float(), spanner.param_types.FLOAT64),
       (field.String(), spanner.param_types.STRING),
+      (field.String(10), spanner.param_types.STRING),
       (field.Timestamp(), spanner.param_types.TIMESTAMP),
       (field.BytesBase64(), spanner.param_types.BYTES),
+      (field.BytesBase64(10), spanner.param_types.BYTES),
       (field.Array(field.Boolean()),
        spanner.param_types.Array(spanner.param_types.BOOL)),
       (field.Array(field.String()),
+       spanner.param_types.Array(spanner.param_types.STRING)),
+      (field.Array(field.String(10)),
        spanner.param_types.Array(spanner.param_types.STRING)),
   )
   def test_field_type_grpc_type(
@@ -70,8 +79,10 @@ class FieldTest(parameterized.TestCase):
       (field.Float(), 1),
       (field.Float(), 1.0),
       (field.String(), 'foo'),
+      (field.String(10), 'foo'),
       (field.Timestamp(), datetime.datetime(2022, 9, 21)),
       (field.BytesBase64(), base64.b64encode(b'\x00')),
+      (field.BytesBase64(10), base64.b64encode(b'\x00')),
       (field.Array(field.Boolean()), [True]),
   )
   def test_field_type_validate_type_ok(
@@ -86,9 +97,11 @@ class FieldTest(parameterized.TestCase):
       (field.Integer(), 1.0),
       (field.Float(), '1.0'),
       (field.String(), b'foo'),
+      (field.String(10), b'foo'),
       (field.Timestamp(), datetime.date(2022, 9, 21)),
       (field.BytesBase64(), base64.b64encode(b'\x00').decode('utf-8')),
       (field.BytesBase64(), b'!'),
+      (field.BytesBase64(10), b'!'),
       (field.Array(field.Boolean()), {True}),
       (field.Array(field.Boolean()), [1]),
   )
@@ -103,6 +116,7 @@ class FieldTest(parameterized.TestCase):
   @parameterized.parameters(
       (field.Boolean(), field.Boolean(), True),
       (field.Boolean(), field.String(), False),
+      (field.String(10), field.String(20), True),
       (field.Array(field.Integer()), field.Array(field.Integer()), False),
       (field.Array(field.Integer()), field.Integer(), False),
   )
@@ -145,10 +159,13 @@ class FieldTest(parameterized.TestCase):
       'INT64',
       'FLOAT64',
       'STRING(MAX)',
+      'STRING(10)',
       'TIMESTAMP',
       'BYTES(MAX)',
+      'BYTES(10)',
       'ARRAY<INT64>',
       'ARRAY<STRING(MAX)>',
+      'ARRAY<STRING(10)>',
   )
   def test_ddl_to_field_type_to_ddl(self, ddl: str):
     self.assertEqual(field.field_type_from_ddl(ddl).ddl(), ddl)

@@ -178,20 +178,20 @@ class Float(FieldType):
 class String(FieldType):
   """Represents a string type."""
 
-  def __init__(self, size: Optional[int] = None):
+  def __init__(self, length: Optional[int] = None):
     """Initializer.
 
     Args:
-      size: Size of the String. MAX is used if not specified.
+      length: Length of the String. MAX is used if not specified.
     """
-    if size is not None and size <= 0:
-      raise error.ValidationError('string size must be positive')
-    self._size = size
+    if length is not None and length <= 0:
+      raise error.ValidationError('String length must be positive')
+    self._length = length
 
   def ddl(self) -> str:
     """See base class."""
-    if self._size is not None:
-      return f'STRING({self._size})'
+    if self._length is not None:
+      return f'STRING({self._length})'
     return 'STRING(MAX)'
 
   def grpc_type(self) -> spanner_v1.Type:
@@ -229,20 +229,20 @@ class Timestamp(FieldType):
 class BytesBase64(FieldType):
   """Represents a bytes type that must be base64 encoded."""
 
-  def __init__(self, size: Optional[int] = None):
+  def __init__(self, length: Optional[int] = None):
     """Initializer.
 
     Args:
-      size: Size of the Byte64. MAX is used if not specified.
+      length: Length of the Byte64. MAX is used if not specified.
     """
-    if size is not None and size <= 0:
-      raise error.ValidationError('Byte64 size must be positive')
-    self._size = size
+    if length is not None and length <= 0:
+      raise error.ValidationError('Bytes length must be positive')
+    self._length = length
 
   def ddl(self) -> str:
     """See base class."""
-    if self._size is not None:
-      return f'BYTES({self._size})'
+    if self._length is not None:
+      return f'BYTES({self._length})'
     return 'BYTES(MAX)'
 
   def grpc_type(self) -> spanner_v1.Type:
@@ -318,12 +318,16 @@ def field_type_from_ddl(ddl: str) -> FieldType:
     return Integer()
   elif ddl == 'FLOAT64':
     return Float()
-  elif re.fullmatch(r'STRING\((?:[0-9]+|MAX)\)', ddl) is not None:
+  elif ddl == 'STRING(MAX)':
     return String()
+  elif (match := re.fullmatch(r'STRING\(((?:[0-9]+))\)', ddl)) is not None:
+    return String(int(match.group(1)))
   elif ddl == 'TIMESTAMP':
     return Timestamp()
-  elif re.fullmatch(r'BYTES\((?:[0-9]+|MAX)\)', ddl) is not None:
+  elif ddl == 'BYTES(MAX)':
     return BytesBase64()
+  elif (match := re.fullmatch(r'BYTES\(((?:[0-9]+))\)', ddl)) is not None:
+    return BytesBase64(int(match.group(1)))
   elif (match := re.fullmatch(r'ARRAY<(.*)>', ddl)) is not None:
     return Array(field_type_from_ddl(match.group(1)))
   else:
