@@ -34,10 +34,13 @@ class OriginalUnittestModelTable(spanner_orm.model.Model):
   float_2 = field.Field(field.Float, nullable=True)
   string = field.Field(field.String, primary_key=True)
   string_2 = field.Field(field.String, nullable=True)
+  string_3 = field.Field(field.String(20), nullable=True)
   bytes_ = field.Field(field.BytesBase64, primary_key=True)
   bytes_2 = field.Field(field.BytesBase64, nullable=True)
+  bytes_3 = field.Field(field.BytesBase64(20), nullable=True)
   timestamp = field.Field(field.Timestamp)
   string_array = field.Field(field.StringArray, nullable=True)
+  string_array_2 = field.Field(field.Array(field.String(20)), nullable=True)
 
 
 def upgrade() -> spanner_orm.CreateTable:

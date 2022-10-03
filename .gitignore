@@ -6,6 +6,7 @@ __pycache__
 .eggs
 *.egg-info
 .pytype
+env
 
 # Files that may or may not be added to the repo while acquiring the Spanner
 # emulator.

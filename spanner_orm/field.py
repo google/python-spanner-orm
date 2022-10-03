@@ -178,9 +178,20 @@ class Float(FieldType):
 class String(FieldType):
   """Represents a string type."""
 
+  def __init__(self, length: Optional[int] = None):
+    """Initializer.
+
+    Args:
+      length: Length of the String. MAX is used if not specified.
+    """
+    if length is not None and length <= 0:
+      raise error.ValidationError('String length must be positive')
+    self._length = length
+
   def ddl(self) -> str:
     """See base class."""
-    del self  # Unused.
+    if self._length is not None:
+      return f'STRING({self._length})'
     return 'STRING(MAX)'
 
   def grpc_type(self) -> spanner_v1.Type:
@@ -218,9 +229,20 @@ class Timestamp(FieldType):
 class BytesBase64(FieldType):
   """Represents a bytes type that must be base64 encoded."""
 
+  def __init__(self, length: Optional[int] = None):
+    """Initializer.
+
+    Args:
+      length: Length of the Bytes. MAX is used if not specified.
+    """
+    if length is not None and length <= 0:
+      raise error.ValidationError('Bytes length must be positive')
+    self._length = length
+
   def ddl(self) -> str:
     """See base class."""
-    del self  # Unused.
+    if self._length is not None:
+      return f'BYTES({self._length})'
     return 'BYTES(MAX)'
 
   def grpc_type(self) -> spanner_v1.Type:
@@ -298,10 +320,14 @@ def field_type_from_ddl(ddl: str) -> FieldType:
     return Float()
   elif ddl == 'STRING(MAX)':
     return String()
+  elif (match := re.fullmatch(r'STRING\(([0-9]+)\)', ddl)) is not None:
+    return String(int(match.group(1)))
   elif ddl == 'TIMESTAMP':
     return Timestamp()
   elif ddl == 'BYTES(MAX)':
     return BytesBase64()
+  elif (match := re.fullmatch(r'BYTES\(([0-9]+)\)', ddl)) is not None:
+    return BytesBase64(int(match.group(1)))
   elif (match := re.fullmatch(r'ARRAY<(.*)>', ddl)) is not None:
     return Array(field_type_from_ddl(match.group(1)))
   else:
