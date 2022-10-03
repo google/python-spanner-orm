@@ -117,7 +117,7 @@ class FieldTest(parameterized.TestCase):
       (field.Boolean(), field.Boolean(), True),
       (field.Boolean(), field.String(), False),
       (field.String(10), field.String(20), True),
-      (field.String(), field.String(), True),
+      (field.String(), field.String(10), True),
       (field.Array(field.Integer()), field.Array(field.Integer()), False),
       (field.Array(field.Integer()), field.Integer(), False),
   )

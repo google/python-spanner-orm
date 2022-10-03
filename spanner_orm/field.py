@@ -320,13 +320,13 @@ def field_type_from_ddl(ddl: str) -> FieldType:
     return Float()
   elif ddl == 'STRING(MAX)':
     return String()
-  elif (match := re.fullmatch(r'STRING\((([0-9]+))\)', ddl)) is not None:
+  elif (match := re.fullmatch(r'STRING\(([0-9]+)\)', ddl)) is not None:
     return String(int(match.group(1)))
   elif ddl == 'TIMESTAMP':
     return Timestamp()
   elif ddl == 'BYTES(MAX)':
     return BytesBase64()
-  elif (match := re.fullmatch(r'BYTES\((([0-9]+))\)', ddl)) is not None:
+  elif (match := re.fullmatch(r'BYTES\(([0-9]+)\)', ddl)) is not None:
     return BytesBase64(int(match.group(1)))
   elif (match := re.fullmatch(r'ARRAY<(.*)>', ddl)) is not None:
     return Array(field_type_from_ddl(match.group(1)))
