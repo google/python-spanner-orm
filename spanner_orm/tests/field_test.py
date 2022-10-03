@@ -117,6 +117,7 @@ class FieldTest(parameterized.TestCase):
       (field.Boolean(), field.Boolean(), True),
       (field.Boolean(), field.String(), False),
       (field.String(10), field.String(20), True),
+      (field.String(), field.String(), True),
       (field.Array(field.Integer()), field.Array(field.Integer()), False),
       (field.Array(field.Integer()), field.Integer(), False),
   )
@@ -170,9 +171,11 @@ class FieldTest(parameterized.TestCase):
   def test_ddl_to_field_type_to_ddl(self, ddl: str):
     self.assertEqual(field.field_type_from_ddl(ddl).ddl(), ddl)
 
-  def test_field_type_from_ddl_invalid(self):
+  @parameterized.parameters('UNICORN(MAX)', 'STRING(MAX1)', 'STRING(MIN)',
+                            'ARRAY<STRING(MAX1)>', 'BYTES(MAX1)', 'BYTES(MIN)')
+  def test_field_type_from_ddl_invalid(self, ddl: str):
     with self.assertRaisesRegex(error.SpannerError, 'DDL type'):
-      field.field_type_from_ddl('UNICORN(MAX)')
+      field.field_type_from_ddl(ddl)
 
 
 if __name__ == '__main__':
