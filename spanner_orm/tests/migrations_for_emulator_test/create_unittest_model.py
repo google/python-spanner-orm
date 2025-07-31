@@ -28,18 +28,18 @@ class OriginalUnittestModelTable(spanner_orm.model.Model):
   """ORM Model with the original schema for the UnittestModel table."""
 
   __table__ = 'table'
-  int_ = field.Field(field.Integer, primary_key=True)
-  int_2 = field.Field(field.Integer, nullable=True)
-  float_ = field.Field(field.Float, primary_key=True)
-  float_2 = field.Field(field.Float, nullable=True)
-  string = field.Field(field.String, primary_key=True)
-  string_2 = field.Field(field.String, nullable=True)
+  int_ = field.Field(field.Integer(), primary_key=True)
+  int_2 = field.Field(field.Integer(), nullable=True)
+  float_ = field.Field(field.Float(), primary_key=True)
+  float_2 = field.Field(field.Float(), nullable=True)
+  string = field.Field(field.String(), primary_key=True)
+  string_2 = field.Field(field.String(), nullable=True)
   string_3 = field.Field(field.String(20), nullable=True)
   bytes_ = field.Field(field.BytesBase64, primary_key=True)
   bytes_2 = field.Field(field.BytesBase64, nullable=True)
   bytes_3 = field.Field(field.BytesBase64(20), nullable=True)
   timestamp = field.Field(field.Timestamp)
-  string_array = field.Field(field.StringArray, nullable=True)
+  string_array = field.Field(field.Array(field.String()), nullable=True)
   string_array_2 = field.Field(field.Array(field.String(20)), nullable=True)
 
 

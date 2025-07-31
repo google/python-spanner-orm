@@ -28,9 +28,9 @@ class OriginalSmallTestModelTable(spanner_orm.model.Model):
   """ORM Model with the original schema for the SmallTestModel table."""
 
   __table__ = 'SmallTestModel'
-  key = field.Field(field.String, primary_key=True)
-  value_1 = field.Field(field.String)
-  value_2 = field.Field(field.String, nullable=True)
+  key = field.Field(field.String(), primary_key=True)
+  value_1 = field.Field(field.String())
+  value_2 = field.Field(field.String(), nullable=True)
 
 
 def upgrade() -> spanner_orm.CreateTable:
