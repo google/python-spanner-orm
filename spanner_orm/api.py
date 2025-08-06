@@ -72,7 +72,7 @@ class SpannerReadApi(SpannerRetryableApi):
     with self._connection.snapshot(multi_use=True) as snapshot:
       return method(snapshot, *args, **kwargs)
 
- 
+
 class SpannerWriteApi(SpannerRetryableApi):
   """Handles sending write requests to Spanner."""
 
