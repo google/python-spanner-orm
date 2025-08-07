@@ -15,6 +15,7 @@
 
 import os
 import subprocess
+import time
 from typing import Mapping, Optional
 
 import portpicker
@@ -65,6 +66,7 @@ class Emulator:
     self._host_port = None
 
     self._start()
+    time.sleep(1)
     self._wait_for_ready()
 
   def get_client(
