@@ -25,9 +25,9 @@ prev_migration_id = 'f735d6b706d4'
 
 class _NullFilteredIndexModel(spanner_orm.Model):
   __table__ = 'NullFilteredIndexModel'
-  key = spanner_orm.Field(spanner_orm.String, primary_key=True)
-  value_1 = spanner_orm.Field(spanner_orm.String, nullable=True)
-  value_2 = spanner_orm.Field(spanner_orm.Integer)
+  key = spanner_orm.Field(spanner_orm.String(), primary_key=True)
+  value_1 = spanner_orm.Field(spanner_orm.String(), nullable=True)
+  value_2 = spanner_orm.Field(spanner_orm.Integer())
 
 
 def upgrade() -> spanner_orm.MigrationUpdate:

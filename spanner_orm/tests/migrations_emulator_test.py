@@ -124,7 +124,7 @@ class SpecificMigrationsEmulatorTest(
             class _Parent(spanner_orm.Model):
               __table__ = 'Parent'
               parent_key = spanner_orm.Field(
-                  spanner_orm.String, primary_key=True)
+                  spanner_orm.String(), primary_key=True)
 
             def upgrade():
               return spanner_orm.CreateTable(_Parent)
@@ -133,15 +133,15 @@ class SpecificMigrationsEmulatorTest(
             class _Parent(spanner_orm.Model):
               __table__ = 'Parent'
               parent_key = spanner_orm.Field(
-                  spanner_orm.String, primary_key=True)
+                  spanner_orm.String(), primary_key=True)
 
             class _Child(spanner_orm.Model):
               __table__ = 'Child'
               __interleaved__ = _Parent
               parent_key = spanner_orm.Field(
-                  spanner_orm.String, primary_key=True)
+                  spanner_orm.String(), primary_key=True)
               child_key = spanner_orm.Field(
-                  spanner_orm.String, primary_key=True)
+                  spanner_orm.String(), primary_key=True)
 
             def upgrade():
               return spanner_orm.CreateTable(_Child)
@@ -170,8 +170,8 @@ class SpecificMigrationsEmulatorTest(
                   class _TableToDrop(spanner_orm.Model):
                     __table__ = 'TableToDrop'
                     key = spanner_orm.Field(
-                        spanner_orm.String, primary_key=True)
-                    value = spanner_orm.Field(spanner_orm.String)
+                        spanner_orm.String(), primary_key=True)
+                    value = spanner_orm.Field(spanner_orm.String())
 
                   def upgrade():
                     return spanner_orm.CreateTable(_TableToDrop)
@@ -194,7 +194,7 @@ class SpecificMigrationsEmulatorTest(
                   class _TableToDrop(spanner_orm.Model):
                     __table__ = 'TableToDrop'
                     parent_key = spanner_orm.Field(
-                        spanner_orm.String, primary_key=True)
+                        spanner_orm.String(), primary_key=True)
 
                   def upgrade():
                     return spanner_orm.CreateTable(_TableToDrop)
@@ -203,15 +203,15 @@ class SpecificMigrationsEmulatorTest(
                   class _TableToDrop(spanner_orm.Model):
                     __table__ = 'TableToDrop'
                     parent_key = spanner_orm.Field(
-                        spanner_orm.String, primary_key=True)
+                        spanner_orm.String(), primary_key=True)
 
                   class _Child(spanner_orm.Model):
                     __table__ = 'Child'
                     __interleaved__ = _TableToDrop
                     parent_key = spanner_orm.Field(
-                        spanner_orm.String, primary_key=True)
+                        spanner_orm.String(), primary_key=True)
                     child_key = spanner_orm.Field(
-                        spanner_orm.String, primary_key=True)
+                        spanner_orm.String(), primary_key=True)
 
                   def upgrade():
                     return spanner_orm.CreateTable(_Child)

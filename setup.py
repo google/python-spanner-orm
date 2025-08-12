@@ -16,7 +16,7 @@ from setuptools import setup
 
 setup(
     name='spanner-orm',
-    version='0.2.0',
+    version='0.3.0',
     description='Basic ORM for Spanner',
     maintainer='Python Spanner ORM developers',
     maintainer_email='python-spanner-orm@google.com',
@@ -25,7 +25,7 @@ setup(
     include_package_data=True,
     python_requires='~=3.8',
     install_requires=[
-        'google-cloud-spanner >= 2, <4',
+        'google-cloud-spanner >= 3, <4',
         'immutabledict',
     ],
     tests_require=['absl-py', 'google-api-core', 'portpicker'],

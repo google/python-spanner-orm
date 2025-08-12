@@ -29,10 +29,10 @@ class OriginalForeignKeyTestModelTable(spanner_orm.model.Model):
   """ORM Model with the original schema for the ForeignKeyTestModel table."""
 
   __table__ = 'ForeignKeyTestModel'
-  referencing_key_1 = field.Field(field.String, primary_key=True)
-  referencing_key_2 = field.Field(field.String, primary_key=True)
-  referencing_key_3 = field.Field(field.Integer, primary_key=True)
-  self_referencing_key = field.Field(field.String, nullable=True)
+  referencing_key_1 = field.Field(field.String(), primary_key=True)
+  referencing_key_2 = field.Field(field.String(), primary_key=True)
+  referencing_key_3 = field.Field(field.Integer(), primary_key=True)
+  self_referencing_key = field.Field(field.String(), nullable=True)
   foreign_key_1 = foreign_key_relationship.ForeignKeyRelationship(
       'SmallTestModel', {'referencing_key_1': 'key'})
   foreign_key_2 = foreign_key_relationship.ForeignKeyRelationship(
