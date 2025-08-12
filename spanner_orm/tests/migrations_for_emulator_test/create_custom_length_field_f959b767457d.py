@@ -16,7 +16,7 @@ class OriginalTeeTable(spanner_orm.model.Model):
   """
 
   __table__ = 'Tee'
-  id = spanner_orm.Field(spanner_orm.String, primary_key=True)
+  id = spanner_orm.Field(spanner_orm.String(), primary_key=True)
   custom_string_length = spanner_orm.Field(spanner_orm.String(20))
   custom_array_string_length = spanner_orm.Field(
       spanner_orm.Array(spanner_orm.String(4)))
