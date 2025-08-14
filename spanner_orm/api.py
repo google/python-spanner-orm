@@ -31,6 +31,9 @@ CallableReturn = TypeVar('CallableReturn')
 class SpannerRetryableApi(abc.ABC):
 
   def _ensure_session(self, api_method, *args, **kwargs):
+    print(f"@@@@@@@@@@@@@DEBUG: api_method: {api_method.__name__}")
+    print(f"@@@@@@@@@@@@@DEBUG: args: {args}")
+    print(f"@@@@@@@@@@@@@DEBUG: kwargs: {kwargs}")
     try:
       return api_method(*args, **kwargs)
     except exceptions.NotFound as e:
@@ -99,15 +102,16 @@ class SpannerWriteApi(SpannerRetryableApi):
     Returns:
       The return value from `method` will be returned from this method
     """
-    def wrapper_method(transaction, *w_args, **w_kwargs):
+    def wrapper_method(transaction):
       # This ensures the transaction object is the first argument passed to
       # the original method.
-      return method(transaction, *w_args, **w_kwargs)
+      print(f"!!!!!!!!!!!!!!DEBUG: Calling method '{method.__name__}' with args={args} and kwargs={kwargs}")
+    
+      return method(transaction, *args, **kwargs)
 
     # Pass the wrapper_method to run_in_transaction, which will handle the
     # transaction lifecycle and provide the 'transaction' object.
-    return self._ensure_session(self._connection.run_in_transaction, wrapper_method,
-                                *args, **kwargs)
+    return self._ensure_session(self._connection.run_in_transaction, wrapper_method)
 
 
 class SpannerConnection:
