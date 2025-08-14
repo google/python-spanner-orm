@@ -99,7 +99,14 @@ class SpannerWriteApi(SpannerRetryableApi):
     Returns:
       The return value from `method` will be returned from this method
     """
-    return self._ensure_session(self._connection.run_in_transaction, method,
+    def wrapper_method(transaction, *w_args, **w_kwargs):
+      # This ensures the transaction object is the first argument passed to
+      # the original method.
+      return method(transaction, *w_args, **w_kwargs)
+
+    # Pass the wrapper_method to run_in_transaction, which will handle the
+    # transaction lifecycle and provide the 'transaction' object.
+    return self._ensure_session(self._connection.run_in_transaction, wrapper_method,
                                 *args, **kwargs)
 
 
