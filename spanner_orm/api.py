@@ -106,8 +106,10 @@ class SpannerWriteApi(SpannerRetryableApi):
       # This ensures the transaction object is the first argument passed to
       # the original method.
       print(f"!!!!!!!!!!!!!!DEBUG: Calling method '{method.__name__}' with args={args} and kwargs={kwargs}")
-    
-      return method(transaction, *args, **kwargs)
+      print(f"%%%%%%%%%%%DEBUG: Mutations count before method: {len(transaction._mutations)}")
+      result = method(transaction, *args, **kwargs)
+      print(f"DEBUG: Mutations count after method: {len(transaction._mutations)}")
+      return result
 
     # Pass the wrapper_method to run_in_transaction, which will handle the
     # transaction lifecycle and provide the 'transaction' object.
