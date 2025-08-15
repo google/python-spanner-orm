@@ -102,18 +102,22 @@ class SpannerWriteApi(SpannerRetryableApi):
     Returns:
       The return value from `method` will be returned from this method
     """
-    def wrapper_method(transaction):
+    def wrapper(transaction):
       # This ensures the transaction object is the first argument passed to
       # the original method.
-      print(f"!!!!!!!!!!!!!!DEBUG: Calling method '{method.__name__}' with args={args} and kwargs={kwargs}")
+      print(f"!!!!!!!!!!!!!!DEBUG: Calling method with args={args} and kwargs={kwargs}")
       print(f"%%%%%%%%%%%DEBUG: Mutations count before method: {len(transaction._mutations)}")
       result = method(transaction, *args, **kwargs)
       print(f"DEBUG: Mutations count after method: {len(transaction._mutations)}")
+      if not transaction._mutations:
+        # If no mutations, don't attempt a commit.
+        # Returning None or a specific value can signal this to the wrapper.
+        return None
       return result
 
     # Pass the wrapper_method to run_in_transaction, which will handle the
     # transaction lifecycle and provide the 'transaction' object.
-    return self._ensure_session(self._connection.run_in_transaction, wrapper_method)
+    return self._ensure_session(self._connection.run_in_transaction, wrapper)
 
 
 class SpannerConnection:
