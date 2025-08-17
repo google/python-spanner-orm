@@ -117,7 +117,8 @@ class SpannerWriteApi(SpannerRetryableApi):
 
     # Pass the wrapper_method to run_in_transaction, which will handle the
     # transaction lifecycle and provide the 'transaction' object.
-    return self._ensure_session(self._connection.run_in_transaction, wrapper)
+    if wrapper is not None:
+      return self._ensure_session(self._connection.run_in_transaction, wrapper)
 
 
 class SpannerConnection:
