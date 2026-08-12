@@ -13,15 +13,15 @@
 # limitations under the License.
 """Class that handles API calls to Spanner that deal with table metadata."""
 
-from typing import Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, Union
 import warnings
 
-from spanner_orm import api
-from spanner_orm import error
-
+from google.api_core import client_options as api_client_options
 from google.auth import credentials as auth_credentials
 from google.cloud.spanner_v1 import database as spanner_database
 from google.cloud.spanner_v1 import pool as spanner_pool
+from spanner_orm import api
+from spanner_orm import error
 
 
 class SpannerAdminApi(api.SpannerReadApi, api.SpannerWriteApi):
@@ -58,7 +58,11 @@ def connect(instance: str,
             project: Optional[str] = None,
             credentials: Optional[auth_credentials.Credentials] = None,
             pool: Optional[spanner_pool.AbstractSessionPool] = None,
-            create_ddl: Optional[Iterable[str]] = None) -> SpannerAdminApi:
+            create_ddl: Optional[Iterable[str]] = None,
+            *,
+            client_options: Union[api_client_options.ClientOptions,
+                                  Dict[Any, Any], None] = None,
+            disable_builtin_metrics: Optional[bool] = None) -> SpannerAdminApi:
   """Connects the global Spanner admin API to a Spanner database.
 
   Deprecated in favor of from_connection().
@@ -72,7 +76,9 @@ def connect(instance: str,
       project=project,
       credentials=credentials,
       pool=pool,
-      create_ddl=create_ddl)
+      create_ddl=create_ddl,
+      client_options=client_options,
+      disable_builtin_metrics=disable_builtin_metrics)
   return from_connection(connection)
 
 

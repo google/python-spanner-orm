@@ -117,6 +117,7 @@ class SpannerConnection:
       *,
       client_options: Union[api_client_options.ClientOptions, Dict[Any, Any],
                             None] = None,
+      disable_builtin_metrics: Optional[bool] = None,
   ):
     """Connects to the specified Spanner database."""
     self._instance = instance
@@ -126,15 +127,20 @@ class SpannerConnection:
     self._pool = pool
     self._create_ddl = create_ddl
     self._client_options = client_options
+    self._disable_builtin_metrics = disable_builtin_metrics
     self.connect()
 
   def connect(self):
     """Establish a new connection to the specified Spanner database."""
-    client = spanner.Client(
-        project=self._project,
-        credentials=self._credentials,
-        client_options=self._client_options,
-    )
+    client_kwargs = {
+        'project': self._project,
+        'credentials': self._credentials,
+        'client_options': self._client_options,
+    }
+    if self._disable_builtin_metrics is not None:
+      client_kwargs['disable_builtin_metrics'] = self._disable_builtin_metrics
+
+    client = spanner.Client(**client_kwargs)
     instance = client.instance(self._instance)
     self.database = instance.database(
         self._database, pool=self._pool, ddl_statements=self._create_ddl or ())
@@ -164,7 +170,11 @@ def connect(
     database: str,
     project: Optional[str] = None,
     credentials: Optional[auth_credentials.Credentials] = None,
-    pool: Optional[spanner_pool.AbstractSessionPool] = None) -> SpannerApi:
+    pool: Optional[spanner_pool.AbstractSessionPool] = None,
+    *,
+    client_options: Union[api_client_options.ClientOptions, Dict[Any, Any],
+                          None] = None,
+    disable_builtin_metrics: Optional[bool] = None) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api.
 
   Deprecated in favor of from_connection().
@@ -174,7 +184,13 @@ def connect(
           'Please use '
           'spanner_orm.from_connection(spanner_orm.SpannerConnection(...))'))
   connection = SpannerConnection(
-      instance, database, project=project, credentials=credentials, pool=pool)
+      instance,
+      database,
+      project=project,
+      credentials=credentials,
+      pool=pool,
+      client_options=client_options,
+      disable_builtin_metrics=disable_builtin_metrics)
   return from_connection(connection)
 
 
