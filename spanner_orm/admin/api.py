@@ -13,10 +13,9 @@
 # limitations under the License.
 """Class that handles API calls to Spanner that deal with table metadata."""
 
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any, Iterable, Optional
 import warnings
 
-from google.api_core import client_options as api_client_options
 from google.auth import credentials as auth_credentials
 from google.cloud.spanner_v1 import database as spanner_database
 from google.cloud.spanner_v1 import pool as spanner_pool
@@ -59,9 +58,6 @@ def connect(instance: str,
             credentials: Optional[auth_credentials.Credentials] = None,
             pool: Optional[spanner_pool.AbstractSessionPool] = None,
             create_ddl: Optional[Iterable[str]] = None,
-            *,
-            client_options: Union[api_client_options.ClientOptions,
-                                  Dict[Any, Any], None] = None,
             **client_kwargs: Any) -> SpannerAdminApi:
   """Connects the global Spanner admin API to a Spanner database.
 
@@ -77,7 +73,6 @@ def connect(instance: str,
       credentials=credentials,
       pool=pool,
       create_ddl=create_ddl,
-      client_options=client_options,
       **client_kwargs)
   return from_connection(connection)
 

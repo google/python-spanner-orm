@@ -168,9 +168,6 @@ def connect(
     project: Optional[str] = None,
     credentials: Optional[auth_credentials.Credentials] = None,
     pool: Optional[spanner_pool.AbstractSessionPool] = None,
-    *,
-    client_options: Union[api_client_options.ClientOptions, Dict[Any, Any],
-                          None] = None,
     **client_kwargs: Any) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api.
 
@@ -186,7 +183,6 @@ def connect(
       project=project,
       credentials=credentials,
       pool=pool,
-      client_options=client_options,
       **client_kwargs)
   return from_connection(connection)
 
