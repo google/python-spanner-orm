@@ -117,7 +117,7 @@ class SpannerConnection:
       *,
       client_options: Union[api_client_options.ClientOptions, Dict[Any, Any],
                             None] = None,
-      disable_builtin_metrics: Optional[bool] = None,
+      **client_kwargs: Any,
   ):
     """Connects to the specified Spanner database."""
     self._instance = instance
@@ -127,20 +127,17 @@ class SpannerConnection:
     self._pool = pool
     self._create_ddl = create_ddl
     self._client_options = client_options
-    self._disable_builtin_metrics = disable_builtin_metrics
+    self._client_kwargs = client_kwargs
     self.connect()
 
   def connect(self):
     """Establish a new connection to the specified Spanner database."""
-    client_kwargs = {
-        'project': self._project,
-        'credentials': self._credentials,
-        'client_options': self._client_options,
-    }
-    if self._disable_builtin_metrics is not None:
-      client_kwargs['disable_builtin_metrics'] = self._disable_builtin_metrics
-
-    client = spanner.Client(**client_kwargs)
+    client = spanner.Client(
+        project=self._project,
+        credentials=self._credentials,
+        client_options=self._client_options,
+        **self._client_kwargs,
+    )
     instance = client.instance(self._instance)
     self.database = instance.database(
         self._database, pool=self._pool, ddl_statements=self._create_ddl or ())
@@ -174,7 +171,7 @@ def connect(
     *,
     client_options: Union[api_client_options.ClientOptions, Dict[Any, Any],
                           None] = None,
-    disable_builtin_metrics: Optional[bool] = None) -> SpannerApi:
+    **client_kwargs: Any) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api.
 
   Deprecated in favor of from_connection().
@@ -190,7 +187,7 @@ def connect(
       credentials=credentials,
       pool=pool,
       client_options=client_options,
-      disable_builtin_metrics=disable_builtin_metrics)
+      **client_kwargs)
   return from_connection(connection)
 
 

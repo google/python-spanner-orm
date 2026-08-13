@@ -74,7 +74,7 @@ class ApiTest(parameterized.TestCase):
     )
 
   @mock.patch.object(spanner, 'Client', autospec=True, spec_set=True)
-  def test_connection_args_with_disable_builtin_metrics(self, client):
+  def test_connection_args_with_client_kwargs(self, client):
     client.return_value.instance.return_value.database.return_value = (
         'fake-database')
     connection = api.SpannerConnection(
@@ -86,6 +86,7 @@ class ApiTest(parameterized.TestCase):
         create_ddl=('fake-ddl',),
         client_options=dict(fake='options'),
         disable_builtin_metrics=True,
+        route_to_leader_enabled=False,
     )
     self.assertEqual('fake-database', connection.database)
     self.assertSequenceEqual(
@@ -95,6 +96,7 @@ class ApiTest(parameterized.TestCase):
                 credentials='fake-credentials',
                 client_options=dict(fake='options'),
                 disable_builtin_metrics=True,
+                route_to_leader_enabled=False,
             ),
             mock.call().instance('some-instance'),
             mock.call().instance().database(

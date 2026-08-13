@@ -62,7 +62,7 @@ def connect(instance: str,
             *,
             client_options: Union[api_client_options.ClientOptions,
                                   Dict[Any, Any], None] = None,
-            disable_builtin_metrics: Optional[bool] = None) -> SpannerAdminApi:
+            **client_kwargs: Any) -> SpannerAdminApi:
   """Connects the global Spanner admin API to a Spanner database.
 
   Deprecated in favor of from_connection().
@@ -78,7 +78,7 @@ def connect(instance: str,
       pool=pool,
       create_ddl=create_ddl,
       client_options=client_options,
-      disable_builtin_metrics=disable_builtin_metrics)
+      **client_kwargs)
   return from_connection(connection)
 
 
