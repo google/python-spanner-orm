@@ -162,13 +162,12 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 _api = None  # type: Optional[SpannerApi]
 
 
-def connect(
-    instance: str,
-    database: str,
-    project: Optional[str] = None,
-    credentials: Optional[auth_credentials.Credentials] = None,
-    pool: Optional[spanner_pool.AbstractSessionPool] = None,
-    **client_kwargs: Any) -> SpannerApi:
+def connect(instance: str,
+            database: str,
+            project: Optional[str] = None,
+            credentials: Optional[auth_credentials.Credentials] = None,
+            pool: Optional[spanner_pool.AbstractSessionPool] = None,
+            **client_kwargs: Any) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api.
 
   Deprecated in favor of from_connection().
