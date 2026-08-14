@@ -26,6 +26,7 @@ jobs:
     strategy:
       matrix:
         python-version:
+        - '3.8'
         - '3.9'
         - '3.10'
         - '3.11'
@@ -49,7 +50,8 @@ jobs:
         pip install \
           absl-py \
           google-api-core \
-          'google-cloud-spanner >= 3, <4' \
+          'google-cloud-spanner >= 3, < 3.64.0; python_version < "3.9"' \
+          'google-cloud-spanner >= 3, < 4; python_version >= "3.9"' \
           immutabledict \
           portpicker \
           pytest
@@ -66,10 +68,3 @@ jobs:
         SPANNER_EMULATOR_BINARY_PATH: ${{ github.workspace }}/emulator_main
       run: |
         pytest
-
-  test-py38-compat:
-    name: test (3.8)
-    runs-on: ubuntu-latest
-    steps:
-    - name: Deprecated notice
-      run: echo "Python 3.8 is end-of-life and unsupported by latest google-cloud-spanner."
