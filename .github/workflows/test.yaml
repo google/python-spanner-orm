@@ -28,7 +28,7 @@ jobs:
         - '3.11'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Install cloud-spanner-emulator
       run: |
         # https://github.com/GoogleCloudPlatform/cloud-spanner-emulator#via-pre-built-linux-binaries
@@ -36,7 +36,7 @@ jobs:
         wget https://storage.googleapis.com/cloud-spanner-emulator/releases/${VERSION}/cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
         tar zxvf cloud-spanner-emulator_linux_amd64-${VERSION}.tar.gz
         chmod u+x gateway_main emulator_main
-    - uses: actions/setup-python@v2
+    - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install python dependencies
