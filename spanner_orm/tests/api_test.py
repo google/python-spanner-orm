@@ -73,7 +73,7 @@ class ApiTest(parameterized.TestCase):
         client.mock_calls,
     )
 
-  @mock.patch.object(spanner, 'Client', autospec=True, spec_set=True)
+  @mock.patch.object(spanner, 'Client')
   def test_connection_args_with_client_kwargs(self, client):
     client.return_value.instance.return_value.database.return_value = (
         'fake-database')
