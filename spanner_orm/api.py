@@ -117,6 +117,7 @@ class SpannerConnection:
       *,
       client_options: Union[api_client_options.ClientOptions, Dict[Any, Any],
                             None] = None,
+      **client_kwargs: Any,
   ):
     """Connects to the specified Spanner database."""
     self._instance = instance
@@ -126,6 +127,7 @@ class SpannerConnection:
     self._pool = pool
     self._create_ddl = create_ddl
     self._client_options = client_options
+    self._client_kwargs = client_kwargs
     self.connect()
 
   def connect(self):
@@ -134,6 +136,7 @@ class SpannerConnection:
         project=self._project,
         credentials=self._credentials,
         client_options=self._client_options,
+        **self._client_kwargs,
     )
     instance = client.instance(self._instance)
     self.database = instance.database(
@@ -159,12 +162,12 @@ class SpannerApi(SpannerReadApi, SpannerWriteApi):
 _api = None  # type: Optional[SpannerApi]
 
 
-def connect(
-    instance: str,
-    database: str,
-    project: Optional[str] = None,
-    credentials: Optional[auth_credentials.Credentials] = None,
-    pool: Optional[spanner_pool.AbstractSessionPool] = None) -> SpannerApi:
+def connect(instance: str,
+            database: str,
+            project: Optional[str] = None,
+            credentials: Optional[auth_credentials.Credentials] = None,
+            pool: Optional[spanner_pool.AbstractSessionPool] = None,
+            **client_kwargs: Any) -> SpannerApi:
   """Connects to the Spanner database and sets the global spanner_api.
 
   Deprecated in favor of from_connection().
@@ -174,7 +177,12 @@ def connect(
           'Please use '
           'spanner_orm.from_connection(spanner_orm.SpannerConnection(...))'))
   connection = SpannerConnection(
-      instance, database, project=project, credentials=credentials, pool=pool)
+      instance,
+      database,
+      project=project,
+      credentials=credentials,
+      pool=pool,
+      **client_kwargs)
   return from_connection(connection)
 
 

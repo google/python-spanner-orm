@@ -73,6 +73,41 @@ class ApiTest(parameterized.TestCase):
         client.mock_calls,
     )
 
+  @mock.patch.object(spanner, 'Client')
+  def test_connection_args_with_client_kwargs(self, client):
+    client.return_value.instance.return_value.database.return_value = (
+        'fake-database')
+    connection = api.SpannerConnection(
+        instance='some-instance',
+        database='some-database',
+        project='some-project',
+        credentials='fake-credentials',
+        pool='fake-pool',
+        create_ddl=('fake-ddl',),
+        client_options=dict(fake='options'),
+        disable_builtin_metrics=True,
+        route_to_leader_enabled=False,
+    )
+    self.assertEqual('fake-database', connection.database)
+    self.assertSequenceEqual(
+        (
+            mock.call(
+                project='some-project',
+                credentials='fake-credentials',
+                client_options=dict(fake='options'),
+                disable_builtin_metrics=True,
+                route_to_leader_enabled=False,
+            ),
+            mock.call().instance('some-instance'),
+            mock.call().instance().database(
+                'some-database',
+                pool='fake-pool',
+                ddl_statements=('fake-ddl',),
+            ),
+        ),
+        client.mock_calls,
+    )
+
   @mock.patch('google.cloud.spanner.Client')
   def test_api_connection(self, client):
     connection = self.mock_connection(client)

@@ -25,7 +25,8 @@ setup(
     include_package_data=True,
     python_requires='~=3.8',
     install_requires=[
-        'google-cloud-spanner >= 3, <4',
+        'google-cloud-spanner >= 3, < 3.64.0; python_version < "3.9"',
+        'google-cloud-spanner >= 3, < 4; python_version >= "3.9"',
         'immutabledict',
     ],
     tests_require=['absl-py', 'google-api-core', 'portpicker'],
