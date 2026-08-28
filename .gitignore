@@ -13,3 +13,4 @@ env
 cloud-spanner-emulator*
 emulator_main
 gateway_main
+.spanner_emulator/**
